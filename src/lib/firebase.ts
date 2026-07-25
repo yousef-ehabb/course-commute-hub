@@ -5,7 +5,7 @@ import { getDatabase, type Database } from "firebase/database";
 const config = {
   apiKey:
     import.meta.env.VITE_FIREBASE_API_KEY ??
-    "AIzaSyDtMDGt0gg7hxRWLxeYIVv53DcyRLmS0Bc",
+    "AIzaSyDtMDGt0gg7hxRWpDpxh9LwMwnM_omAzVw",
   authDomain: "pulse-live-ayhab.firebaseapp.com",
   databaseURL: "https://pulse-live-ayhab-default-rtdb.firebaseio.com",
   projectId: "pulse-live-ayhab",
