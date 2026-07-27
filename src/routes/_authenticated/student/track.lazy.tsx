@@ -4,8 +4,10 @@ import { useStations } from "@/contexts/StationsContext";
 import { useTripStatus } from "@/hooks/useTripStatus";
 import { getStation } from "@/utils/stationResolver";
 import { StationTimeline } from "@/components/admin/StationTimeline";
-import ClientTrackMap from "@/components/student/ClientTrackMap";
+import React, { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const TrackMap = React.lazy(() => import("@/components/student/TrackMap"));
 import { Button } from "@/components/ui/button";
 
 export const Route = createLazyFileRoute("/_authenticated/student/track")({
@@ -84,8 +86,10 @@ function TrackBusPage() {
         <p className="text-[13px] text-muted-foreground">تابع حركة الباص لحظة بلحظة</p>
       </div>
 
-      <div className="flex-1 relative rounded-2xl overflow-hidden shadow-card z-0">
-        <ClientTrackMap busLocation={busLocation} />
+      <div className="flex-1 relative rounded-2xl overflow-hidden shadow-card z-0 bg-gray-100 dark:bg-gray-800">
+        <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-muted-foreground">جاري تحميل الخريطة...</div>}>
+          <TrackMap busLocation={busLocation} />
+        </Suspense>
       </div>
 
       <div className="mt-4">
