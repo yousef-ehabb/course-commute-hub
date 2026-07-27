@@ -3,15 +3,13 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getDatabase, ref, push, type Database } from "firebase/database";
 
 const config = {
-  apiKey:
-    import.meta.env.VITE_FIREBASE_API_KEY ??
-    "AIzaSyDtMDGt0gg7hxRWpDpxh9LwMwnM_omAzVw",
-  authDomain: "pulse-live-ayhab.firebaseapp.com",
-  databaseURL: "https://pulse-live-ayhab-default-rtdb.firebaseio.com",
-  projectId: "pulse-live-ayhab",
-  storageBucket: "pulse-live-ayhab.firebasestorage.app",
-  messagingSenderId: "898945341763",
-  appId: "1:898945341763:web:5ce81c592757c98f8677f6",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 export const isFirebaseConfigured = Boolean(config.apiKey && config.projectId);
