@@ -27,6 +27,7 @@ function TrackBusPage() {
     nextStationId,
     lastStationId,
     location,
+    licensePlate,
     error: tripError,
     retry: retryTrip,
     loaded: tripLoaded,
@@ -81,9 +82,17 @@ function TrackBusPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-foreground">تتبع الباص</h1>
-        <p className="text-[13px] text-muted-foreground">تابع حركة الباص لحظة بلحظة</p>
+      <div className="mb-4 flex justify-between items-start">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">تتبع الباص</h1>
+          <p className="text-[13px] text-muted-foreground">تابع حركة الباص لحظة بلحظة</p>
+        </div>
+        {licensePlate && (
+          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg border border-primary/20 flex flex-col items-center">
+            <span className="text-[10px] font-medium opacity-80">رقم الباص</span>
+            <span className="text-sm font-bold whitespace-nowrap">{licensePlate}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative rounded-2xl overflow-hidden shadow-card z-0 bg-gray-100 dark:bg-gray-800">

@@ -114,7 +114,7 @@ function TripsPage() {
     return getAllStudentsStatus(users);
   }, [getAllStudentsStatus, users]);
 
-  const handleStartTrip = async () => {
+  const handleStartTrip = async (licensePlate: string) => {
     if (!dbRefs || stations.length === 0) return;
     try {
       await startTrip({
@@ -127,6 +127,7 @@ function TripsPage() {
         serverTimeOffset,
         adminUid: user?.uid ?? "unknown",
         activeDateKey,
+        licensePlate: licensePlate || undefined,
       });
 
       toast.success("تم بدء الرحلة بنجاح!");

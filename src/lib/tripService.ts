@@ -36,6 +36,7 @@ export interface StartTripParams {
   serverTimeOffset: number;
   adminUid: string;
   activeDateKey: string;
+  licensePlate?: string;
 }
 
 export async function startTrip(params: StartTripParams): Promise<void> {
@@ -49,6 +50,7 @@ export async function startTrip(params: StartTripParams): Promise<void> {
     serverTimeOffset,
     adminUid,
     activeDateKey,
+    licensePlate,
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
   const updates: Record<string, unknown> = {};
@@ -61,6 +63,7 @@ export async function startTrip(params: StartTripParams): Promise<void> {
   updates[`${tripPath}/arrivedAt`] = now;
   updates[`${tripPath}/endedAt`] = null;
   updates[`${tripPath}/location`] = null;
+  updates[`${tripPath}/licensePlate`] = licensePlate || null;
 
   // Only reset boarded state for students who actually have a record
   for (const uid of passengerIds) {

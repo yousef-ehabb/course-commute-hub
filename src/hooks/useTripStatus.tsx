@@ -16,6 +16,7 @@ interface TripStatusContextValue {
   nextStationId: string | null;
   lastStationId: string | null;
   location: TripLocation | null;
+  licensePlate: string | null;
   /** Today's date key (YYYY-MM-DD) */
   todayKey: string;
   /** Whether the listener has fired at least once */
@@ -38,6 +39,7 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
   const [nextStationId, setNextStationId] = useState<string | null>(null);
   const [lastStationId, setLastStationId] = useState<string | null>(null);
   const [location, setLocation] = useState<TripLocation | null>(null);
+  const [licensePlate, setLicensePlate] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [raw, setRaw] = useState<Record<string, any> | null>(null);
@@ -50,6 +52,7 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
       setNextStationId(null);
       setLastStationId(null);
       setLocation(null);
+      setLicensePlate(null);
       setRaw(null);
       setLoaded(activeDateLoaded);
       return;
@@ -75,12 +78,14 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
             setNextStationId(val.nextStationId || null);
             setLastStationId(val.lastStationId || null);
             setLocation(val.location || null);
+            setLicensePlate(val.licensePlate || null);
           } else {
             setStatus("pending");
             setCurrentStationId(null);
             setNextStationId(null);
             setLastStationId(null);
             setLocation(null);
+            setLicensePlate(null);
           }
           setLoaded(true);
           setError(null);
@@ -113,6 +118,7 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
       nextStationId,
       lastStationId,
       location,
+      licensePlate,
       todayKey: activeDateKey,
       loaded,
       error,

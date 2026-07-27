@@ -3,9 +3,10 @@ import { Link } from "@tanstack/react-router";
 
 interface TripStatusBannerProps {
   status: "pending" | "waiting_at_station" | "moving" | "completed";
+  licensePlate?: string | null;
 }
 
-export function TripStatusBanner({ status }: TripStatusBannerProps) {
+export function TripStatusBanner({ status, licensePlate }: TripStatusBannerProps) {
   if (status === "pending") {
     return (
       <div className="rounded-2xl bg-card shadow-card p-4 flex items-center gap-3">
@@ -27,9 +28,16 @@ export function TripStatusBanner({ status }: TripStatusBannerProps) {
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
             <Bus className="w-5 h-5 animate-pulse" strokeWidth={1.8} />
           </div>
-          <div>
-            <h3 className="text-[14px] font-semibold text-primary">الباص يتحرك الآن</h3>
-            <p className="text-[12px] text-primary/70">تابع مسار الباص للوصول في الوقت المناسب</p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[14px] font-semibold text-primary">الباص يتحرك الآن</h3>
+              {licensePlate && (
+                <span className="text-[10px] font-bold bg-white/50 text-primary px-2 py-0.5 rounded uppercase tracking-wider">
+                  {licensePlate}
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-primary/70 mt-0.5">تابع مسار الباص للوصول في الوقت المناسب</p>
           </div>
         </div>
         <Link
@@ -50,9 +58,16 @@ export function TripStatusBanner({ status }: TripStatusBannerProps) {
           <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center text-primary animate-pulse">
             <MapPin className="w-5 h-5" strokeWidth={1.8} />
           </div>
-          <div>
-            <h3 className="text-[14px] font-semibold text-primary">الباص متوقف في نقطة التجمع</h3>
-            <p className="text-[12px] text-primary/70">يتم الآن تسجيل صعود الطلاب</p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[14px] font-semibold text-primary">الباص متوقف في نقطة التجمع</h3>
+              {licensePlate && (
+                <span className="text-[10px] font-bold bg-white/50 text-primary px-2 py-0.5 rounded uppercase tracking-wider">
+                  {licensePlate}
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-primary/70 mt-0.5">يتم الآن تسجيل صعود الطلاب</p>
           </div>
         </div>
         <Link

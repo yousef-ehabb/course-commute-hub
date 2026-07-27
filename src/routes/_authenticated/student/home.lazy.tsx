@@ -67,7 +67,7 @@ function StudentHome() {
     }
   }, [stations, profile, station]);
 
-  const { status: tripStatus } = useTripStatus();
+  const { status: tripStatus, licensePlate } = useTripStatus();
 
   useEffect(() => {
     if (!user) return;
@@ -281,7 +281,7 @@ function StudentHome() {
       )}
 
       {/* 5. Trip status — context info */}
-      <TripStatusBanner status={tripStatus} />
+      <TripStatusBanner status={tripStatus} licensePlate={licensePlate} />
 
       <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen} direction="bottom">
         <Drawer.Portal>

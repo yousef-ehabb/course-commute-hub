@@ -1,9 +1,12 @@
 import { Bus, MapPin, Play, Square, RotateCcw, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 interface TripControlsProps {
   status: "pending" | "waiting_at_station" | "moving" | "completed" | "completing";
-  onStartTrip: () => void;
+  onStartTrip: (licensePlate: string) => void;
   onEndTrip: () => void;
   isLocationEnabled: boolean;
   endTripDisabled?: boolean;
@@ -22,6 +25,8 @@ export function TripControls({
   totalPassengers = 0,
   boardedPassengers = 0,
 }: TripControlsProps) {
+  const [licensePlate, setLicensePlate] = useState("");
+
   const occupancyPercentage =
     totalPassengers > 0 ? Math.round((boardedPassengers / totalPassengers) * 100) : 0;
 
@@ -130,28 +135,44 @@ export function TripControls({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-1">
-        {status === "completing" && (
-          <Button
-            size="lg"
-            disabled
-            className="flex-1 h-12 bg-amber-600 text-white rounded-xl text-base gap-2"
-          >
-            <Loader2 className="w-5 h-5 animate-spin" />
-            جاري إنهاء الرحلة...
-          </Button>
+      <div className="flex flex-col gap-3 pt-1">
+        {status === "pending" && (
+          <div className="space-y-3 mb-2">
+            <div className="space-y-1">
+              <Label htmlFor="licensePlate" className="text-sm">رقم لوحة الباص (اختياري)</Label>
+              <Input
+                id="licensePlate"
+                placeholder="أدخل رقم اللوحة (مثال: أ ب ج 123)"
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value)}
+                className="h-11"
+              />
+            </div>
+          </div>
         )}
 
-        {status === "pending" && (
-          <Button
-            size="lg"
-            className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md active:scale-95 transition-transform"
-            onClick={onStartTrip}
-          >
-            <Play className="w-5 h-5 fill-current" />
-            بدء الرحلة
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {status === "completing" && (
+            <Button
+              size="lg"
+              disabled
+              className="flex-1 h-12 bg-amber-600 text-white rounded-xl text-base gap-2"
+            >
+              <Loader2 className="w-5 h-5 animate-spin" />
+              جاري إنهاء الرحلة...
+            </Button>
+          )}
+
+          {status === "pending" && (
+            <Button
+              size="lg"
+              className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md active:scale-95 transition-transform"
+              onClick={() => onStartTrip(licensePlate.trim())}
+            >
+              <Play className="w-5 h-5 fill-current" />
+              بدء الرحلة
+            </Button>
+          )}
 
         {(status === "waiting_at_station" || status === "moving") && (
           <Button
@@ -179,12 +200,16 @@ export function TripControls({
           <Button
             size="lg"
             className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md active:scale-95 transition-transform"
-            onClick={onStartTrip}
+            onClick={() => {
+              setLicensePlate("");
+              onStartTrip("");
+            }}
           >
             <RotateCcw className="w-5 h-5" strokeWidth={2} />
             بدء رحلة جديدة
           </Button>
         )}
+        </div>
       </div>
     </article>
   );
