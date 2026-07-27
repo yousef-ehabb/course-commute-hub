@@ -66,6 +66,7 @@ function formatTimestamp(ts: number | undefined): string {
 function HistoryPage() {
   const [historyMap, setHistoryMap] = useState<Record<string, TripHistoryRecord> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [searchDate, setSearchDate] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -73,6 +74,7 @@ function HistoryPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let unsubscribe: (() => void) | null = null;
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -251,7 +253,7 @@ function HistoryPage() {
       ) : (
         <motion.div 
           className="space-y-3"
-          initial="hidden"
+          initial={mounted ? false : "hidden"}
           animate="show"
           variants={{
             hidden: { opacity: 0 },
@@ -270,6 +272,7 @@ function HistoryPage() {
             return (
               <motion.div
                 key={trip.dateKey}
+                initial={mounted ? false : "hidden"}
                 variants={{
                   hidden: { opacity: 0, y: 10 },
                   show: { opacity: 1, y: 0 }
@@ -346,7 +349,7 @@ function HistoryPage() {
                     <div className="bg-muted/50 rounded-xl p-2.5 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
                       <div>
-                        <div className="text-[10px] text-muted-foreground">المحطات</div>
+                        <div className="text-[10px] text-muted-foreground">نقاط التجمع</div>
                         <div className="text-xs font-bold text-foreground">
                           {trip.totalStationsVisited ?? 0}
                         </div>

@@ -105,10 +105,10 @@ function StudentHome() {
       await update(ref(getFirebaseDb(), `rakeb/users/${user.uid}`), {
         defaultStation: newStation,
       });
-      toast.success("تم تحديث محطتك الافتراضية بنجاح");
+      toast.success("تم تحديث نقطة التجمع الافتراضية بنجاح");
     } catch (e) {
       console.error("Failed to update default station:", e);
-      toast.error("فشل في تحديث المحطة الافتراضية");
+      toast.error("فشل في تحديث نقطة التجمع الافتراضية");
     }
   }
 
@@ -152,7 +152,7 @@ function StudentHome() {
           }
           await set(ref(getFirebaseDb(), path), data);
         }
-        toast.success(newRiding ? "تم تفعيل ركوبك بنجاح" : "تم إلغاء ركوبك لليوم");
+        toast.success(newRiding ? "تم تأكيد الحضور بنجاح" : "تم إلغاء تأكيد الحضور لليوم");
       } catch (e) {
         toast.error((e as Error).message);
       } finally {
@@ -227,8 +227,8 @@ function StudentHome() {
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
           <p>
             {isStationInvalid
-              ? "محطة الركوب السابقة الخاصة بك لم تعد متاحة. يرجى اختيار محطة ركوب افتراضية جديدة."
-              : "يرجى اختيار محطة ركوب لتأكيد الركوب."}
+              ? "نقطة التجمع السابقة الخاصة بك لم تعد متاحة. يرجى اختيار نقطة تجمع افتراضية جديدة."
+              : "يرجى اختيار نقطة تجمع لتأكيد الحضور."}
           </p>
         </div>
       )}
@@ -291,10 +291,10 @@ function StudentHome() {
               <div className="mx-auto w-10 h-1 flex-shrink-0 rounded-full bg-muted mb-6" />
               <div className="max-w-md mx-auto text-right">
                 <Drawer.Title className="font-bold text-lg mb-1">
-                  لقد اخترت محطة ركوب مختلفة.
+                  لقد اخترت نقطة تجمع مختلفة.
                 </Drawer.Title>
                 <Drawer.Description className="text-[13px] text-muted-foreground mb-5">
-                  كيف تود استخدام هذه المحطة؟
+                  كيف تود استخدام هذه النقطة؟
                 </Drawer.Description>
 
                 <div className="space-y-3">
@@ -304,9 +304,9 @@ function StudentHome() {
                     onClick={() => handleStationChoice("temporary")}
                   >
                     <div className="flex flex-col items-start w-full">
-                      <span className="font-semibold text-foreground">استخدام لرحلة اليوم فقط</span>
+                      <span className="font-semibold text-foreground">استخدام لليوم فقط</span>
                       <span className="text-sm text-muted-foreground font-normal mt-1">
-                        ستبقى محطتك الافتراضية كما هي دون تغيير.
+                        ستبقى نقطة التجمع الافتراضية كما هي دون تغيير.
                       </span>
                     </div>
                   </Button>
@@ -317,10 +317,10 @@ function StudentHome() {
                   >
                     <div className="flex flex-col items-start w-full">
                       <span className="font-semibold text-foreground">
-                        تعيين كمحطة ركوب افتراضية
+                        تعيين كنقطة تجمع افتراضية
                       </span>
                       <span className="text-sm text-muted-foreground font-normal mt-1">
-                        سيتم استخدام هذه المحطة لجميع الرحلات القادمة.
+                        سيتم استخدام هذه النقطة لجميع الأيام القادمة.
                       </span>
                     </div>
                   </Button>

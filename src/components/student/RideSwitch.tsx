@@ -28,10 +28,10 @@ export function RideSwitch({ status, onChange, disabled }: RideSwitchProps) {
             className="text-center"
           >
             <h2 className={`text-xl font-bold ${isRiding ? "text-success" : "text-foreground"}`}>
-              {isRiding ? "أنت راكب اليوم ✓" : "لم تسجل بعد"}
+              {isRiding ? "تم تأكيد الحضور ✓" : "لم يتم تأكيد الحضور"}
             </h2>
             <p className="text-[13px] text-muted-foreground mt-1">
-              {isRiding ? "سيتم تأكيد صعودك عند وصول الباص" : "اضغط لتأكيد حضورك اليوم"}
+              {isRiding ? "أنت مسجل في باص اليوم" : "اضغط لتأكيد حضورك اليوم"}
             </p>
           </motion.div>
         </AnimatePresence>
@@ -43,7 +43,7 @@ export function RideSwitch({ status, onChange, disabled }: RideSwitchProps) {
           className={`relative w-[150px] h-[64px] rounded-full transition-colors duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center p-[6px] ${
             isRiding ? "bg-success shadow-[0_0_0_4px_rgba(34,197,94,0.1)] justify-end" : "bg-muted justify-start"
           }`}
-          aria-label={isRiding ? "إلغاء الركوب" : "تأكيد الركوب"}
+          aria-label={isRiding ? "إلغاء الحضور" : "تأكيد الحضور"}
           dir="ltr"
         >
           <motion.div
@@ -84,7 +84,7 @@ export function RideSwitch({ status, onChange, disabled }: RideSwitchProps) {
               }`}
             >
               <span className="text-[16px] font-bold text-white tracking-wide">
-                راكب
+                تأكيد
               </span>
             </div>
             <div
@@ -101,7 +101,7 @@ export function RideSwitch({ status, onChange, disabled }: RideSwitchProps) {
 
         {/* Subtle footer hint */}
         <p className="text-[11px] text-muted-foreground/60">
-          الحالة الافتراضية «راكب» — ألغِ فقط إن لم تأتِ اليوم
+          الحالة الافتراضية «تأكيد الحضور» — قم بإلغاء التأكيد إذا كنت لن تحضر اليوم
         </p>
       </div>
     </div>

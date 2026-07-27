@@ -1,8 +1,8 @@
 import { Station } from "@/contexts/StationsContext";
 
-export const STATION_DELETED_MSG = "تم حذف محطة الركوب";
+export const STATION_DELETED_MSG = "تم حذف نقطة التجمع";
 export const STATION_CUSTOM_MSG = "موقع مخصص";
-export const STATION_UNKNOWN_MSG = "محطة غير متوفرة";
+export const STATION_UNKNOWN_MSG = "نقطة غير متوفرة";
 
 /**
  * Resolves a station ID to its friendly Arabic name.

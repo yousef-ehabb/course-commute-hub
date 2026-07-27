@@ -22,7 +22,7 @@ export function AdminLayout() {
   const navItems = [
     { name: "الرئيسية", icon: LayoutDashboard, path: "/admin/dashboard" },
     { name: "الطلاب", icon: Users, path: "/admin/students" },
-    { name: "المحطات", icon: MapPin, path: "/admin/stations" },
+    { name: "نقاط التجمع", icon: MapPin, path: "/admin/stations" },
     { name: "الرحلات", icon: Map, path: "/admin/trips" },
     { name: "السجل", icon: History, path: "/admin/history" },
     { name: "إحصائيات", icon: BarChart3, path: "/admin/stats" },

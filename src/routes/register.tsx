@@ -117,11 +117,11 @@ function RegisterPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[13px]">نقطة الركوب الافتراضية</Label>
+            <Label className="text-[13px]">نقطة التجمع الافتراضية</Label>
             {stationsLoading ? (
               <div className="flex h-11 items-center justify-center rounded-xl border border-input bg-muted/20 text-[13px] text-muted-foreground">
                 <Loader2 className="ml-2 h-4 w-4 animate-spin text-primary" strokeWidth={2} />
-                جاري تحميل المحطات...
+                جاري تحميل نقاط التجمع...
               </div>
             ) : stationsError ? (
               <div className="flex h-11 items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 text-[13px] text-destructive">
@@ -129,12 +129,12 @@ function RegisterPage() {
               </div>
             ) : stations.length === 0 ? (
               <div className="flex h-11 items-center justify-center rounded-xl border border-input bg-muted/20 text-[13px] text-muted-foreground">
-                لا توجد محطات متاحة حالياً
+                لا توجد نقاط تجمع متاحة حالياً
               </div>
             ) : (
               <Select value={station} onValueChange={setStation}>
                 <SelectTrigger className="h-11 rounded-xl text-[15px]">
-                  <SelectValue placeholder="اختر نقطة الركوب" />
+                  <SelectValue placeholder="اختر نقطة التجمع" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {stations.map((s) => (

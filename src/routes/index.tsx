@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin, ShieldCheck, Users } from "lucide-react";
+import { MapPin, CheckCircle2, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 
@@ -7,15 +7,15 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "راكب — إدارة مواصلات الكورسات" },
+      { title: "راكب — إدارة باص التدريب" },
       {
         name: "description",
-        content: "سجل ركوبك، اتبع الأوتوبيس مباشرة، وأدر رحلاتك ومحطاتك في مكان واحد.",
+        content: "أكد حضورك، اختر نقطة التجمع المناسبة، وتابع الباص حتى وصوله.",
       },
-      { property: "og:title", content: "راكب — إدارة مواصلات الكورسات" },
+      { property: "og:title", content: "راكب — إدارة باص التدريب" },
       {
         property: "og:description",
-        content: "منصة عربية احترافية لتنظيم مواصلات الكورسات والفعاليات.",
+        content: "منصة عربية احترافية لتنظيم حضور متدربي الكورسات والفعاليات.",
       },
       { property: "og:url", content: "/" },
     ],
@@ -50,16 +50,15 @@ function Index() {
       <main className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
         <section className="text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/8 text-primary text-xs font-semibold">
-            <span>نظام إدارة مواصلات الكورسات والفعاليات</span>
+            <span>جاي ولا الدور الجاي؟</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold leading-tight text-foreground tracking-tight max-w-3xl mx-auto">
-            نظّم مواصلات كورساتك <span className="text-primary">بسهولة وأمان</span>
+            كل حاجه تخص باص التدريب <span className="text-primary">في مكان واحد</span>
           </h1>
 
           <p className="mx-auto max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
-            سجل ركوبك اليومي، اعرف ميعاد الباص، وتتبّع حركته لحظة بلحظة على الخريطة من واجهة واحدة
-            بسيطة.
+            أكد حضورك، اختار نقطة التجمع المناسبة ليك، وتابع الباص لحد ما يوصل.
           </p>
 
           <div className="pt-4 flex flex-wrap justify-center gap-4">
@@ -77,18 +76,18 @@ function Index() {
           {[
             {
               icon: MapPin,
-              title: "تتبع لحظي",
-              desc: "شوف الباص على الخريطة مباشرة وتتبّع وصوله لكل محطة.",
+              title: "تتبع الباص",
+              desc: "شوف الباص فين دلوقتي واعرف هيوصل نقطة التجمع إمتى.",
             },
             {
-              icon: Users,
-              title: "إدارة متكاملة",
-              desc: "تنظيم الطلاب والمحطات والرحلات اليومية بمرونة عالية.",
+              icon: Navigation,
+              title: "نقطة التجمع",
+              desc: "اختار نقطة التجمع المناسبة ليك واعرف معاد وصول الباص.",
             },
             {
-              icon: ShieldCheck,
-              title: "تأكيد صعود",
-              desc: "تأكيد صعود كل طالب بسهولة وتصدير كشوفات الرحلة.",
+              icon: CheckCircle2,
+              title: "تأكيد الحضور",
+              desc: "أكد حضورك علشان يبقى اسمك موجود في كشف باص التدريب.",
             },
           ].map((f) => (
             <div key={f.title} className="rounded-2xl bg-card p-6 shadow-card space-y-3">
@@ -104,7 +103,7 @@ function Index() {
 
       {/* Clean Footer */}
       <footer className="border-t border-border/40 py-8 text-center text-xs text-muted-foreground">
-        راكب — نظام إدارة مواصلات الكورسات
+        راكب — نظام إدارة باص التدريب
       </footer>
     </div>
   );

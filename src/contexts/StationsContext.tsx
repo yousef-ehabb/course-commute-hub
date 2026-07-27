@@ -101,15 +101,15 @@ export function StationsProvider({ children }: { children: ReactNode }) {
               const defaultAswanStations: Station[] = [
                 {
                   id: "st1",
-                  name: "محطة أسوان الرئيسية",
-                  detail: "بجوار المحطة",
+                  name: "نقطة أسوان الرئيسية",
+                  detail: "بجوار النقطة",
                   time: "08:00",
                   latitude: 24.0935,
                   longitude: 32.9,
                 },
                 {
                   id: "st2",
-                  name: "ميدان المحطة",
+                  name: "ميدان النقطة",
                   detail: "أمام البريد",
                   time: "08:05",
                   latitude: 24.089,
@@ -145,7 +145,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
                   }
                   setStations([]);
                   setLoading(false);
-                  setError("فشل تحميل المحطات");
+                  setError("فشل تحميل النقاط");
                 }
               }
             }
@@ -153,9 +153,9 @@ export function StationsProvider({ children }: { children: ReactNode }) {
           (firebaseError) => {
             console.error("Failed to load stations:", firebaseError);
             if (!isMounted) return;
-            toast.error("فشل تحميل المحطات");
+            toast.error("فشل تحميل النقاط");
             setLoading(false);
-            setError(firebaseError.message || "فشل تحميل المحطات");
+            setError(firebaseError.message || "فشل تحميل النقاط");
           },
         );
       } catch (err) {
@@ -180,10 +180,10 @@ export function StationsProvider({ children }: { children: ReactNode }) {
     try {
       const db = getFirebaseDb();
       await set(ref(db, "rakeb/stations"), newStations);
-      toast.success("تم حفظ المحطات بنجاح");
+      toast.success("تم حفظ النقاط بنجاح");
     } catch (saveError) {
       console.error("Failed to save stations:", saveError);
-      toast.error("فشل حفظ المحطات");
+      toast.error("فشل حفظ النقاط");
       throw saveError;
     }
   };

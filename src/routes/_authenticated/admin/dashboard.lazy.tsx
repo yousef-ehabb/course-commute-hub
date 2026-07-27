@@ -125,7 +125,7 @@ function DashboardPage() {
                   "الرحلة لم تبدأ بعد. يمكنك بدء الرحلة من إدارة الرحلات."}
                 {tripStatus === "moving" && "الباص يتحرك الآن في مساره."}
                 {tripStatus === "waiting_at_station" &&
-                  "الباص متوقف في المحطة الحالية، في انتظار ركوب الطلاب."}
+                  "الباص متوقف في النقطة الحالية، في انتظار ركوب الطلاب."}
                 {tripStatus === "completed" && "اكتملت رحلة اليوم بنجاح وتم الوصول لكرياتيفا."}
               </p>
             </div>
@@ -149,7 +149,7 @@ function DashboardPage() {
         >
           <Link to="/admin/stations">
             <MapPin className="w-5 h-5 ml-2 text-primary" />
-            إدارة المحطات
+            إدارة النقاط
           </Link>
         </Button>
       </div>
@@ -165,7 +165,7 @@ function DashboardPage() {
         {/* Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>توزيع الطلاب على المحطات</CardTitle>
+            <CardTitle>توزيع الطلاب على نقاط التجمع</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-56 md:h-72 w-full" dir="ltr">

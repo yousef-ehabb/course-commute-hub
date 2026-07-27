@@ -120,7 +120,7 @@ function StationsManagementPage() {
         executeDelete(id, null);
       }
     } catch (error) {
-      toast.error("حدث خطأ أثناء التحقق من المحطة.");
+      toast.error("حدث خطأ أثناء التحقق من النقطة.");
     }
   };
 
@@ -154,9 +154,9 @@ function StationsManagementPage() {
       await saveStations(updatedStations);
       setIsDirty(false);
       setDeletionDialog(null);
-      toast.success("تم حذف المحطة بنجاح.");
+      toast.success("تم حذف النقطة بنجاح.");
     } catch (e) {
-      toast.error("فشل في حذف المحطة.");
+      toast.error("فشل في حذف النقطة.");
     } finally {
       setSaving(false);
     }
@@ -190,9 +190,9 @@ function StationsManagementPage() {
     <div className="space-y-6 pt-4 h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">إدارة المحطات</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">إدارة نقاط التجمع</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            انقر على الخريطة لإضافة محطة جديدة. يمكنك إعادة الترتيب للحفظ.
+            انقر على الخريطة لإضافة نقطة جديدة. يمكنك إعادة الترتيب للحفظ.
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -228,7 +228,7 @@ function StationsManagementPage() {
           className={`w-full md:w-1/3 flex-col overflow-hidden shrink-0 ${mobileView === "list" ? "flex" : "hidden md:flex"}`}
         >
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <h3 className="font-bold text-lg">ترتيب المحطات ({localStations.length})</h3>
+            <h3 className="font-bold text-lg">ترتيب النقاط ({localStations.length})</h3>
           </div>
           <CardContent className="p-0 flex-1 overflow-y-auto">
             <ul className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -300,10 +300,10 @@ function StationsManagementPage() {
             <div className="absolute inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
               <Card className="w-full max-w-sm">
                 <CardContent className="p-6 space-y-4">
-                  <h3 className="text-lg font-bold">إضافة محطة جديدة</h3>
+                  <h3 className="text-lg font-bold">إضافة نقطة جديدة</h3>
 
                   <div className="space-y-2">
-                    <Label>اسم المحطة</Label>
+                    <Label>اسم النقطة</Label>
                     <Input
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
@@ -354,9 +354,9 @@ function StationsManagementPage() {
                       <AlertTriangle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold leading-tight">تنبيه: محطة مستخدمة</h3>
+                      <h3 className="text-lg font-bold leading-tight">تنبيه: نقطة مستخدمة</h3>
                       <p className="text-sm opacity-90 font-medium">
-                        أنت تحاول حذف محطة ({deletionDialog.stationName})
+                        أنت تحاول حذف نقطة ({deletionDialog.stationName})
                       </p>
                     </div>
                   </div>
@@ -364,7 +364,7 @@ function StationsManagementPage() {
                   <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm border">
                     {deletionDialog.affectedUsers.length > 0 && (
                       <p className="font-medium text-foreground">
-                        هذه المحطة مخصصة حالياً لـ{" "}
+                        هذه النقطة مخصصة حالياً لـ{" "}
                         <span className="font-bold text-destructive">
                           {deletionDialog.affectedUsers.length} طلاب
                         </span>{" "}
@@ -373,7 +373,7 @@ function StationsManagementPage() {
                     )}
                     {deletionDialog.isTripActive && (
                       <p className="font-medium text-amber-600 dark:text-amber-500">
-                        الرحلة النشطة حالياً تمر بهذه المحطة! يُفضل عدم الحذف أثناء الرحلة.
+                        الرحلة النشطة حالياً تمر بهذه النقطة! يُفضل عدم الحذف أثناء الرحلة.
                       </p>
                     )}
                   </div>
@@ -381,10 +381,10 @@ function StationsManagementPage() {
                   <div className="space-y-4">
                     <div className="p-4 border rounded-xl bg-card hover:bg-muted/30 transition-colors">
                       <Label className="text-sm font-bold mb-2 block cursor-pointer">
-                        الخيار الأول: نقل الطلاب لمحطة أخرى
+                        الخيار الأول: نقل الطلاب لنقطة أخرى
                       </Label>
                       <p className="text-xs text-muted-foreground mb-3">
-                        سيتم تحديث ملفات الطلاب لتصبح المحطة الجديدة هي الافتراضية.
+                        سيتم تحديث ملفات الطلاب لتصبح النقطة الجديدة هي الافتراضية.
                       </p>
                       <div className="flex items-center gap-3">
                         <select
@@ -393,7 +393,7 @@ function StationsManagementPage() {
                           onChange={(e) => setReassignStationId(e.target.value)}
                         >
                           <option value="" disabled>
-                            اختر محطة بديلة...
+                            اختر نقطة بديلة...
                           </option>
                           {localStations
                             .filter((s) => s.id !== deletionDialog.stationId)
@@ -418,7 +418,7 @@ function StationsManagementPage() {
                         الخيار الثاني: إزالة التخصيص
                       </Label>
                       <p className="text-xs text-muted-foreground mb-3">
-                        لن يتم تعيين محطة بديلة. سيُطلب من الطلاب اختيار محطة جديدة عند الدخول
+                        لن يتم تعيين نقطة بديلة. سيُطلب من الطلاب اختيار نقطة جديدة عند الدخول
                         للتطبيق.
                       </p>
                       <Button

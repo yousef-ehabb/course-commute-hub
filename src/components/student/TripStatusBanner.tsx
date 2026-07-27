@@ -51,7 +51,7 @@ export function TripStatusBanner({ status }: TripStatusBannerProps) {
             <MapPin className="w-5 h-5" strokeWidth={1.8} />
           </div>
           <div>
-            <h3 className="text-[14px] font-semibold text-primary">الباص متوقف في المحطة</h3>
+            <h3 className="text-[14px] font-semibold text-primary">الباص متوقف في نقطة التجمع</h3>
             <p className="text-[12px] text-primary/70">يتم الآن تسجيل صعود الطلاب</p>
           </div>
         </div>

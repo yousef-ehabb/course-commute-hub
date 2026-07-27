@@ -36,11 +36,11 @@ export function StationPicker({
               <MapPin className="w-5 h-5" strokeWidth={1.8} />
             </div>
             <div className="text-right">
-              <div className="text-[11px] text-muted-foreground font-medium">نقطة الركوب</div>
+              <div className="text-[11px] text-muted-foreground font-medium">نقطة التجمع</div>
               <div
                 className={`text-[15px] font-semibold ${isInvalid ? "text-destructive" : "text-foreground"}`}
               >
-                {currentStationId ? getStationName(currentStationId, stations) : "اختر محطة"}
+                {currentStationId ? getStationName(currentStationId, stations) : "اختر نقطة تجمع"}
               </div>
             </div>
           </div>
@@ -54,9 +54,9 @@ export function StationPicker({
           <div className="p-5 bg-card rounded-t-3xl flex-1">
             <div className="mx-auto w-10 h-1 flex-shrink-0 rounded-full bg-muted mb-6" />
             <div className="max-w-md mx-auto">
-              <Drawer.Title className="font-bold text-lg mb-1">تغيير نقطة الركوب</Drawer.Title>
+              <Drawer.Title className="font-bold text-lg mb-1">تغيير نقطة التجمع</Drawer.Title>
               <Drawer.Description className="text-[13px] text-muted-foreground mb-5">
-                اختر المحطة التي ستركب منها اليوم
+                اختر نقطة التجمع الخاصة بك لليوم
               </Drawer.Description>
 
               <div className="space-y-2 overflow-y-auto max-h-[50vh] pr-1">

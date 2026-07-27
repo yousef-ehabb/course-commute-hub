@@ -27,8 +27,10 @@ function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [users, setUsers] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let unsub: (() => void) | undefined;
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -75,8 +77,8 @@ function StudentsPage() {
     const exportData = filteredStudents.map((student) => ({
       الاسم: student.name,
       "رقم الهاتف": student.phone,
-      "محطة الركوب": student.station,
-      "يركب اليوم": student.isRidingToday ? "نعم" : "لا",
+      "نقطة التجمع": student.station,
+      "تأكيد الحضور": student.isRidingToday ? "نعم" : "لا",
     }));
 
     const now = new Date();
@@ -141,12 +143,12 @@ function StudentsPage() {
           onClick={() => setFilterType("all")}
         />
         <FilterChip
-          label="يركب اليوم"
+          label="تم تأكيد الحضور"
           active={filterType === "riding"}
           onClick={() => setFilterType("riding")}
         />
         <FilterChip
-          label="لا يركب"
+          label="لم يتم التأكيد"
           active={filterType === "not_riding"}
           onClick={() => setFilterType("not_riding")}
         />
@@ -155,7 +157,7 @@ function StudentsPage() {
       {/* Student List */}
       <motion.div 
         className="flex flex-col gap-4"
-        initial="hidden"
+        initial={mounted ? false : "hidden"}
         animate="show"
         variants={{
           hidden: { opacity: 0 },
@@ -178,6 +180,7 @@ function StudentsPage() {
           return (
             <motion.div
               key={student.id}
+              initial={mounted ? false : "hidden"}
               variants={{
                 hidden: { opacity: 0, y: 10 },
                 show: { opacity: 1, y: 0 }
@@ -204,7 +207,7 @@ function StudentsPage() {
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${isRiding ? "bg-primary" : "bg-on-surface-variant"}`}
                   />
-                  {isRiding ? "يركب اليوم" : "لا يركب"}
+                  {isRiding ? "تم تأكيد الحضور" : "لم يتم التأكيد"}
                 </div>
               </div>
 

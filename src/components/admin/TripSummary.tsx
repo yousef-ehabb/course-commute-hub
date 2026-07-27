@@ -40,7 +40,7 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
               <Users className="w-4 h-4" /> {totalStudents} ركاب
             </span>
             <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" /> {participatingStationsCount} محطات
+              <MapPin className="w-4 h-4" /> {participatingStationsCount} نقاط
             </span>
           </p>
         </div>
@@ -52,7 +52,7 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
       {isExpanded && (
         <div className="p-5 pt-0 border-t border-border/50">
           <h4 className="text-[13px] font-semibold text-muted-foreground mb-3 mt-4">
-            المحطات وعدد الركاب:
+            النقاط وعدد الركاب:
           </h4>
           <div className="space-y-2.5">
             {stations.map((station, index) => {

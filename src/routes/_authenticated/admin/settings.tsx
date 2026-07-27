@@ -158,25 +158,25 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Stations Config (Placeholder) */}
+        {/* Pickup Points Config */}
         <Card className="md:col-span-2">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-primary" />
-                  إدارة المحطات
+                  إدارة نقاط التجمع
                 </CardTitle>
-                <CardDescription>إضافة وتعديل وترتيب المحطات</CardDescription>
+                <CardDescription>إضافة وتعديل وترتيب نقاط التجمع</CardDescription>
               </div>
               <Button variant="outline" size="sm">
-                إضافة محطة جديدة
+                إضافة نقطة جديدة
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 border border-dashed border-gray-300 dark:border-gray-700 text-center">
-              <p className="text-gray-500">واجهة إدارة المحطات قيد التطوير...</p>
+              <p className="text-gray-500">واجهة إدارة نقاط التجمع قيد التطوير...</p>
             </div>
           </CardContent>
         </Card>

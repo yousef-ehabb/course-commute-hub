@@ -65,7 +65,7 @@ export function BoardingList({
     <div className="bg-card rounded-2xl p-5 shadow-card space-y-4 border border-border/50">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-base font-bold text-foreground">ركاب محطة: {stationName}</h3>
+          <h3 className="text-base font-bold text-foreground">المتدربون في نقطة التجمع: {stationName}</h3>
           <p className="text-[12px] text-muted-foreground mt-0.5">تأكيد صعود الطلاب للباص</p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -136,7 +136,7 @@ export function BoardingList({
 
         {passengers.length === 0 && (
           <div className="text-center py-8 text-xs text-muted-foreground bg-muted/30 rounded-xl">
-            لا يوجد ركاب مسجلين في هذه المحطة اليوم
+            لا يوجد متدربين مسجلين في هذه النقطة اليوم
           </div>
         )}
       </div>
@@ -149,16 +149,16 @@ export function BoardingList({
             variant="default"
             onClick={handleDepartClick}
           >
-            {isLastStation ? "مغادرة نحو كرياتيفا (الوجهة النهائية) 🏁" : "مغادرة المحطة"}
+            {isLastStation ? "مغادرة نحو كرياتيفا (الوجهة النهائية) 🏁" : "مغادرة نقطة التجمع"}
           </Button>
 
           <AlertDialog open={showDepartConfirm} onOpenChange={setShowDepartConfirm}>
             <AlertDialogContent dir="rtl">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-right">تأكيد مغادرة المحطة</AlertDialogTitle>
+                <AlertDialogTitle className="text-right">تأكيد مغادرة نقطة التجمع</AlertDialogTitle>
                 <AlertDialogDescription className="text-right text-base text-foreground mt-2">
                   هناك <strong className="text-amber-600 font-bold">{remainingCount}</strong> طلاب
-                  لم يتم تأكيد صعودهم، هل تريد مغادرة المحطة؟
+                  لم يتم تأكيد صعودهم، هل تريد مغادرة نقطة التجمع؟
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex flex-row-reverse justify-start gap-2 mt-4 sm:space-x-0">

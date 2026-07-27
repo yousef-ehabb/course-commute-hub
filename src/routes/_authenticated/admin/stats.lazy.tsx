@@ -247,7 +247,7 @@ function StatsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-primary-foreground/80 text-[13px] font-medium">
-                  أكثر محطة استخداماً
+                  أكثر نقاط التجمع استخداماً
                 </p>
                 <h3 className="text-xl font-bold mt-1">{topStation.name}</h3>
                 <p className="text-[12px] mt-2 text-primary-foreground/90">
@@ -411,7 +411,7 @@ function StatsPage() {
         {/* Station Breakdown Bar Chart */}
         <Card className="lg:col-span-2">
           <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-4">
-            <CardTitle>إجمالي الركاب حسب المحطات (تراكمي)</CardTitle>
+            <CardTitle>إجمالي الركاب حسب نقاط التجمع (تراكمي)</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="h-64 w-full" dir="ltr">

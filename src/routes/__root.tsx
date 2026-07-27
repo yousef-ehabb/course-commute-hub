@@ -82,12 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "راكب — إدارة مواصلات الكورسات" },
+      { title: "راكب" },
       {
         name: "description",
         content: "نظام احترافي لإدارة مواصلات الكورسات والفعاليات — تسجيل، تتبع، وتأكيد صعود.",
       },
-      { property: "og:title", content: "راكب — إدارة مواصلات الكورسات" },
+      { property: "og:title", content: "راكب " },
       { property: "og:description", content: "سجل، اتبع الأوتوبيس، وأدر رحلاتك في مكان واحد." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

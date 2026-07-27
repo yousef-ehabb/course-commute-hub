@@ -88,7 +88,7 @@ export function TripControls({
                 : status === "pending"
                   ? "لم تبدأ"
                   : status === "waiting_at_station"
-                    ? "بالمحطة"
+                    ? "بالنقطة"
                     : status === "moving"
                       ? "جارية"
                       : "اكتملت"}

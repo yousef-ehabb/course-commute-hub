@@ -61,7 +61,7 @@ function ProfilePage() {
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <div>
-              <div className="text-[12px] text-muted-foreground">المحطة الافتراضية</div>
+              <div className="text-[12px] text-muted-foreground">نقطة التجمع الافتراضية</div>
               <div className="text-[14px] font-medium">
                 {getStationName(profile.defaultStation, stations)}
               </div>

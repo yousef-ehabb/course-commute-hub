@@ -77,8 +77,10 @@ function TripsPage() {
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"trip" | "passengers">("trip");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let unsubUsers: (() => void) | undefined;
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -220,10 +222,10 @@ function TripsPage() {
       toast.success(
         isLastPickupStation
           ? "الباص يتحرك الآن نحو كرياتيفا (الوجهة النهائية)!"
-          : "الباص يتحرك الآن للمحطة التالية!",
+          : "الباص يتحرك الآن للنقطة التالية!",
       );
     } catch (e) {
-      handleTripError(e, "حدث خطأ أثناء مغادرة المحطة");
+      handleTripError(e, "حدث خطأ أثناء مغادرة النقطة");
     }
   };
 
@@ -259,9 +261,9 @@ function TripsPage() {
         activeDateKey,
       });
 
-      toast.success(`تم الوصول إلى محطة ${stations[nextIndex].name}`);
+      toast.success(`تم الوصول إلى نقطة ${stations[nextIndex].name}`);
     } catch (e) {
-      handleTripError(e, "حدث خطأ أثناء الوصول للمحطة");
+      handleTripError(e, "حدث خطأ أثناء الوصول للنقطة");
     }
   };
 
@@ -383,7 +385,7 @@ function TripsPage() {
           {tripStatus === "waiting_at_station" || tripStatus === "moving" ? (
             <motion.div
               className="space-y-5"
-              initial="hidden"
+              initial={mounted ? false : "hidden"}
               animate="show"
               variants={{
                 hidden: { opacity: 0 },
@@ -394,7 +396,7 @@ function TripsPage() {
               }}
             >
               {tripStatus === "moving" && (
-                <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="bg-card rounded-2xl p-8 shadow-card flex flex-col items-center justify-center text-center">
+                <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="bg-card rounded-2xl p-8 shadow-card flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 animate-bounce">
                     <span className="text-3xl">🚌</span>
                   </div>
@@ -404,7 +406,7 @@ function TripsPage() {
                   <p className="text-[13px] text-muted-foreground mb-6 max-w-sm">
                     {isHeadingToCreativa
                       ? "الباص في طريقه إلى الوجهة النهائية (مركز كرياتيفا). عند الوصول، اضغط لإنهاء الرحلة."
-                      : "الباص في طريقه إلى المحطة التالية. اضغط لتأكيد التوقف وتسجيل صعود الركاب."}
+                      : "الباص في طريقه إلى النقطة التالية. اضغط لتأكيد التوقف وتسجيل صعود الركاب."}
                   </p>
 
                   <Button
@@ -420,7 +422,7 @@ function TripsPage() {
                     ) : (
                       <>
                         <span className="text-lg">📍</span>
-                        الوصول للمحطة التالية
+                        الوصول للنقطة التالية
                       </>
                     )}
                   </Button>
@@ -437,6 +439,7 @@ function TripsPage() {
                 return (
                   <motion.div
                     key={station.id}
+                    initial={mounted ? false : "hidden"}
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     className={
                       isActiveStation
@@ -459,7 +462,7 @@ function TripsPage() {
               })}
 
               {customLocationPassengers.length > 0 && (
-                <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="pt-2 opacity-80 hover:opacity-100 transition-opacity">
+                <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="pt-2 opacity-80 hover:opacity-100 transition-opacity">
                   <BoardingList
                     stationName="طلاب في مواقع مخصصة"
                     passengers={customLocationPassengers}
