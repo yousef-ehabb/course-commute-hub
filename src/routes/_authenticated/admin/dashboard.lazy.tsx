@@ -11,6 +11,8 @@ import { useTripStatus } from "@/hooks/useTripStatus";
 import { Car, BusFront, Bus, MapPin, Navigation } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 
 export const Route = createLazyFileRoute("/_authenticated/admin/dashboard")({
   component: DashboardPage,
@@ -120,8 +122,11 @@ function DashboardPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-bold">حالة الرحلة اليوم</h2>
+              <div className="text-sm font-medium text-primary-foreground/80 mt-0.5">
+                {format(new Date(), "EEEE، d MMMM yyyy", { locale: ar })}
+              </div>
               <p className="text-primary-foreground/90 text-[13px] mt-1">
-                {tripStatus === "not_started" &&
+                {tripStatus === "pending" &&
                   "الرحلة لم تبدأ بعد. يمكنك بدء الرحلة من إدارة الرحلات."}
                 {tripStatus === "moving" && "الباص يتحرك الآن في مساره."}
                 {tripStatus === "waiting_at_station" &&
