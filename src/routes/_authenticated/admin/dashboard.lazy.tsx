@@ -7,7 +7,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { useStations } from "@/contexts/StationsContext";
 import { getStationName } from "@/utils/stationResolver";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
-import { Car, BusFront, MapPin, Navigation } from "lucide-react";
+import { useTripStatus } from "@/hooks/useTripStatus";
+import { Car, BusFront, Bus, MapPin, Navigation } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -20,6 +21,7 @@ export const Route = createLazyFileRoute("/_authenticated/admin/dashboard")({
 function DashboardPage() {
   const { stations } = useStations();
   const { getAllStudentsStatus } = useTodayStatus();
+  const { status: tripStatus } = useTripStatus();
   const [users, setUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
@@ -111,7 +113,23 @@ function DashboardPage() {
         <p className="text-gray-500 dark:text-gray-400 mt-1">نظرة عامة على رحلات اليوم</p>
       </div>
 
+      {/* Active Trip Status */}
+      <Card className="bg-primary text-primary-foreground border-none shadow-elevated">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+              <Bus className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold">حالة الرحلة اليوم</h2>
+              <div className="text-sm font-medium text-primary-foreground/80 mt-0.5">
+                {format(new Date(), "EEEE، d MMMM yyyy", { locale: ar })}
+              </div>
 
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">
