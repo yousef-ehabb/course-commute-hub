@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<title>قائمة الطلاب - تطبيق النقل المدرسي</title>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#d3e4fe",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#0047bb",
+                    "tertiary": "#12367b",
+                    "secondary-container": "#d6e4f4",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-secondary-fixed-variant": "#3b4855",
+                    "surface-container-high": "#dce9ff",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "primary": "#00328a",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#213145",
+                    "surface-tint": "#2156ca",
+                    "on-primary-container": "#afc1ff",
+                    "tertiary-container": "#2f4e93",
+                    "on-tertiary-container": "#adc2ff",
+                    "surface-container-low": "#eff4ff",
+                    "secondary-fixed-dim": "#bac8d7",
+                    "outline": "#737685",
+                    "on-tertiary-fixed": "#001847",
+                    "secondary": "#52606d",
+                    "on-secondary-fixed": "#0f1d28",
+                    "primary-fixed": "#dbe1ff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "tertiary-fixed": "#dae2ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#e5eeff",
+                    "secondary-fixed": "#d6e4f4",
+                    "on-background": "#0b1c30",
+                    "on-surface-variant": "#434653",
+                    "surface": "#f8f9ff",
+                    "inverse-primary": "#b3c5ff",
+                    "primary-fixed-dim": "#b3c5ff",
+                    "outline-variant": "#c3c6d6",
+                    "on-surface": "#0b1c30",
+                    "background": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "tertiary-fixed-dim": "#b1c5ff",
+                    "on-tertiary-fixed-variant": "#244488",
+                    "surface-dim": "#cbdbf5",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#003ea6",
+                    "on-secondary-container": "#586673",
+                    "on-primary-fixed": "#00174a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "1rem",
+                    "margin-desktop": "2rem",
+                    "stack-sm": "0.5rem",
+                    "stack-md": "1rem",
+                    "base-unit": "4px",
+                    "stack-lg": "1.5rem",
+                    "margin-mobile": "1rem"
+            },
+            "fontFamily": {
+                    "title-md": ["Hanken Grotesk"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-sm": ["Hanken Grotesk"],
+                    "label-md": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "body-lg": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- Top AppBar (from JSON guidance) -->
+<header class="w-full sticky top-0 z-50 bg-surface shadow-sm flex items-center justify-between px-margin-mobile h-16">
+<!-- Leading: Action (Export RTL Left) -->
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+<span class="font-label-md text-label-md">تصدير إلى Excel</span>
+</button>
+<!-- Title (RTL Center/Right context) -->
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">الطلاب</h1>
+<!-- Trailing: Icon (Search/Menu placeholder as per JSON style) -->
+<div class="w-10 flex justify-end">
+<span class="material-symbols-outlined text-primary" data-icon="group">group</span>
+</div>
+</header>
+<main class="px-margin-mobile pt-stack-md">
+<!-- Search Bar -->
+<div class="relative w-full mb-stack-lg">
+<input class="w-full h-12 pr-12 pl-4 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-body-lg text-body-lg text-on-surface-variant" placeholder="ابحث بالاسم أو الموبايل..." type="text"/>
+<div class="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline" data-icon="search">search</span>
+</div>
+</div>
+<!-- Filter Chips (Horizontal Scroll) -->
+<div class="flex gap-stack-sm overflow-x-auto hide-scrollbar mb-stack-lg pb-1">
+<button class="px-5 py-2 bg-primary-container text-white rounded-full font-label-md text-label-md whitespace-nowrap active:scale-95 duration-150">
+                الكل
+            </button>
+<button class="px-5 py-2 bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md whitespace-nowrap hover:bg-primary-container hover:text-white transition-all active:scale-95 duration-150">
+                يركب اليوم
+            </button>
+<button class="px-5 py-2 bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md whitespace-nowrap hover:bg-primary-container hover:text-white transition-all active:scale-95 duration-150">
+                لا يركب
+            </button>
+<button class="px-5 py-2 bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md whitespace-nowrap hover:bg-primary-container hover:text-white transition-all active:scale-95 duration-150">
+                بانتظار التأكيد
+            </button>
+</div>
+<!-- Student Manifest List -->
+<div class="flex flex-col gap-stack-md">
+<!-- Passenger Card 1 -->
+<div class="bg-white p-4 rounded-xl shadow-[0px_4px_12px_rgba(15,23,42,0.05)] border border-transparent hover:border-outline-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-background">أحمد خالد منصور</h2>
+<span class="px-3 py-1 bg-[#dbe1ff] text-[#00174a] rounded-full font-label-md text-[10px] tracking-normal">يركب اليوم</span>
+</div>
+<div class="text-on-surface-variant mb-2">
+<p class="font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="call">call</span>
+                        0501234567
+                    </p>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="location_on">location_on</span>
+<p class="font-body-sm text-body-sm">محطة الياسمين - فيلا 42</p>
+</div>
+</div>
+<!-- Passenger Card 2 -->
+<div class="bg-white p-4 rounded-xl shadow-[0px_4px_12px_rgba(15,23,42,0.05)] border border-transparent hover:border-outline-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-background">سارة عبد الرحمن</h2>
+<span class="px-3 py-1 bg-[#dbe1ff] text-[#00174a] rounded-full font-label-md text-[10px] tracking-normal">يركب اليوم</span>
+</div>
+<div class="text-on-surface-variant mb-2">
+<p class="font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="call">call</span>
+                        0559876543
+                    </p>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="location_on">location_on</span>
+<p class="font-body-sm text-body-sm">حي النرجس - مجمع الابتكار</p>
+</div>
+</div>
+<!-- Passenger Card 3 -->
+<div class="bg-white p-4 rounded-xl shadow-[0px_4px_12px_rgba(15,23,42,0.05)] border border-transparent hover:border-outline-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-background">عمر يوسف العتيبي</h2>
+<span class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full font-label-md text-[10px] tracking-normal">لا يركب</span>
+</div>
+<div class="text-on-surface-variant mb-2">
+<p class="font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="call">call</span>
+                        0541122334
+                    </p>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="location_on">location_on</span>
+<p class="font-body-sm text-body-sm">طريق الملك فهد - عمارة الروضة</p>
+</div>
+</div>
+<!-- Passenger Card 4 -->
+<div class="bg-white p-4 rounded-xl shadow-[0px_4px_12px_rgba(15,23,42,0.05)] border border-transparent hover:border-outline-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-background">ليلى محمد السعيد</h2>
+<span class="px-3 py-1 bg-[#dbe1ff] text-[#00174a] rounded-full font-label-md text-[10px] tracking-normal">يركب اليوم</span>
+</div>
+<div class="text-on-surface-variant mb-2">
+<p class="font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="call">call</span>
+                        0560099887
+                    </p>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="location_on">location_on</span>
+<p class="font-body-sm text-body-sm">محطة الربيع - خلف المسجد</p>
+</div>
+</div>
+<!-- Passenger Card 5 -->
+<div class="bg-white p-4 rounded-xl shadow-[0px_4px_12px_rgba(15,23,42,0.05)] border border-transparent hover:border-outline-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-title-md text-title-md text-on-background">ياسين فهد القحطاني</h2>
+<span class="px-3 py-1 bg-[#dbe1ff] text-[#00174a] rounded-full font-label-md text-[10px] tracking-normal">يركب اليوم</span>
+</div>
+<div class="text-on-surface-variant mb-2">
+<p class="font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="call">call</span>
+                        0535544332
+                    </p>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="location_on">location_on</span>
+<p class="font-body-sm text-body-sm">حي الغدير - شارع التخصصي</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Mandatory Shell) -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container shadow-[0px_-4px_12px_rgba(15,23,42,0.05)] flex justify-around items-center h-20 px-2 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="route">route</span>
+<span class="font-label-md text-label-md">Trips</span>
+</a>
+<!-- Active Tab: Students -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for chips
+        const chips = document.querySelectorAll('.flex.gap-stack-sm button');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                chips.forEach(c => {
+                    c.classList.remove('bg-primary-container', 'text-white');
+                    c.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                });
+                chip.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+                chip.classList.add('bg-primary-container', 'text-white');
+            });
+        });
+
+        // Search highlight simulation
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('input', (e) => {
+            const cards = document.querySelectorAll('.bg-white.p-4');
+            const term = e.target.value.toLowerCase();
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                if(text.includes(term)) {
+                    card.style.display = 'block';
+                    card.style.opacity = '1';
+                } else {
+                    card.style.display = 'none';
+                    card.style.opacity = '0';
+                }
+            });
+        });
+    </script>
+</body></html>

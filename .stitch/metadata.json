@@ -1,0 +1,54 @@
+{
+  "name": "projects/3527397048210619861",
+  "projectId": "3527397048210619861",
+  "title": "Rakeb Admin Dashboard",
+  "visibility": "PRIVATE",
+  "createTime": "2026-07-26T20:53:58.066483Z",
+  "updateTime": "2026-07-26T20:55:34.525346Z",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "MOBILE",
+  "designTheme": {
+    "colorMode": "LIGHT",
+    "font": "HANKEN_GROTESK",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#0047bb"
+  },
+  "screens": {
+    "admin-dashboard": {
+      "id": "4427315f7e8e4bcea93a6d0225251f23",
+      "sourceScreen": "projects/3527397048210619861/screens/4427315f7e8e4bcea93a6d0225251f23",
+      "x": 0,
+      "y": 0,
+      "width": 780,
+      "height": 2120
+    },
+    "trips-management": {
+      "id": "6e456103c4174b5f97c09ae16cfb26f1",
+      "sourceScreen": "projects/3527397048210619861/screens/6e456103c4174b5f97c09ae16cfb26f1",
+      "x": 800,
+      "y": 0,
+      "width": 780,
+      "height": 1942
+    },
+    "students-list": {
+      "id": "7652ac6562ac40eaa9589cd4858bccb0",
+      "sourceScreen": "projects/3527397048210619861/screens/7652ac6562ac40eaa9589cd4858bccb0",
+      "x": 1600,
+      "y": 0,
+      "width": 780,
+      "height": 1792
+    },
+    "passenger-manifest": {
+      "id": "d7892e5136ff443581d98814dd5b9c95",
+      "sourceScreen": "projects/3527397048210619861/screens/d7892e5136ff443581d98814dd5b9c95",
+      "x": 2400,
+      "y": 0,
+      "width": 780,
+      "height": 1884
+    }
+  },
+  "metadata": {
+    "userRole": "OWNER"
+  }
+}

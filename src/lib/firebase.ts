@@ -1,6 +1,6 @@
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getDatabase, type Database } from "firebase/database";
+import { getDatabase, ref, push, type Database } from "firebase/database";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? "",
@@ -20,7 +20,7 @@ let _db: Database | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!_app) {
-    _app = getApps()[0] ?? initializeApp(config);
+    _app = getApps().length === 0 ? initializeApp(config) : getApp();
   }
   return _app;
 }
@@ -30,7 +30,21 @@ export function getFirebaseAuth(): Auth {
   return _auth;
 }
 
-export function getFirebaseDb(): Database {
-  if (!_db) _db = getDatabase(getFirebaseApp());
+export function getFirebaseDb() {
+  if (!_db) {
+    if (import.meta.env.DEV) {
+      console.warn("[Firebase] Initializing Realtime Database instance...");
+    }
+    _db = getDatabase(getFirebaseApp());
+    // @ts-ignore
+    if (typeof window !== "undefined") {
+      // @ts-ignore
+      window.db = _db;
+      // @ts-ignore
+      window.push = push;
+      // @ts-ignore
+      window.ref = ref;
+    }
+  }
   return _db;
 }

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bus } from "lucide-react";
+import { RakebLogo } from "@/components/ui/RakebLogo";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
@@ -34,8 +34,23 @@ function LoginPage() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
+
+      const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, get } = await import("firebase/database");
+      const currentUser = getFirebaseAuth().currentUser;
+      if (currentUser) {
+        const snap = await get(ref(getFirebaseDb(), `rakeb/users/${currentUser.uid}`));
+        const profile = snap.val();
+        if (profile?.role === "admin") {
+          navigate({ to: "/admin/dashboard", replace: true });
+        } else {
+          navigate({ to: "/student/home", replace: true });
+        }
+      } else {
+        navigate({ to: "/student/home", replace: true });
+      }
+
       toast.success("تم الدخول");
-      navigate({ to: "/home" });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -44,16 +59,19 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-xl">
-        <div className="mb-6 flex items-center justify-center gap-2 text-primary">
-          <Bus className="h-8 w-8" />
-          <span className="text-2xl font-extrabold">راكب</span>
+    <div className="flex min-h-screen items-center justify-center bg-background px-5">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-elevated">
+        <div className="mb-8 flex justify-center">
+          <Link to="/">
+            <RakebLogo size="lg" />
+          </Link>
         </div>
-        <h1 className="text-center text-xl font-bold">تسجيل الدخول</h1>
+        <h1 className="text-center text-lg font-bold text-foreground">تسجيل الدخول</h1>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <div>
-            <Label htmlFor="email">البريد الإلكتروني</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-[13px]">
+              البريد الإلكتروني
+            </Label>
             <Input
               id="email"
               type="email"
@@ -63,8 +81,10 @@ function LoginPage() {
               dir="ltr"
             />
           </div>
-          <div>
-            <Label htmlFor="password">كلمة السر</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-[13px]">
+              كلمة السر
+            </Label>
             <Input
               id="password"
               type="password"
@@ -74,13 +94,13 @@ function LoginPage() {
               dir="ltr"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? "جارٍ الدخول..." : "دخول"}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <p className="mt-6 text-center text-[13px] text-muted-foreground">
           ليس لديك حساب؟{" "}
-          <Link to="/register" className="font-semibold text-primary">
+          <Link to="/register" className="font-semibold text-primary hover:underline">
             سجل الآن
           </Link>
         </p>

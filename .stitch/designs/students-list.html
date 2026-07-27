@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Rakeb Admin - Students</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#d6e4f4",
+                        "on-secondary-fixed-variant": "#3b4855",
+                        "on-secondary-container": "#586673",
+                        "primary-fixed-dim": "#b3c5ff",
+                        "primary-container": "#0047bb",
+                        "on-secondary": "#ffffff",
+                        "outline": "#737685",
+                        "surface-dim": "#cbdbf5",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#d3e4fe",
+                        "secondary": "#52606d",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c3c6d6",
+                        "tertiary-fixed": "#dae2ff",
+                        "on-surface-variant": "#434653",
+                        "inverse-primary": "#b3c5ff",
+                        "on-primary-container": "#afc1ff",
+                        "on-primary-fixed-variant": "#003ea6",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#0b1c30",
+                        "on-tertiary-container": "#adc2ff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#00328a",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#d3e4fe",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-fixed-dim": "#b1c5ff",
+                        "background": "#f8f9ff",
+                        "on-secondary-fixed": "#0f1d28",
+                        "surface-tint": "#2156ca",
+                        "surface-container-low": "#eff4ff",
+                        "surface-container": "#e5eeff",
+                        "tertiary": "#12367b",
+                        "secondary-fixed-dim": "#bac8d7",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#244488",
+                        "inverse-surface": "#213145",
+                        "surface": "#f8f9ff",
+                        "on-primary-fixed": "#00174a",
+                        "secondary-container": "#d6e4f4",
+                        "on-tertiary-fixed": "#001847",
+                        "on-background": "#0b1c30",
+                        "tertiary-container": "#2f4e93",
+                        "surface-container-high": "#dce9ff",
+                        "primary-fixed": "#dbe1ff",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "stack-lg": "1.5rem",
+                        "margin-desktop": "2rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1rem",
+                        "base-unit": "4px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "title-md": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Custom Toggle Styling */
+        .toggle-switch { position: relative; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #E2E8F0; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input:checked + .slider { background-color: #0047BB; }
+        input:checked + .slider:before { transform: translateX(20px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="w-full sticky top-0 z-50 bg-surface shadow-sm flex items-center justify-between px-margin-mobile md:px-margin-desktop h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary p-2 active:scale-95 duration-150 rounded-full hover:bg-surface-container-high transition-colors" data-icon="menu">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary">Students</h1>
+</div>
+<div class="flex items-center">
+<button class="material-symbols-outlined text-primary p-2 active:scale-95 duration-150 rounded-full hover:bg-surface-container-high transition-colors" data-icon="search">search</button>
+</div>
+</header>
+<main class="w-full max-w-5xl mx-auto px-margin-mobile md:px-margin-desktop py-stack-md">
+<!-- Search Bar Section -->
+<div class="relative w-full mb-stack-lg">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="search">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-12 pr-4 py-3 h-12 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none font-body-lg text-body-lg placeholder:text-on-surface-variant/60" placeholder="Search students..." type="text"/>
+</div>
+<!-- Filter Chips Section -->
+<div class="flex overflow-x-auto no-scrollbar gap-stack-sm mb-stack-lg -mx-margin-mobile px-margin-mobile">
+<button class="flex-shrink-0 px-6 py-2 rounded-full font-label-md text-label-md bg-primary text-on-primary shadow-sm active:scale-95 transition-all">All</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full font-label-md text-label-md bg-surface-container-high text-on-surface-variant hover:bg-surface-variant active:scale-95 transition-all border border-transparent">Boarded</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full font-label-md text-label-md bg-surface-container-high text-on-surface-variant hover:bg-surface-variant active:scale-95 transition-all border border-transparent">Waiting</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full font-label-md text-label-md bg-surface-container-high text-on-surface-variant hover:bg-surface-variant active:scale-95 transition-all border border-transparent">Cancelled</button>
+</div>
+<!-- Student List -->
+<div class="space-y-stack-md">
+<!-- Student Card 1 -->
+<div class="bg-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(15,23,42,0.05)] flex items-center justify-between border border-transparent hover:border-primary-fixed-dim transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a young student girl named Sarah with a friendly smile, shot in high-key soft lighting. The background is a clean, minimalist blue-gray that matches the corporate modern design aesthetic. The image captures a sense of reliability and academic progress with clear, sharp details and vibrant colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAACoYyowXReTW87HCY1zAtKRBD8jZv2Zl_qIeMCGqpQ97z1ijq6N55wDZu0hWhGOC8DdT4Of6GHRggLC-WxfCEHvcAAzreiX_YaAHVoKUZ82C56HxF30dN3pwhBtCeOtOUXj_0gaVOH28EiP60Dc5l4Z2T00-gQCqyfWMv6YDg_vERdckERqvUrp2B0D-Nr6nnWEftAQFmfS7WLrrNHHJ1mwD90fdw1TrbAJ1XfB6K1yjZFk4bG159AoNkXh6ynpBjhTtFhlsHpLU"/>
+</div>
+<div class="flex flex-col">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Sarah Jenkins</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">+1 555-0123</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="location_on">location_on</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Maple St. Crossing</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider bg-green-100 text-green-700 font-bold border border-green-200">BOARDED</span>
+<label class="toggle-switch">
+<input checked="" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<!-- Student Card 2 -->
+<div class="bg-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(15,23,42,0.05)] flex items-center justify-between border border-transparent hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A high-quality close-up portrait of a primary school boy with glasses, looking energetic and ready for the day. The lighting is bright and natural, set against a soft bokeh background of a modern school environment. The color palette features deep blues and clean whites to maintain consistency with the corporate branding and functional UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf6xm_fuVGMw7ak_wttov2I2X717uC34ZAVQDKTzStcZg9C2OHECBNDPfKXR_2rNlV8gxiv-4dQQtfQK8Sb_b9KmduxYBZSfD_ACI44lAW_Mxo3Ib5ieeVaFJp8PzoeslT80qC2SemlwWbShwPDDC06Oc8TmCJQx28BmWtYzuQGTNjTWilS-FLpsr-QFMooTzfvK7hksF9luqq3FRtkc180a6azT1jmeYtXDGcjpC3sIaQ5MnpYxYMPQozmyKtPIELJMvejK1493Q"/>
+</div>
+<div class="flex flex-col">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Marcus Thorne</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">+1 555-0245</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="location_on">location_on</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Oak Avenue High</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 font-bold border border-orange-200">WAITING</span>
+<label class="toggle-switch">
+<input type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<!-- Student Card 3 -->
+<div class="bg-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(15,23,42,0.05)] flex items-center justify-between border border-transparent hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A vibrant and clear photograph of a young student with a backpack, standing at a designated bus stop in a modern urban setting. The lighting is morning golden hour, creating a warm yet professional atmosphere. The image is crisp, emphasizing safety and punctuality within a sleek, clean-edged design system environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCH5v47CYrJV6UGL37tQleuvFmVzwVnGvOfLCjdM6nBeo8JC87W7603RktdORqSiGxsP_BqiRj-EI6KlUaJ-pXQUqoPFQYHYwtwufUmyRmE3KiSJbzP8hiVqtwOxECbY6w-uWXWdHKDBKDI4YdH7kW9Ycz4Ln8SFxV4Wrhrc8PTYY4MwKz9sbhYZlBDJk8MNzophx3yYTGp1HhJGRkAZQbzQDvs6367Vrat77Ljce-tn9M6oKxVVdfpcRSz0pPmZj0H6AGmeoQ8Pao"/>
+</div>
+<div class="flex flex-col">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Elena Rodriguez</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">+1 555-0389</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="location_on">location_on</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Pine Ridge Station</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider bg-green-100 text-green-700 font-bold border border-green-200">BOARDED</span>
+<label class="toggle-switch">
+<input checked="" type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<!-- Student Card 4 -->
+<div class="bg-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(15,23,42,0.05)] flex items-center justify-between border border-transparent hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a teenage male student with a focused expression, shot in a minimalist studio style. The image uses a cool color palette with deep blue highlights to match the Rakeb app's identity. Soft, diffused lighting creates clear contours and a high-end corporate feel suitable for an administrative logistics platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQ4I4_rnjZtE-pBBiboIxRA_ocBI3gSoEGr3FcfewCE2GdFl_w0xmb9IxUKq5kPwh8gJOWXu4Bcy86sShstzaYmh_UgOA-qPuJhEbH7ywE_ewoC5X8brWu0FYha_vj5tOX-8aYKEZgf-1_EkocKlb2JR62-VKIRmXcX9HngYryMLd7_O4DWE2vY8zvqWBuEESCUFqf7WesF93kFvjUftM8xM-XFiN879gWawMuX300LHBMgzYtrWF7GB7zhRi3iL6yps31Et3w4oY"/>
+</div>
+<div class="flex flex-col">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Liam Chen</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">+1 555-0422</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="location_on">location_on</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Central Hub</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 font-bold border border-orange-200">WAITING</span>
+<label class="toggle-switch">
+<input type="checkbox"/>
+<span class="slider"></span>
+</label>
+</div>
+</div>
+<!-- Student Card 5 -->
+<div class="bg-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(15,23,42,0.05)] flex items-center justify-between border border-transparent hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A high-definition portrait of a cheerful primary student girl in a classroom setting, illuminated by bright daylight. The style is contemporary and professional, utilizing a balanced palette of whites and soft grays with vibrant blue accents. The visual clarity and professional grade photography reinforce the trust and precision required by the Rakeb administrative interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBF-yAMZLtTYgDuns1CyDg1PVbWSFqH_4IAzjn9AMGXvjz_ecW4ZFs0DIq87xqyBYvXu2lmQ-8GVp0MYqSVTeV8_yzRakKwwsKWmlJGQ2jWsyidb00BrsuRhnrXnrufPhNGXBmVW921OiTx6KH4szA_vwA1YdHKSwOVXmUiAwQj0jlt4wdE_zGUTDpHcU1q5teuNR28Feb7jG540Eu3ng7uzwE2-DqULhi0HOcVh3ES7ZVEV1RLnjWYvbveGBvpPrLF9X1gpHuYK0"/>
+</div>
+<div class="flex flex-col">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Aaliyah Khan</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">+1 555-0911</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="location_on">location_on</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">East Gate Entrance</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="px-3 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider bg-red-100 text-red-700 font-bold border border-red-200">CANCELLED</span>
+<label class="toggle-switch">
+<input disabled="" type="checkbox"/>
+<span class="slider opacity-50 cursor-not-allowed"></span>
+</label>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container dark:bg-inverse-surface shadow-[0px_-4px_12px_rgba(15,23,42,0.05)] flex justify-around items-center w-full h-20 px-2 pb-safe">
+<!-- Dashboard -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<!-- Trips -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="route">route</span>
+<span class="font-label-md text-label-md">Trips</span>
+</a>
+<!-- Students (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for chips
+        document.querySelectorAll('button[class*="flex-shrink-0"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('button[class*="flex-shrink-0"]').forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+                    b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                });
+                this.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+                this.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+            });
+        });
+
+        // Toggle interaction feedback
+        document.querySelectorAll('.toggle-switch input').forEach(input => {
+            input.addEventListener('change', function() {
+                const card = this.closest('.bg-white');
+                const statusChip = card.querySelector('span[class*="tracking-wider"]');
+                
+                if(this.checked) {
+                    statusChip.textContent = 'BOARDED';
+                    statusChip.classList.remove('bg-orange-100', 'text-orange-700', 'border-orange-200');
+                    statusChip.classList.add('bg-green-100', 'text-green-700', 'border-green-200');
+                } else {
+                    statusChip.textContent = 'WAITING';
+                    statusChip.classList.remove('bg-green-100', 'text-green-700', 'border-green-200');
+                    statusChip.classList.add('bg-orange-100', 'text-orange-700', 'border-orange-200');
+                }
+            });
+        });
+    </script>
+</body></html>

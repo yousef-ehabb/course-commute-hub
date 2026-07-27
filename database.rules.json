@@ -1,0 +1,52 @@
+{
+  "rules": {
+    "rakeb": {
+      "users": {
+        ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
+          ".write": "auth != null && ((auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student') || (data.exists() && data.child('role').val() === newData.child('role').val()))) || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')"
+        }
+      },
+      "stations": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+      },
+      "settings": {
+        "$courseId": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      },
+      "trips": {
+        "$courseId": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      },
+      "tripHistory": {
+        "$courseId": {
+          ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      },
+      "dailyStatus": {
+        "$courseId": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+          "$date": {
+            "$uid": {
+              ".write": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')"
+            }
+          }
+        }
+      },
+      "auditLog": {
+        "$courseId": {
+          ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      }
+    }
+  }
+}

@@ -6,12 +6,15 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { StationsProvider } from "@/contexts/StationsContext";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -80,7 +83,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "راكب — إدارة مواصلات الكورسات" },
-      { name: "description", content: "نظام احترافي لإدارة مواصلات الكورسات والفعاليات — تسجيل، تتبع، وتأكيد صعود." },
+      {
+        name: "description",
+        content: "نظام احترافي لإدارة مواصلات الكورسات والفعاليات — تسجيل، تتبع، وتأكيد صعود.",
+      },
       { property: "og:title", content: "راكب — إدارة مواصلات الكورسات" },
       { property: "og:description", content: "سجل، اتبع الأوتوبيس، وأدر رحلاتك في مكان واحد." },
       { property: "og:type", content: "website" },
@@ -91,12 +97,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/logo.png", type: "image/png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap",
       },
     ],
   }),
@@ -112,7 +122,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -122,12 +132,26 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const location = useRouterState({ select: (s) => s.location });
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-center" />
+        <StationsProvider>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex flex-col min-h-screen"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+          <Toaster richColors position="top-center" />
+        </StationsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

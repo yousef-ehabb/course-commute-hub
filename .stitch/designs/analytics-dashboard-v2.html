@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>الإحصائيات التحليلية</title>
+<!-- Google Fonts: Hanken Grotesk & Arabic Support -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;family=Noto+Sans+Arabic:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#dbe1ff",
+                    "on-secondary-fixed": "#0f1d28",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#001847",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#b3c5ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#e5eeff",
+                    "on-surface": "#0b1c30",
+                    "surface-container-low": "#eff4ff",
+                    "on-primary-container": "#afc1ff",
+                    "background": "#f8f9ff",
+                    "tertiary-fixed-dim": "#b1c5ff",
+                    "tertiary-container": "#2f4e93",
+                    "primary": "#00328a",
+                    "inverse-surface": "#213145",
+                    "surface-bright": "#f8f9ff",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#00174a",
+                    "on-tertiary-fixed-variant": "#244488",
+                    "tertiary-fixed": "#dae2ff",
+                    "secondary-fixed-dim": "#bac8d7",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-dim": "#cbdbf5",
+                    "on-tertiary-container": "#adc2ff",
+                    "on-background": "#0b1c30",
+                    "surface-container-highest": "#d3e4fe",
+                    "outline-variant": "#c3c6d6",
+                    "on-primary-fixed-variant": "#003ea6",
+                    "outline": "#737685",
+                    "on-secondary-container": "#586673",
+                    "error": "#ba1a1a",
+                    "surface-variant": "#d3e4fe",
+                    "surface": "#f8f9ff",
+                    "on-secondary-fixed-variant": "#3b4855",
+                    "on-surface-variant": "#434653",
+                    "surface-container-high": "#dce9ff",
+                    "tertiary": "#12367b",
+                    "secondary-container": "#d6e4f4",
+                    "secondary": "#52606d",
+                    "primary-fixed-dim": "#b3c5ff",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#d6e4f4",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-container": "#0047bb",
+                    "surface-tint": "#2156ca"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base-unit": "4px",
+                    "gutter": "1rem",
+                    "stack-sm": "0.5rem",
+                    "margin-mobile": "1rem",
+                    "stack-md": "1rem",
+                    "stack-lg": "1.5rem",
+                    "margin-desktop": "2rem"
+            },
+            "fontFamily": {
+                    "title-md": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "body-sm": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "display-lg": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "body-lg": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "label-md": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "headline-lg-mobile": ["Noto Sans Arabic", "Hanken Grotesk"],
+                    "headline-lg": ["Noto Sans Arabic", "Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f8f9ff;
+            font-family: 'Noto Sans Arabic', 'Hanken Grotesk', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .shadow-card {
+            box-shadow: 0px 4px 12px rgba(15, 23, 42, 0.05);
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-on-surface flex flex-row-reverse items-center justify-between px-margin-mobile h-12">
+<div class="flex items-center gap-2">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary dark:text-primary-fixed">الإحصائيات التفصيلية</h1>
+</div>
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed active:scale-95 transition-transform hover:opacity-80 transition-opacity">
+            arrow_forward
+        </button>
+</header>
+<main class="px-margin-mobile pt-stack-lg pb-32 max-w-md mx-auto">
+<!-- Header Section -->
+<section class="mb-stack-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface">الإحصائيات التحليلية</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">تحليلات حية لأداء ورحلات الكورس من قاعدة البيانات</p>
+</section>
+<!-- KPI Cards -->
+<div class="space-y-stack-md mb-stack-lg">
+<!-- KPI 1: Top Station -->
+<div class="bg-primary-container p-stack-md rounded-xl shadow-card flex flex-row items-center justify-between text-white transition-transform active:scale-[0.98]">
+<div class="flex flex-col gap-1">
+<span class="font-body-sm text-body-sm opacity-80">أكثر محطة استخداماً</span>
+<span class="font-headline-lg text-headline-lg font-bold">محطة الياسمين</span>
+<span class="font-label-md text-label-md opacity-90">بمتوسط 12 طالب يومياً</span>
+</div>
+<div class="bg-white/10 p-3 rounded-full">
+<span class="material-symbols-outlined text-[32px]">location_on</span>
+</div>
+</div>
+<!-- KPI 2: Avg Riders -->
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-card flex flex-row items-center justify-between transition-transform active:scale-[0.98]">
+<div class="flex flex-col gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">متوسط الركاب يومياً</span>
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface">45 طالب</span>
+<span class="font-label-md text-label-md text-green-600 font-bold">+15% عن اليوم السابق</span>
+</div>
+<div class="bg-secondary-container p-3 rounded-full text-primary">
+<span class="material-symbols-outlined text-[32px]">trending_up</span>
+</div>
+</div>
+<!-- KPI 3: Total Users -->
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-card flex flex-row items-center justify-between transition-transform active:scale-[0.98]">
+<div class="flex flex-col gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">إجمالي الطلاب المسجلين</span>
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface">120 طالب</span>
+<span class="font-label-md text-label-md text-on-surface-variant">حسابات طلاب معتمدة في النظام</span>
+</div>
+<div class="bg-secondary-container p-3 rounded-full text-primary">
+<span class="material-symbols-outlined text-[32px]">group</span>
+</div>
+</div>
+</div>
+<!-- Chart Containers -->
+<div class="space-y-stack-lg">
+<!-- Chart 1 -->
+<section class="bg-surface-container-lowest p-stack-md rounded-xl shadow-card">
+<div class="flex items-center justify-between mb-stack-md">
+<h3 class="font-title-md text-title-md text-on-surface">معدل الطلاب الأيام المسجلة</h3>
+<span class="material-symbols-outlined text-outline-variant">info</span>
+</div>
+<div class="h-64 bg-surface-container-low rounded-xl relative overflow-hidden flex items-center justify-center border border-outline-variant/10">
+<!-- Subtle Abstract Graphic for "Empty State" feel -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-primary-container to-transparent"></div>
+</div>
+<div class="text-center z-10 px-6">
+<span class="material-symbols-outlined text-primary-container text-4xl mb-2">bar_chart</span>
+<p class="font-label-md text-on-surface-variant">جاري تحميل البيانات...</p>
+</div>
+</div>
+</section>
+<!-- Chart 2 -->
+<section class="bg-surface-container-lowest p-stack-md rounded-xl shadow-card">
+<div class="flex items-center justify-between mb-stack-md">
+<h3 class="font-title-md text-title-md text-on-surface">نسبة الإشغال اليومية (%)</h3>
+<div class="flex gap-1">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+</div>
+</div>
+<div class="h-64 bg-surface-container-low rounded-xl relative overflow-hidden flex items-center justify-center border border-outline-variant/10">
+<div class="text-center z-10 px-6">
+<span class="material-symbols-outlined text-primary-container text-4xl mb-2">pie_chart</span>
+<p class="font-label-md text-on-surface-variant">بيانات النسبة المئوية قيد المعالجة</p>
+</div>
+</div>
+</section>
+<!-- Chart 3 -->
+<section class="bg-surface-container-lowest p-stack-md rounded-xl shadow-card">
+<div class="flex items-center justify-between mb-stack-md">
+<h3 class="font-title-md text-title-md text-on-surface">إجمالي الركاب حسب المحطات (تراكمي)</h3>
+</div>
+<div class="h-64 bg-surface-container-low rounded-xl relative overflow-hidden flex items-center justify-center border border-outline-variant/10">
+<div class="text-center z-10 px-6">
+<span class="material-symbols-outlined text-primary-container text-4xl mb-2">stacked_line_chart</span>
+<p class="font-label-md text-on-surface-variant">عرض التراكم الزمني للمحطات</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 shadow-[0px_-4px_12px_rgba(15,23,42,0.05)] bg-surface-container dark:bg-inverse-surface flex flex-row-reverse justify-around items-center h-[72px] px-2 pb-safe">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-variant/50 transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">الرئيسية</span>
+</a>
+<!-- Trips -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-variant/50 transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">directions_bus</span>
+<span class="font-label-md text-label-md">الرحلات</span>
+</a>
+<!-- Stats (ACTIVE) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-xl px-3 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">leaderboard</span>
+<span class="font-label-md text-label-md">الإحصائيات</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant p-2 hover:bg-surface-variant/50 transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">الملف</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for cards
+        document.querySelectorAll('.shadow-card').forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.add('scale-95');
+                setTimeout(() => card.classList.remove('scale-95'), 150);
+            });
+        });
+    </script>
+</body></html>
