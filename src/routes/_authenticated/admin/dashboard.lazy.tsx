@@ -126,8 +126,6 @@ function DashboardPage() {
                 {format(new Date(), "EEEE، d MMMM yyyy", { locale: ar })}
               </div>
               <p className="text-primary-foreground/90 text-[13px] mt-1">
-                {tripStatus === "pending" &&
-                  "الرحلة لم تبدأ بعد. يمكنك بدء الرحلة من إدارة الرحلات."}
                 {tripStatus === "moving" && "الباص يتحرك الآن في مساره."}
                 {tripStatus === "waiting_at_station" &&
                   "الباص متوقف في النقطة الحالية، في انتظار ركوب الطلاب."}
