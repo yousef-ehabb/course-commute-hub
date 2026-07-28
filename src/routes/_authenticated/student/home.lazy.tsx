@@ -43,6 +43,7 @@ function StudentHome() {
     activeDateKey,
     cutoffTime,
     cutoffEnabled,
+    forceLock,
     loaded: dateLoaded,
     getServerTime,
   } = useActiveDate();
@@ -82,6 +83,10 @@ function StudentHome() {
   }, [user, records]);
 
   useEffect(() => {
+    if (forceLock) {
+      setIsClosed(true);
+      return;
+    }
     if (!cutoffEnabled || !activeDateKey || !cutoffTime) {
       setIsClosed(false);
       return;
@@ -94,7 +99,7 @@ function StudentHome() {
     cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
 
     setIsClosed(getServerTime() > cutoff.getTime());
-  }, [cutoffEnabled, activeDateKey, cutoffTime]);
+  }, [cutoffEnabled, activeDateKey, cutoffTime, forceLock, getServerTime]);
 
   async function updateDefaultStation(newStation: string) {
     if (!user || newStation === "custom") return;
@@ -240,10 +245,11 @@ function StudentHome() {
           updateStatus(checked, station);
         }}
         disabled={busy || !loaded || !station || isClosed || isStationInvalid}
+        locked={isClosed}
       />
 
       {/* 3. Countdown — compact inline */}
-      {cutoffEnabled && (
+      {cutoffEnabled && !forceLock && (
         <CountdownTimer
           cutoffTime={cutoffTime}
           activeDateKey={activeDateKey}
@@ -280,7 +286,17 @@ function StudentHome() {
         />
       )}
 
-      {/* 5. Trip status — context info */}
+      {/* 5. Warning note if riding and closed */}
+      {isClosed && riding && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-xl flex items-start gap-3 text-sm font-medium">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p>
+            مهم جدًا نكون موجودين قبل المعاد، لأن الباص هيمشي ف وقته ومش هنقدر نستني حد
+          </p>
+        </div>
+      )}
+
+      {/* 6. Trip status — context info */}
       <TripStatusBanner status={tripStatus} licensePlate={licensePlate} />
 
       <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen} direction="bottom">

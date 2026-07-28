@@ -36,7 +36,7 @@
           ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
           "$date": {
             "$uid": {
-              ".write": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')"
+              ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && (root.child('rakeb/settings/' + $courseId + '/cutoffEnabled').val() !== true || !root.child('rakeb/settings/' + $courseId + '/cutoffTimestamp').exists() || now <= root.child('rakeb/settings/' + $courseId + '/cutoffTimestamp').val())))"
             }
           }
         }

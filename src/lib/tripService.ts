@@ -64,6 +64,10 @@ export async function startTrip(params: StartTripParams): Promise<void> {
   updates[`${tripPath}/endedAt`] = null;
   updates[`${tripPath}/location`] = null;
   updates[`${tripPath}/licensePlate`] = licensePlate || null;
+  updates[`${tripPath}/createdAt`] = now;
+  updates[`${tripPath}/createdBy`] = adminUid;
+  updates[`${tripPath}/updatedAt`] = now;
+  updates[`${tripPath}/updatedBy`] = adminUid;
 
   // Only reset boarded state for students who actually have a record
   for (const uid of passengerIds) {
@@ -199,6 +203,8 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
     totalStationsVisited: totalStations,
     totalExpectedPassengers,
     totalCancelledPassengers,
+    updatedAt: now,
+    updatedBy: adminUid,
   };
 
   // ── 4. Multi-path atomic update ─────────────────────────────────────
@@ -214,6 +220,28 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
 
   // Initialize next day's trip
   updates[`rakeb/trips/default/${nextDateKey}/status`] = "pending";
+  updates[`rakeb/trips/default/${nextDateKey}/createdAt`] = now;
+  updates[`rakeb/trips/default/${nextDateKey}/createdBy`] = adminUid;
+  updates[`rakeb/trips/default/${nextDateKey}/updatedAt`] = now;
+  updates[`rakeb/trips/default/${nextDateKey}/updatedBy`] = adminUid;
+
+  // Sync new cutoff timestamp for nextDateKey
+  try {
+    const { ref, get } = await import("firebase/database");
+    const settingsSnap = await get(ref(db, "rakeb/settings/default"));
+    if (settingsSnap.exists()) {
+      const settings = settingsSnap.val();
+      const cutoffTimeStr = settings.cutoffTime || "13:15";
+      const [year, month, day] = nextDateKey.split("-").map(Number);
+      const [cutoffHours, cutoffMinutes] = cutoffTimeStr.split(":").map(Number);
+      const cutoff = new Date(year, month - 1, day);
+      cutoff.setDate(cutoff.getDate() - 1);
+      cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
+      updates[`rakeb/settings/default/cutoffTimestamp`] = cutoff.getTime();
+    }
+  } catch (e) {
+    console.warn("[TripService] Failed to calculate next cutoff timestamp:", e);
+  }
 
   try {
     await TripRepository.atomicUpdate(
@@ -294,6 +322,8 @@ export async function departStation(params: DepartStationParams): Promise<void> 
     currentStationId: null,
     nextStationId: targetNextStation,
     departedAt: now,
+    updatedAt: now,
+    updatedBy: adminUid,
   };
 
   try {
@@ -357,6 +387,8 @@ export async function arriveAtStation(params: ArriveAtStationParams): Promise<vo
     lastStationId: null,
     nextStationId: targetNextStation,
     arrivedAt: now,
+    updatedAt: now,
+    updatedBy: adminUid,
   };
 
   try {

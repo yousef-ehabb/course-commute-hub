@@ -6,6 +6,7 @@ interface ActiveDateContextValue {
   activeDateKey: string;
   cutoffTime: string;
   cutoffEnabled: boolean;
+  forceLock: boolean;
   loaded: boolean;
   /**
    * Firebase server time offset in milliseconds.
@@ -29,6 +30,7 @@ export function ActiveDateProvider({ children }: { children: ReactNode }) {
   const [activeDateKey, setActiveDateKey] = useState<string>(getTodayKey());
   const [cutoffTime, setCutoffTime] = useState<string>(DEFAULT_CUTOFF_TIME);
   const [cutoffEnabled, setCutoffEnabled] = useState<boolean>(true);
+  const [forceLock, setForceLock] = useState<boolean>(false);
   const [loaded, setLoaded] = useState(false);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
 
@@ -78,6 +80,7 @@ export function ActiveDateProvider({ children }: { children: ReactNode }) {
               if (val.activeDateKey) setActiveDateKey(val.activeDateKey);
               if (val.cutoffTime !== undefined) setCutoffTime(val.cutoffTime);
               if (val.cutoffEnabled !== undefined) setCutoffEnabled(val.cutoffEnabled);
+              if (val.forceLock !== undefined) setForceLock(val.forceLock);
             }
             setLoaded(true);
           },
@@ -101,7 +104,7 @@ export function ActiveDateProvider({ children }: { children: ReactNode }) {
 
   return (
     <ActiveDateContext.Provider
-      value={{ activeDateKey, cutoffTime, cutoffEnabled, loaded, serverTimeOffset, getServerTime }}
+      value={{ activeDateKey, cutoffTime, cutoffEnabled, forceLock, loaded, serverTimeOffset, getServerTime }}
     >
       {children}
     </ActiveDateContext.Provider>

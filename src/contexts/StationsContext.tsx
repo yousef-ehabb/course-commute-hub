@@ -20,6 +20,10 @@ export interface Station {
   time: string;
   latitude: number;
   longitude: number;
+  createdAt?: number;
+  createdBy?: string;
+  updatedAt?: number;
+  updatedBy?: string;
 }
 
 interface StationsContextType {
@@ -179,7 +183,18 @@ export function StationsProvider({ children }: { children: ReactNode }) {
   const saveStations = async (newStations: Station[]) => {
     try {
       const db = getFirebaseDb();
-      await set(ref(db, "rakeb/stations"), newStations);
+      const now = Date.now();
+      const adminUid = user?.uid || "unknown";
+      
+      const stationsToSave = newStations.map(station => ({
+        ...station,
+        updatedAt: now,
+        updatedBy: adminUid,
+        createdAt: station.createdAt || now,
+        createdBy: station.createdBy || adminUid,
+      }));
+
+      await set(ref(db, "rakeb/stations"), stationsToSave);
       toast.success("تم حفظ النقاط بنجاح");
     } catch (saveError) {
       console.error("Failed to save stations:", saveError);

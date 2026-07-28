@@ -11,11 +11,14 @@ import { useTripStatus } from "@/hooks/useTripStatus";
 import { getStationName } from "@/utils/stationResolver";
 import { toast } from "sonner";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 export const Route = createFileRoute("/_authenticated/admin/stations")({
   component: StationsManagementPage,
 });
 
 function StationsManagementPage() {
+  const { user } = useAuth();
   const { stations: remoteStations, saveStations, loading } = useStations();
   const [localStations, setLocalStations] = useState<Station[]>([]);
   const [isDirty, setIsDirty] = useState(false);
@@ -137,8 +140,11 @@ function StationsManagementPage() {
 
         // If we are passing through the dialog, use its state
         const usersToUpdate = deletionDialog?.affectedUsers || [];
+        const now = Date.now();
         for (const uid of usersToUpdate) {
           updates[`rakeb/users/${uid}/defaultStation`] = targetStation;
+          updates[`rakeb/users/${uid}/updatedAt`] = now;
+          updates[`rakeb/users/${uid}/updatedBy`] = user?.uid || "unknown";
         }
 
         if (Object.keys(updates).length > 0) {

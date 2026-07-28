@@ -50,7 +50,7 @@ export function AdminLayout() {
           {profile && (
             <div className="flex items-center gap-4">
               <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-                {profile.fullName.split(" ")[0]}
+                {profile.fullName}
               </div>
               <Button
                 variant="ghost"

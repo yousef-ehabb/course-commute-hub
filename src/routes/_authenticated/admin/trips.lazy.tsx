@@ -20,6 +20,7 @@ import {
   arriveAtStation,
   toggleBoarding,
   FirebaseTripError,
+  getNextDateKey,
 } from "@/lib/tripService";
 import { TripRepository } from "@/lib/TripRepository";
 import { useAuth } from "@/contexts/AuthContext";
@@ -165,6 +166,38 @@ function TripsPage() {
     if (!dbRefs || isCompleting) return;
     setIsCompleting(true);
     try {
+      // Check if we are past the next day's deadline
+      const nextDate = getNextDateKey(activeDateKey);
+      const [year, month, day] = nextDate.split("-").map(Number);
+      const { ref, get } = await import("firebase/database");
+      const settingsSnap = await get(ref(dbRefs.db, "rakeb/settings/default"));
+      
+      let cutoffTimeStr = "13:15";
+      let isCutoffEnabled = false;
+      if (settingsSnap.exists()) {
+        const s = settingsSnap.val();
+        if (s.cutoffTime) cutoffTimeStr = s.cutoffTime;
+        if (s.cutoffEnabled === true) isCutoffEnabled = true;
+      }
+      
+      if (isCutoffEnabled) {
+        const [cutoffHours, cutoffMinutes] = cutoffTimeStr.split(":").map(Number);
+        const cutoff = new Date(year, month - 1, day);
+        cutoff.setDate(cutoff.getDate() - 1);
+        cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
+        
+        const now = Date.now() + serverTimeOffset;
+        if (now > cutoff.getTime()) {
+          const proceed = window.confirm(
+            `⚠️ تحذير: موعد غلق التسجيل لرحلة الغد (${cutoffTimeStr}) قد انقضى بالفعل!\nإذا قمت بإنهاء هذه الرحلة الآن، فلن يتمكن الطلاب من التسجيل لرحلة الغد.\n\nهل أنت متأكد من رغبتك في إنهاء الرحلة الآن؟`
+          );
+          if (!proceed) {
+            setIsCompleting(false);
+            return;
+          }
+        }
+      }
+
       // Read daily status for metadata enrichment
       const dailyStatusSnapshot = await TripRepository.readDailyStatusSnapshot(
         dbRefs.db,

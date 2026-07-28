@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Save, Clock, Users, MapPin } from "lucide-react";
 import { DEFAULT_CUTOFF_TIME } from "@/lib/constants";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
+  const { user } = useAuth();
   const [cutoffTime, setCutoffTime] = useState(DEFAULT_CUTOFF_TIME);
   const [cutoffEnabled, setCutoffEnabled] = useState(true);
+  const [forceLock, setForceLock] = useState(false);
   const [vehicleLimits, setVehicleLimits] = useState({ micro: 14, mini: 33, bus: 50 });
+  const [activeDateKey, setActiveDateKey] = useState<string>("");
 
   const [dbRef, setDbRef] = useState<any>(null);
 
@@ -35,7 +39,9 @@ function SettingsPage() {
           if (val) {
             if (val.cutoffTime !== undefined) setCutoffTime(val.cutoffTime);
             if (val.cutoffEnabled !== undefined) setCutoffEnabled(val.cutoffEnabled);
+            if (val.forceLock !== undefined) setForceLock(val.forceLock);
             if (val.vehicleLimits) setVehicleLimits(val.vehicleLimits);
+            if (val.activeDateKey) setActiveDateKey(val.activeDateKey);
           }
         },
         (error) => {
@@ -52,13 +58,27 @@ function SettingsPage() {
     if (!dbRef) return;
     try {
       const { ref, update } = await import("firebase/database");
+      
+      let cutoffTimestamp = null;
+      if (activeDateKey && cutoffTime) {
+        const [year, month, day] = activeDateKey.split("-").map(Number);
+        const [cutoffHours, cutoffMinutes] = cutoffTime.split(":").map(Number);
+        const cutoff = new Date(year, month - 1, day);
+        cutoff.setDate(cutoff.getDate() - 1);
+        cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
+        cutoffTimestamp = cutoff.getTime();
+      }
+
       // Use update() instead of set() to merge with existing data.
       // set() was destroying activeDateKey and other fields on every save.
       await update(ref(dbRef, `rakeb/settings/default`), {
         cutoffTime,
         cutoffEnabled,
+        forceLock,
+        ...(cutoffTimestamp ? { cutoffTimestamp } : {}),
         vehicleLimits,
         updatedAt: Date.now(),
+        updatedBy: user?.uid || "unknown",
       });
       toast.success("تم حفظ الإعدادات بنجاح");
     } catch (e) {
@@ -91,15 +111,27 @@ function SettingsPage() {
             <CardDescription>تحكم في أوقات غلق التسجيل للطلاب</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
               <div>
-                <p className="font-medium">تفعيل غلق التسجيل التلقائي</p>
-                <p className="text-sm text-gray-500">منع الطلاب من تغيير حالتهم بعد وقت محدد</p>
+                <label className="text-sm font-medium">إغلاق التسجيل يدوياً</label>
+                <p className="text-xs text-gray-500">منع الطلاب من تغيير حالتهم فوراً وبشكل دائم</p>
+              </div>
+              <Switch
+                checked={forceLock}
+                onCheckedChange={setForceLock}
+                className={forceLock ? "bg-red-500" : ""}
+              />
+            </div>
+
+            <div className={`flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 ${forceLock ? "opacity-50 pointer-events-none" : ""}`}>
+              <div>
+                <label className="text-sm font-medium">تفعيل غلق التسجيل التلقائي</label>
+                <p className="text-xs text-gray-500">منع الطلاب من تغيير حالتهم بعد وقت محدد</p>
               </div>
               <Switch checked={cutoffEnabled} onCheckedChange={setCutoffEnabled} />
             </div>
 
-            <div className={`space-y-2 ${!cutoffEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+            <div className={`space-y-2 ${(!cutoffEnabled || forceLock) ? "opacity-50 pointer-events-none" : ""}`}>
               <label className="text-sm font-medium">وقت غلق التسجيل يومياً</label>
               <input
                 type="time"
@@ -108,6 +140,32 @@ function SettingsPage() {
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-gray-500">الوقت بصيغة 24 ساعة (مثال: 22:00 = 10 مساءً)</p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+              <label className="text-sm font-medium">تاريخ الرحلة القادمة (اليوم الفعال)</label>
+              <div className="flex items-center gap-3 mt-2">
+                <input
+                  type="date"
+                  value={activeDateKey || ""}
+                  onChange={async (e) => {
+                    const newDate = e.target.value;
+                    if (!newDate || !dbRef) return;
+                    try {
+                      const { ref, update } = await import("firebase/database");
+                      await update(ref(dbRef, `rakeb/settings/default`), { activeDateKey: newDate });
+                      setActiveDateKey(newDate);
+                      toast.success("تم تحديث تاريخ الرحلة القادمة بنجاح");
+                    } catch(err) {
+                      toast.error("فشل في تحديث تاريخ الرحلة");
+                    }
+                  }}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                هذا هو تاريخ الرحلة التي سيتم التسجيل لها. موعد غلق التسجيل سيكون <b>اليوم الذي يسبق هذا التاريخ</b> في الوقت المحدد أعلاه.
+              </p>
             </div>
           </CardContent>
         </Card>

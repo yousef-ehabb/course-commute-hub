@@ -43,7 +43,7 @@ export function CountdownTimer({
         onExpire?.();
       } else {
         setIsClosed(false);
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff / 1000 / 60) % 60);
         const seconds = Math.floor((diff / 1000) % 60);
         setTimeLeft({ hours, minutes, seconds });
@@ -58,31 +58,34 @@ export function CountdownTimer({
       <div className="rounded-2xl bg-destructive/6 px-4 py-3 flex items-center justify-center gap-2.5">
         <Clock className="w-[18px] h-[18px] text-destructive" strokeWidth={1.8} />
         <span className="text-[13px] font-semibold text-destructive">
-          تم غلق التسجيل لرحلات اليوم
-        </span>
+          اتقفل التسجيل لباص بكره شكرا علي التزامكم        </span>
       </div>
     );
   }
 
   if (!timeLeft) return null;
 
+  const isUrgent = timeLeft.hours === 0 && timeLeft.minutes < 10;
+
   return (
-    <div className="rounded-2xl bg-card shadow-card px-4 py-3">
+    <div className={`rounded-2xl shadow-card px-4 py-3 transition-colors duration-500 ${isUrgent ? "bg-destructive/10 animate-[pulse_2s_ease-in-out_infinite]" : "bg-card"}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Clock className="w-[18px] h-[18px] text-muted-foreground" strokeWidth={1.8} />
-          <span className="text-[13px] font-medium text-muted-foreground">غلق التسجيل خلال</span>
+          <Clock className={`w-[18px] h-[18px] ${isUrgent ? "text-destructive" : "text-muted-foreground"}`} strokeWidth={1.8} />
+          <span className={`text-[13px] font-medium ${isUrgent ? "text-destructive font-bold" : "text-muted-foreground"}`}>
+            {isUrgent ? "ينتهي التسجيل قريباً" : "غلق التسجيل خلال"}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 font-mono" dir="ltr">
-          <div className="bg-muted rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold text-foreground">
+          <div className={`rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold ${isUrgent ? "bg-destructive/20 text-destructive" : "bg-muted text-foreground"}`}>
             {String(timeLeft.hours).padStart(2, "0")}
           </div>
-          <span className="text-muted-foreground/50 font-bold">:</span>
-          <div className="bg-muted rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold text-foreground">
+          <span className={`${isUrgent ? "text-destructive/50" : "text-muted-foreground/50"} font-bold`}>:</span>
+          <div className={`rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold ${isUrgent ? "bg-destructive/20 text-destructive" : "bg-muted text-foreground"}`}>
             {String(timeLeft.minutes).padStart(2, "0")}
           </div>
-          <span className="text-muted-foreground/50 font-bold">:</span>
-          <div className="bg-muted rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold text-foreground">
+          <span className={`${isUrgent ? "text-destructive/50" : "text-muted-foreground/50"} font-bold`}>:</span>
+          <div className={`rounded-lg px-2 py-1 min-w-[2rem] text-center text-[15px] font-bold ${isUrgent ? "bg-destructive/20 text-destructive" : "bg-muted text-foreground"}`}>
             {String(timeLeft.seconds).padStart(2, "0")}
           </div>
         </div>
