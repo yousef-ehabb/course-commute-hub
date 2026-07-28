@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { useStations } from "@/contexts/StationsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +65,7 @@ function RegisterPage() {
       toast.success("تم إنشاء الحساب");
       navigate({ to: "/student/home" });
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }

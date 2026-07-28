@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,7 @@ function LoginPage() {
 
       toast.success("تم الدخول");
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
