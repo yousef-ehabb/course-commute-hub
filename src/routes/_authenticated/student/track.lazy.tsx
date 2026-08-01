@@ -1,20 +1,28 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { useStations } from "@/contexts/StationsContext";
 import { useTripStatus } from "@/hooks/useTripStatus";
-import { getStation } from "@/utils/stationResolver";
+import { useVehicles } from "@/hooks/useVehicles";
+import { useStudentBoardingRecord } from "@/hooks/useStudentBoardingRecord";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVehicleTabState } from "@/hooks/useVehicleTabState";
+
 import { StationTimeline } from "@/components/admin/StationTimeline";
-import React, { Suspense } from "react";
+import { StudentVehicleStatus } from "@/components/student/StudentVehicleStatus";
+import { VehicleTabStrip } from "@/components/student/VehicleTabStrip";
+import { VehiclePassedCard } from "@/components/student/VehiclePassedCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import React, { Suspense, useMemo } from "react";
 
 const TrackMap = React.lazy(() => import("@/components/student/TrackMap"));
-import { Button } from "@/components/ui/button";
+import type { VehicleMarker } from "@/components/student/TrackMap";
 
 export const Route = createLazyFileRoute("/_authenticated/student/track")({
   component: TrackBusPage,
 });
 
 function TrackBusPage() {
+  const { profile } = useAuth();
   const {
     stations,
     loading: stationsLoading,
@@ -23,38 +31,94 @@ function TrackBusPage() {
   } = useStations();
   const {
     status: tripStatus,
-    currentStationId,
-    nextStationId,
-    lastStationId,
-    location,
-    licensePlate,
     error: tripError,
     retry: retryTrip,
     loaded: tripLoaded,
   } = useTripStatus();
+  const {
+    vehicles,
+    loaded: vehiclesLoaded,
+    error: vehiclesError,
+    retry: retryVehicles,
+  } = useVehicles();
+  const {
+    record: boardingRecord,
+    loaded: boardingLoaded,
+    error: boardingError,
+    retry: retryBoarding,
+  } = useStudentBoardingRecord();
 
-  const error = stationsError || tripError;
+  const error = stationsError || tripError || vehiclesError || boardingError;
   const handleRetry = () => {
     retryStations();
     retryTrip();
+    retryVehicles();
+    retryBoarding();
   };
-  const [busLocation, setBusLocation] = useState<[number, number] | null>(null);
 
-  useEffect(() => {
-    if (stations.length === 0) return;
+  const allLoaded = tripLoaded && vehiclesLoaded && boardingLoaded;
 
-    if ((tripStatus === "waiting_at_station" || tripStatus === "moving") && location) {
-      setBusLocation([location.lat, location.lng]);
-    } else if (tripStatus === "waiting_at_station" && currentStationId) {
-      const st = getStation(currentStationId, stations);
-      if (st) setBusLocation([st.latitude, st.longitude]);
-    } else if (tripStatus === "moving" && lastStationId) {
-      const st = getStation(lastStationId, stations);
-      if (st) setBusLocation([st.latitude, st.longitude]);
-    } else {
-      setBusLocation(null);
+  // ── Tab State Machine ───────────────────────────────────────────────
+
+  const {
+    tabs,
+    selectedTabId,
+    setSelectedTabId,
+    isLockedToVehicle,
+    selectedVehicle,
+  } = useVehicleTabState(
+    vehicles,
+    boardingRecord,
+    stations,
+    profile?.defaultStation,
+  );
+
+  const selectedTab = tabs.find((t) => t.vehicle.id === selectedTabId) || null;
+
+  // ── Build vehicle markers for the map (only the selected vehicle) ──
+
+  const vehicleMarkers = useMemo<VehicleMarker[]>(() => {
+    if (!selectedVehicle || !selectedVehicle.currentLocation) return [];
+    if (selectedVehicle.status !== "running" && selectedVehicle.status !== "full") {
+      return [];
     }
-  }, [tripStatus, location, currentStationId, lastStationId, stations]);
+
+    const isMine =
+      boardingRecord?.status === "boarded" &&
+      boardingRecord.vehicleId === selectedVehicle.id;
+    const isFull =
+      selectedVehicle.status === "full" ||
+      selectedVehicle.occupiedSeats >= selectedVehicle.capacity;
+
+    const currentTab = tabs.find((t) => t.vehicle.id === selectedVehicle.id);
+
+    return [
+      {
+        id: selectedVehicle.id,
+        position: [
+          selectedVehicle.currentLocation.lat,
+          selectedVehicle.currentLocation.lng,
+        ] as [number, number],
+        label: currentTab?.label || "المركبة",
+        emoji: currentTab?.emoji || "🚐",
+        variant: isMine ? "mine" : isFull ? "full" : "available",
+      },
+    ];
+  }, [selectedVehicle, boardingRecord, tabs]);
+
+  // ── Determine timeline status for the selected vehicle ──────────────
+
+  const timelineStatus = useMemo(() => {
+    if (!selectedVehicle) return tripStatus;
+    if (selectedVehicle.status === "ended") return "completed" as const;
+    if (selectedVehicle.status === "running" && selectedVehicle.currentStationId) {
+      return "waiting_at_station" as const;
+    }
+    if (selectedVehicle.status === "running") return "moving" as const;
+    return "pending" as const;
+  }, [selectedVehicle, tripStatus]);
+
+  // ── Error State ──────────────────────────────────────────────────────
 
   if (error) {
     return (
@@ -67,48 +131,85 @@ function TrackBusPage() {
     );
   }
 
-  if (stationsLoading || !tripLoaded) {
+  // ── Loading State ────────────────────────────────────────────────────
+
+  if (stationsLoading || !allLoaded) {
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] space-y-4">
-        <div>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-48 mt-1" />
-        </div>
-        <Skeleton className="flex-1 w-full rounded-2xl" />
-        <Skeleton className="h-32 w-full rounded-2xl mt-4" />
+      <div className="flex flex-col space-y-3">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-10 w-full rounded-xl" />
+        <Skeleton className="h-[300px] w-full rounded-2xl" />
       </div>
     );
   }
 
+  // ── Render ───────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="mb-4 flex justify-between items-start">
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">تتبع الباص</h1>
-          <p className="text-[13px] text-muted-foreground">تابع حركة الباص لحظة بلحظة</p>
-        </div>
-        {licensePlate && (
-          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg border border-primary/20 flex flex-col items-center">
-            <span className="text-[10px] font-medium opacity-80">رقم الباص</span>
-            <span className="text-sm font-bold whitespace-nowrap">{licensePlate}</span>
-          </div>
-        )}
-      </div>
+    <div className="flex flex-col min-h-[calc(100vh-10rem)] gap-2.5">
+      {/* 1. Compact Vehicle Tab Strip (Navigation Pills) */}
+      <VehicleTabStrip
+        tabs={tabs}
+        selectedTabId={selectedTabId}
+        onTabSelect={setSelectedTabId}
+        isLocked={isLockedToVehicle}
+      />
 
-      <div className="flex-1 relative rounded-2xl overflow-hidden shadow-card z-0 bg-gray-100 dark:bg-gray-800">
-        <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-muted-foreground">جاري تحميل الخريطة...</div>}>
-          <TrackMap busLocation={busLocation} />
-        </Suspense>
-      </div>
-
-      <div className="mt-4">
-        <StationTimeline
-          status={tripStatus}
-          currentStationId={currentStationId}
-          nextStationId={nextStationId}
-          lastStationId={lastStationId}
+      {/* 2. Main content area (Passed Card OR Map + Micro Banner) */}
+      {selectedTab?.state === "passed" ? (
+        <VehiclePassedCard
+          passedTab={selectedTab}
+          nextAvailableTab={tabs.find((t) => t.state === "active") || null}
+          onSwitchToVehicle={setSelectedTabId}
         />
-      </div>
+      ) : (
+        <>
+          {/* 2. Collapsed Micro Status Banner */}
+          <StudentVehicleStatus
+            tripStatus={tripStatus}
+            vehicle={selectedVehicle}
+            boardingRecord={boardingRecord}
+            allVehicles={vehicles}
+          />
+
+          {/* 3. Hero Map — Dominates the page */}
+          <div className="relative w-full h-[320px] sm:h-[400px] rounded-2xl overflow-hidden shadow-card z-0 bg-gray-100 dark:bg-gray-800 shrink-0">
+            <Suspense
+              fallback={
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                  جاري تحميل الخريطة...
+                </div>
+              }
+            >
+              <TrackMap
+                vehicleMarkers={vehicleMarkers}
+                focusVehicleId={selectedTabId}
+              />
+            </Suspense>
+          </div>
+
+          {/* 4. Timeline */}
+          {selectedVehicle && (
+            <div className="pt-1 pb-4">
+              <StationTimeline
+                status={timelineStatus}
+                currentStationId={selectedVehicle.currentStationId || null}
+                nextStationId={selectedVehicle.nextStationId || null}
+                lastStationId={selectedVehicle.lastStationId || null}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Fallback when no vehicles are active and trip is pending */}
+      {!selectedVehicle && tripStatus === "pending" && (
+        <div className="bg-card rounded-xl p-4 shadow-xs border border-border/50 text-center">
+          <p className="text-[13px] text-muted-foreground">
+            لسه مفيش مركبات شغالة النهارده. هنبلغك أول ما يبدأ التحرك.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

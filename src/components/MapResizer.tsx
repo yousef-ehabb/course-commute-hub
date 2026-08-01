@@ -14,6 +14,12 @@ export default function MapResizer() {
   useEffect(() => {
     if (!map) return;
 
+    // Immediately invalidate size on mount & after layout renders
+    map.invalidateSize();
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
     // The actual DOM element of the map container
     const container = map.getContainer();
 
@@ -26,6 +32,7 @@ export default function MapResizer() {
     resizeObserver.observe(container);
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
     };
   }, [map]);

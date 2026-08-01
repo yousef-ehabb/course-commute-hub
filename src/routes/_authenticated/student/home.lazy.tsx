@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStations } from "@/contexts/StationsContext";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useTripStatus } from "@/hooks/useTripStatus";
+import { useVehicles } from "@/hooks/useVehicles";
+import { useStudentBoardingRecord } from "@/hooks/useStudentBoardingRecord";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
 import { RideSwitch } from "@/components/student/RideSwitch";
 import { CountdownTimer } from "@/components/student/CountdownTimer";
@@ -69,6 +71,8 @@ function StudentHome() {
   }, [stations, profile, station]);
 
   const { status: tripStatus, licensePlate } = useTripStatus();
+  const { vehicles } = useVehicles();
+  const { record: boardingRecord } = useStudentBoardingRecord();
 
   useEffect(() => {
     if (!user) return;
@@ -297,7 +301,12 @@ function StudentHome() {
       )}
 
       {/* 6. Trip status — context info */}
-      <TripStatusBanner status={tripStatus} licensePlate={licensePlate} />
+      <TripStatusBanner
+        status={tripStatus}
+        licensePlate={licensePlate}
+        vehicles={vehicles}
+        boardingRecord={boardingRecord}
+      />
 
       <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen} direction="bottom">
         <Drawer.Portal>

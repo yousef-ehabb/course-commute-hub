@@ -2,21 +2,67 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useStations } from "@/contexts/StationsContext";
-import { MapPin, UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { MapPin } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 import { setupLeaflet } from "@/lib/leaflet-setup";
 import MapResizer from "@/components/MapResizer";
 
 setupLeaflet();
 
+// ── Vehicle marker icons ────────────────────────────────────────────────
 
-const busIcon = new L.DivIcon({
-  html: `<div style="background-color: #2563EB; color: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>`,
-  className: "custom-bus-icon",
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
+function createVehicleIcon(
+  variant: "available" | "full" | "mine",
+  emoji: string
+): L.DivIcon {
+  const config = {
+    available: {
+      bg: "#10B981",
+      border: "white",
+      size: 38,
+      pulse: "",
+    },
+    full: {
+      bg: "#EF4444",
+      border: "white",
+      size: 34,
+      pulse: "",
+    },
+    mine: {
+      bg: "#2563EB",
+      border: "#93C5FD",
+      size: 44,
+      pulse: "animation: pulse 2s infinite;",
+    },
+  }[variant];
+
+  return new L.DivIcon({
+    html: `<div style="
+      background-color: ${config.bg};
+      color: white;
+      width: ${config.size}px;
+      height: ${config.size}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 3px solid ${config.border};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-size: ${variant === "mine" ? "22px" : "18px"};
+      ${config.pulse}
+    "><span>${emoji}</span></div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+      }
+    </style>`,
+    className: `vehicle-marker-${variant}`,
+    iconSize: [config.size, config.size],
+    iconAnchor: [config.size / 2, config.size / 2],
+  });
+}
 
 const userIcon = new L.DivIcon({
   html: `<div style="background-color: #10B981; color: white; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`,
@@ -25,11 +71,70 @@ const userIcon = new L.DivIcon({
   iconAnchor: [16, 16],
 });
 
-interface TrackMapProps {
-  busLocation: [number, number] | null;
+// ── Types ───────────────────────────────────────────────────────────────
+
+export interface VehicleMarker {
+  id: string;
+  position: [number, number];
+  label: string;
+  emoji: string;
+  variant: "available" | "full" | "mine";
 }
 
-export default function TrackMap({ busLocation }: TrackMapProps) {
+interface TrackMapProps {
+  vehicleMarkers: VehicleMarker[];
+  /** When set, the map smoothly pans to center on this vehicle */
+  focusVehicleId?: string | null;
+}
+
+// ── Auto-fit bounds when markers change ─────────────────────────────────
+
+function FitBoundsToMarkers({ markers }: { markers: VehicleMarker[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (markers.length === 0) return;
+
+    const bounds = L.latLngBounds(markers.map((m) => m.position));
+    // Pad a bit so markers aren't on the edge
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [markers.length]); // Only re-fit when the count changes, not on every GPS tick
+
+  return null;
+}
+
+// ── Recenter on focused vehicle change ──────────────────────────────────
+
+function RecenterOnVehicle({
+  markers,
+  focusVehicleId,
+}: {
+  markers: VehicleMarker[];
+  focusVehicleId: string | null;
+}) {
+  const map = useMap();
+  const prevFocusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusVehicleId) return;
+    // Only recenter when the focus changes, not on every render
+    if (prevFocusRef.current === focusVehicleId) return;
+    prevFocusRef.current = focusVehicleId;
+
+    const marker = markers.find((m) => m.id === focusVehicleId);
+    if (marker) {
+      map.flyTo(marker.position, Math.max(map.getZoom(), 14), {
+        duration: 0.8,
+      });
+    }
+  }, [focusVehicleId, markers, map]);
+
+  return null;
+}
+
+// ── Component ───────────────────────────────────────────────────────────
+
+export default function TrackMap({ vehicleMarkers, focusVehicleId }: TrackMapProps) {
   const { stations } = useStations();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
@@ -58,6 +163,10 @@ export default function TrackMap({ busLocation }: TrackMapProps) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapResizer />
+      {vehicleMarkers.length > 0 && <FitBoundsToMarkers markers={vehicleMarkers} />}
+      {focusVehicleId && (
+        <RecenterOnVehicle markers={vehicleMarkers} focusVehicleId={focusVehicleId} />
+      )}
 
       {/* Station Markers */}
       {stations.map((station) => (
@@ -75,14 +184,20 @@ export default function TrackMap({ busLocation }: TrackMapProps) {
         </Marker>
       ))}
 
-      {/* Bus Marker */}
-      {busLocation && (
-        <Marker position={busLocation} icon={busIcon}>
-          <Popup>
-            <div className="text-center font-bold text-primary">الباص هنا الآن!</div>
+      {/* Vehicle Markers */}
+      {vehicleMarkers.map((vm) => (
+        <Marker
+          key={vm.id}
+          position={vm.position}
+          icon={createVehicleIcon(vm.variant, vm.emoji)}
+          opacity={vm.variant === "full" ? 0.6 : 1}
+          zIndexOffset={vm.variant === "mine" ? 1000 : vm.variant === "available" ? 500 : 0}
+        >
+          <Popup className="font-cairo">
+            <div className="text-center font-bold text-primary rtl">{vm.label}</div>
           </Popup>
         </Marker>
-      )}
+      ))}
 
       {/* User Location Marker */}
       {userLocation && (

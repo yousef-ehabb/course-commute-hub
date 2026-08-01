@@ -101,6 +101,49 @@ export async function startTrip(params: StartTripParams): Promise<void> {
   }
 }
 
+export interface StartDayParams {
+  db: Database;
+  activeDateKey: string;
+  serverTimeOffset: number;
+  adminUid: string;
+}
+
+export async function startDay(params: StartDayParams): Promise<void> {
+  const { db, activeDateKey, serverTimeOffset, adminUid } = params;
+  const now = getServerTimestamp(serverTimeOffset);
+  const tripPath = `rakeb/trips/default/${activeDateKey}`;
+  const updates: Record<string, unknown> = {};
+
+  updates[`${tripPath}/status`] = "waiting_at_station"; // active phase
+  updates[`${tripPath}/updatedAt`] = now;
+  updates[`${tripPath}/updatedBy`] = adminUid;
+
+  try {
+    await TripRepository.atomicUpdate(db, updates, "startDay", tripPath);
+    
+    AuditService.log({
+      db,
+      adminUid,
+      action: "day_started",
+      tripDate: activeDateKey,
+      serverTimeOffset,
+      metadata: {},
+    });
+  } catch (err) {
+    if (err instanceof FirebaseTripError) {
+      logError({
+        operation: err.operation,
+        path: err.path,
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+        timestamp: Date.now(),
+      });
+    }
+    throw err;
+  }
+}
+
 export interface CompleteTripParams {
   db: Database;
   activeDateKey: string;
@@ -294,7 +337,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
 
 export interface DepartStationParams {
   db: Database;
-  tripPath: string;
+  vehicleId: string;
   currentStationId: string;
   nextStationId: string;
   isFinalPickup: boolean;
@@ -306,7 +349,7 @@ export interface DepartStationParams {
 export async function departStation(params: DepartStationParams): Promise<void> {
   const {
     db,
-    tripPath,
+    vehicleId,
     currentStationId,
     nextStationId,
     isFinalPickup,
@@ -316,8 +359,10 @@ export async function departStation(params: DepartStationParams): Promise<void> 
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
   const targetNextStation = isFinalPickup ? "creativa" : nextStationId;
+  const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${vehicleId}`;
+  
   const updates: Record<string, unknown> = {
-    status: "moving",
+    status: "running",
     lastStationId: currentStationId,
     currentStationId: null,
     nextStationId: targetNextStation,
@@ -329,9 +374,9 @@ export async function departStation(params: DepartStationParams): Promise<void> 
   try {
     const updatePayload: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(updates)) {
-      updatePayload[`${tripPath}/${k}`] = v;
+      updatePayload[`${vehiclePath}/${k}`] = v;
     }
-    await TripRepository.atomicUpdate(db, updatePayload, "departStation", tripPath);
+    await TripRepository.atomicUpdate(db, updatePayload, "departStation", vehiclePath);
 
     // Log audit entry
     AuditService.log({
@@ -340,7 +385,7 @@ export async function departStation(params: DepartStationParams): Promise<void> 
       action: "station_departed",
       tripDate: activeDateKey,
       serverTimeOffset,
-      metadata: { stationId: currentStationId, nextStationId: targetNextStation, isFinalPickup },
+      metadata: { vehicleId, stationId: currentStationId, nextStationId: targetNextStation, isFinalPickup },
     });
   } catch (err) {
     if (err instanceof FirebaseTripError) {
@@ -359,7 +404,7 @@ export async function departStation(params: DepartStationParams): Promise<void> 
 
 export interface ArriveAtStationParams {
   db: Database;
-  tripPath: string;
+  vehicleId: string;
   stationId: string;
   nextStationId: string;
   isLastPickup: boolean;
@@ -371,7 +416,7 @@ export interface ArriveAtStationParams {
 export async function arriveAtStation(params: ArriveAtStationParams): Promise<void> {
   const {
     db,
-    tripPath,
+    vehicleId,
     stationId,
     nextStationId,
     isLastPickup,
@@ -381,8 +426,10 @@ export async function arriveAtStation(params: ArriveAtStationParams): Promise<vo
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
   const targetNextStation = isLastPickup ? "creativa" : nextStationId;
+  const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${vehicleId}`;
+  
   const updates: Record<string, unknown> = {
-    status: "waiting_at_station",
+    status: "running",
     currentStationId: stationId,
     lastStationId: null,
     nextStationId: targetNextStation,
@@ -394,9 +441,9 @@ export async function arriveAtStation(params: ArriveAtStationParams): Promise<vo
   try {
     const updatePayload: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(updates)) {
-      updatePayload[`${tripPath}/${k}`] = v;
+      updatePayload[`${vehiclePath}/${k}`] = v;
     }
-    await TripRepository.atomicUpdate(db, updatePayload, "arriveAtStation", tripPath);
+    await TripRepository.atomicUpdate(db, updatePayload, "arriveAtStation", vehiclePath);
 
     // Log audit entry
     AuditService.log({
@@ -405,7 +452,7 @@ export async function arriveAtStation(params: ArriveAtStationParams): Promise<vo
       action: "station_arrived",
       tripDate: activeDateKey,
       serverTimeOffset,
-      metadata: { stationId, nextStationId: targetNextStation, isLastPickup },
+      metadata: { vehicleId, stationId, nextStationId: targetNextStation, isLastPickup },
     });
   } catch (err) {
     if (err instanceof FirebaseTripError) {

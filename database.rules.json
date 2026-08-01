@@ -9,7 +9,7 @@
         }
       },
       "stations": {
-        ".read": "auth != null",
+        ".read": true,
         ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
       },
       "settings": {
@@ -45,6 +45,37 @@
         "$courseId": {
           ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
           ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      },
+      "vehicles": {
+        "$courseId": {
+          ".read": "auth != null",
+          "$dateKey": {
+            "$vehicleId": {
+              ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' && (newData.exists() || data.child('status').val() === 'planned')",
+              "capacity": {
+                ".validate": "!data.parent().exists() || data.parent().child('status').val() === 'planned' || newData.val() === data.val()"
+              },
+              "currentLocation": {
+                ".validate": "newData.parent().child('assignedCoordinatorId').val() === auth.uid"
+              },
+              "occupiedSeats": {
+                ".validate": "newData.val() <= newData.parent().child('capacity').val() && newData.val() >= 0"
+              },
+              "assignedCoordinatorId": {
+                ".validate": "newData.val() === null || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+              }
+            }
+          }
+        }
+      },
+      "boardingRecords": {
+        "$dateKey": {
+          ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+          "$studentId": {
+            ".read": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || $studentId === auth.uid)",
+            ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+          }
         }
       }
     }

@@ -32,9 +32,6 @@ export function getFirebaseAuth(): Auth {
 
 export function getFirebaseDb() {
   if (!_db) {
-    if (import.meta.env.DEV) {
-      console.warn("[Firebase] Initializing Realtime Database instance...");
-    }
     _db = getDatabase(getFirebaseApp());
     // @ts-ignore
     if (typeof window !== "undefined") {

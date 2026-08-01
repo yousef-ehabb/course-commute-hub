@@ -241,9 +241,8 @@ function StationsManagementPage() {
               {localStations.map((station, idx) => (
                 <li
                   key={station.id}
-                  className={`p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-                    activeId === station.id ? "bg-primary/5 dark:bg-primary/10" : ""
-                  }`}
+                  className={`p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${activeId === station.id ? "bg-primary/5 dark:bg-primary/10" : ""
+                    }`}
                   onMouseEnter={() => setActiveId(station.id)}
                   onMouseLeave={() => setActiveId(null)}
                 >
@@ -374,7 +373,7 @@ function StationsManagementPage() {
                         <span className="font-bold text-destructive">
                           {deletionDialog.affectedUsers.length} طلاب
                         </span>{" "}
-                        كنقطة ركوب افتراضية.
+                        كنقطة تجمع افتراضية.
                       </p>
                     )}
                     {deletionDialog.isTripActive && (

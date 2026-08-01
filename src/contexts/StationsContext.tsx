@@ -40,7 +40,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
   const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   // Retry key: incrementing this forces a re-subscribe
   const [retryKey, setRetryKey] = useState(0);
@@ -54,23 +54,6 @@ export function StationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
     let unsub: (() => void) | undefined;
-
-    if (authLoading) {
-      return; // wait for auth to resolve
-    }
-
-    if (!user) {
-      if (isMounted) {
-        if (stations.length > 0) {
-          console.log("[StationsContext] Stations state cleared (user is null)");
-          console.trace("[StationsContext] Stack trace for clear");
-        }
-        setStations([]);
-        setLoading(false);
-        setError(null);
-      }
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -101,56 +84,59 @@ export function StationsProvider({ children }: { children: ReactNode }) {
               setError(null);
             } else {
               console.log("[StationsContext] Stations loaded from Firebase (null/empty)");
-              // Seed default Aswan stations if DB is completely empty
-              const defaultAswanStations: Station[] = [
-                {
-                  id: "st1",
-                  name: "نقطة أسوان الرئيسية",
-                  detail: "بجوار النقطة",
-                  time: "08:00",
-                  latitude: 24.0935,
-                  longitude: 32.9,
-                },
-                {
-                  id: "st2",
-                  name: "ميدان النقطة",
-                  detail: "أمام البريد",
-                  time: "08:05",
-                  latitude: 24.089,
-                  longitude: 32.8995,
-                },
-                {
-                  id: "st3",
-                  name: "الكورنيش",
-                  detail: "نادي التجديف",
-                  time: "08:15",
-                  latitude: 24.085,
-                  longitude: 32.895,
-                },
-                {
-                  id: "st4",
-                  name: "الجامعة القديمة",
-                  detail: "بوابة الجامعة",
-                  time: "08:30",
-                  latitude: 24.08,
-                  longitude: 32.89,
-                },
-              ];
-              try {
-                await set(stationsRef, defaultAswanStations);
-                console.log("Seeded default Aswan stations");
-                if (isMounted) setLoading(false);
-              } catch (e) {
-                console.error("Failed to seed stations:", e);
-                if (isMounted) {
-                  if (stations.length > 0) {
-                    console.log("[StationsContext] Stations state cleared (seed failed)");
-                    console.trace("[StationsContext] Stack trace for clear");
+              // Seed default Aswan stations if DB is completely empty and user is authenticated
+              if (user) {
+                const defaultAswanStations: Station[] = [
+                  {
+                    id: "st1",
+                    name: "نقطة أسوان الرئيسية",
+                    detail: "بجوار النقطة",
+                    time: "08:00",
+                    latitude: 24.0935,
+                    longitude: 32.9,
+                  },
+                  {
+                    id: "st2",
+                    name: "ميدان النقطة",
+                    detail: "أمام البريد",
+                    time: "08:05",
+                    latitude: 24.089,
+                    longitude: 32.8995,
+                  },
+                  {
+                    id: "st3",
+                    name: "الكورنيش",
+                    detail: "نادي التجديف",
+                    time: "08:15",
+                    latitude: 24.085,
+                    longitude: 32.895,
+                  },
+                  {
+                    id: "st4",
+                    name: "الجامعة القديمة",
+                    detail: "بوابة الجامعة",
+                    time: "08:30",
+                    latitude: 24.08,
+                    longitude: 32.89,
+                  },
+                ];
+                try {
+                  await set(stationsRef, defaultAswanStations);
+                  console.log("Seeded default Aswan stations");
+                  if (isMounted) setLoading(false);
+                } catch (e) {
+                  console.error("Failed to seed stations:", e);
+                  if (isMounted) {
+                    setStations([]);
+                    setLoading(false);
+                    setError("فشل تحميل النقاط");
                   }
-                  setStations([]);
-                  setLoading(false);
-                  setError("فشل تحميل النقاط");
                 }
+              } else {
+                // Not authenticated — can't seed, just show empty
+                console.log("[StationsContext] No stations and no auth to seed — showing empty");
+                setStations([]);
+                setLoading(false);
               }
             }
           },
@@ -178,7 +164,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
         unsub();
       }
     };
-  }, [retryKey, user, authLoading]);
+  }, [retryKey, user]);
 
   const saveStations = async (newStations: Station[]) => {
     try {

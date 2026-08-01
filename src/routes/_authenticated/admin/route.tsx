@@ -3,7 +3,9 @@ import { useEffect, useRef } from "react";
 import { AdminGuard } from "@/components/guards/AdminGuard";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { TodayStatusProvider } from "@/hooks/useTodayStatus";
+import { BoardingRecordsProvider } from "@/hooks/useBoardingRecords";
 import { TripStatusProvider } from "@/hooks/useTripStatus";
+import { VehiclesProvider } from "@/hooks/useVehicles";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
 import { reconcileOnStartup } from "@/lib/tripService";
 
@@ -38,9 +40,13 @@ function AdminRouteLayout() {
     <AdminGuard>
       <AdminStartupInitializer>
         <TodayStatusProvider>
-          <TripStatusProvider>
-            <AdminLayout />
-          </TripStatusProvider>
+          <BoardingRecordsProvider>
+            <TripStatusProvider>
+              <VehiclesProvider>
+                <AdminLayout />
+              </VehiclesProvider>
+            </TripStatusProvider>
+          </BoardingRecordsProvider>
         </TodayStatusProvider>
       </AdminStartupInitializer>
     </AdminGuard>
