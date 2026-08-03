@@ -17,7 +17,9 @@ interface Passenger {
   name: string;
   phone: string;
   boarded: boolean;
+  vehicleName?: string;
   locationLink?: string;
+  customLocationName?: string;
 }
 
 interface BoardingListProps {
@@ -89,25 +91,32 @@ export function BoardingList({
             }`}
             onClick={() => handleToggle(passenger)}
           >
-            <div>
-              <div className="text-[14px] font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                <span>{passenger.name}</span>
-                {passenger.boarded && (
-                  <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    ✓ تم الصعود
-                  </span>
-                )}
-                {passenger.locationLink && (
-                  <a
-                    href={passenger.locationLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-md"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    موقعه الفعلي
-                  </a>
-                )}
+            <div className="min-w-0 flex-1 pl-2">
+              <div className="text-[14px] font-semibold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span className="truncate">{passenger.name}</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {passenger.boarded && (
+                    <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                      ✓ تم الصعود {passenger.vehicleName ? `• ${passenger.vehicleName}` : ""}
+                    </span>
+                  )}
+                  {passenger.customLocationName && (
+                    <span className="bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-blue-500/20">
+                      📍 موقع مخصص: {passenger.customLocationName}
+                    </span>
+                  )}
+                  {passenger.locationLink && (
+                    <a
+                      href={passenger.locationLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-semibold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-primary/20"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      🗺️ فتح الخريطة
+                    </a>
+                  )}
+                </div>
               </div>
               <div
                 className="text-[12px] text-muted-foreground dir-ltr text-right mt-0.5"

@@ -13,6 +13,8 @@ import { useTodayStatus, type DailyRecord } from "@/hooks/useTodayStatus";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
+import { getVehicleLabel } from "@/utils/vehicleResolver";
+import { isStationSelected } from "@/utils/stationResolver";
 import { toast } from "sonner";
 import { Flag, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -115,7 +117,11 @@ function TripsPage() {
       unsubUsers = onValue(ref(db, "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u })));
+          setUsers(
+            Object.entries(val)
+              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
+              .filter((u: any) => u.role !== "admin"),
+          );
         } else {
           setUsers([]);
         }
@@ -135,7 +141,7 @@ function TripsPage() {
   }, [getAllStudentsStatus, users]);
 
   const confirmedStudents = useMemo(
-    () => passengers.filter((p) => p.status === "riding").length,
+    () => passengers.filter((p) => p.status === "riding" && isStationSelected(p.station)).length,
     [passengers],
   );
 
@@ -483,11 +489,16 @@ function TripsPage() {
       .filter((p: any) => p.status === "riding" && p.station === stationId)
       .map((p: any) => {
         const record = recordsByStudent[p.id];
+        const isBoarded = record?.status === "boarded";
+        const vehicleName = isBoarded && record?.vehicleId
+          ? getVehicleLabel(record.vehicleId, vehicles)
+          : undefined;
         return {
           id: p.id,
           name: p.fullName || "غير معروف",
           phone: p.phone || "---",
-          boarded: record?.status === "boarded",
+          boarded: isBoarded,
+          vehicleName,
           locationLink: p.customLocation
             ? `https://maps.google.com/?q=${p.customLocation.lat},${p.customLocation.lng}`
             : undefined,
@@ -499,16 +510,34 @@ function TripsPage() {
     .filter((p: any) => p.status === "riding" && p.station === "custom")
     .map((p: any) => {
       const record = recordsByStudent[p.id];
+      const isBoarded = record?.status === "boarded";
+      const vehicleName = isBoarded && record?.vehicleId
+        ? getVehicleLabel(record.vehicleId, vehicles)
+        : undefined;
       return {
         id: p.id,
         name: p.fullName || "غير معروف",
         phone: p.phone || "---",
-        boarded: record?.status === "boarded",
+        boarded: isBoarded,
+        vehicleName,
+        customLocationName: p.customLocation?.name,
         locationLink: p.customLocation
           ? `https://maps.google.com/?q=${p.customLocation.lat},${p.customLocation.lng}`
           : undefined,
       };
     });
+
+  const customStudentMarkers = useMemo(() => {
+    return passengers
+      .filter((p: any) => p.status === "riding" && p.station === "custom" && p.customLocation?.lat && p.customLocation?.lng)
+      .map((p: any) => ({
+        id: p.id,
+        studentName: p.fullName || "طالب",
+        locationName: p.customLocation.name || "موقع مخصص",
+        lat: Number(p.customLocation.lat),
+        lng: Number(p.customLocation.lng),
+      }));
+  }, [passengers]);
 
   if (stationsLoading) {
     return (
@@ -544,7 +573,7 @@ function TripsPage() {
 
       {/* Segmented Control for Mobile */}
       {displayedVehicle && !showPlanningPanel && (
-        <div className="flex w-full mb-5 border-b border-border/50 sticky top-16 z-30 bg-background/95 backdrop-blur-sm lg:hidden mx-[-16px] px-4 w-[calc(100%+32px)]">
+        <div className="flex mb-5 border-b border-border/50 sticky top-16 z-30 bg-background/95 backdrop-blur-sm lg:hidden mx-[-16px] px-4 w-[calc(100%+32px)]">
           <button
             className={`flex-1 py-3.5 text-center font-bold text-sm relative transition-colors ${activeTab === "trip" ? "text-primary" : "text-muted-foreground hover:bg-muted/30"}`}
             onClick={() => setActiveTab("trip")}
@@ -629,6 +658,7 @@ function TripsPage() {
               <div className="h-[250px] rounded-2xl overflow-hidden border border-border/50 shadow-sm relative z-0">
                 <AdminStationsMap
                   stations={stations}
+                  customLocationMarkers={customStudentMarkers}
                   activeStationId={displayedVehicle.currentStationId || displayedVehicle.nextStationId}
                 />
               </div>

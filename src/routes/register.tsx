@@ -17,6 +17,7 @@ import {
 import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw } from "lucide-react";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { motion, AnimatePresence } from "framer-motion";
+import { StationPicker } from "@/components/student/StationPicker";
 
 export const Route = createFileRoute("/register")({
   ssr: false,
@@ -44,6 +45,7 @@ function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [station, setStation] = useState<string>("");
+  const [customLocation, setCustomLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -98,6 +100,29 @@ function RegisterPage() {
       setLoading(false);
     }
   }
+
+  // Auto-detect Google authenticated user who needs to complete registration profile
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+        const { ref, get } = await import("firebase/database");
+        const currentUser = getFirebaseAuth().currentUser;
+        if (currentUser && currentUser.providerData.some((p) => p.providerId === "google.com")) {
+          const snap = await get(ref(getFirebaseDb(), `rakeb/users/${currentUser.uid}`));
+          if (!snap.exists()) {
+            setIsGoogleUser(true);
+            setGoogleUid(currentUser.uid);
+            if (currentUser.displayName) setFullName(currentUser.displayName);
+            if (currentUser.email) setEmail(currentUser.email);
+            setStep(2);
+          }
+        }
+      } catch (e) {
+        console.error("Google user check error:", e);
+      }
+    })();
+  }, []);
 
   // Set default station if available
   useEffect(() => {
@@ -158,6 +183,7 @@ function RegisterPage() {
         phone: phone.trim(),
         nationalId: nationalId.trim(),
         defaultStation: station,
+        ...(station === "custom" && customLocation ? { customLocation } : {}),
       });
       // Registration successful! Move to success step
       setStep(5);
@@ -381,18 +407,18 @@ function RegisterPage() {
                     لا توجد نقاط متاحة حالياً
                   </div>
                 ) : (
-                  <Select value={station} onValueChange={setStation}>
-                    <SelectTrigger className="h-11 rounded-xl text-[15px]">
-                      <SelectValue placeholder="اختر نقطة التجمع" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {stations.map((s) => (
-                        <SelectItem key={s.id} value={s.id} className="rounded-lg text-[14px]">
-                          {s.name} — {s.time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <StationPicker
+                    currentStationId={station}
+                    customLocationName={customLocation?.name}
+                    customLocationCoords={customLocation ? { lat: customLocation.lat, lng: customLocation.lng } : null}
+                    stations={stations}
+                    onChange={(newStation, customLoc) => {
+                      setStation(newStation);
+                      if (newStation === "custom" && customLoc) {
+                        setCustomLocation(customLoc);
+                      }
+                    }}
+                  />
                 )}
                 <p className="text-[13px] text-muted-foreground mt-1.5">
                   تقدر تغيرها بعدين لو احتجت من إعدادات حسابك.

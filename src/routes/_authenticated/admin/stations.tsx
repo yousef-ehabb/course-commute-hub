@@ -300,161 +300,164 @@ function StationsManagementPage() {
             onAddStation={handleAddClick}
             activeStationId={activeId}
           />
-
-          {newStationDialog && (
-            <div className="absolute inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
-              <Card className="w-full max-w-sm">
-                <CardContent className="p-6 space-y-4">
-                  <h3 className="text-lg font-bold">إضافة نقطة جديدة</h3>
-
-                  <div className="space-y-2">
-                    <Label>اسم النقطة</Label>
-                    <Input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="مثال: محطة الكورنيش"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>التفاصيل (اختياري)</Label>
-                    <Input
-                      value={newDetail}
-                      onChange={(e) => setNewDetail(e.target.value)}
-                      placeholder="مثال: بجوار البنك الأهلي"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>وقت الوصول المتوقع</Label>
-                    <Input
-                      type="time"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button className="flex-1" onClick={confirmAdd} disabled={!newName}>
-                      إضافة
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setNewStationDialog(null)}
-                    >
-                      إلغاء
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          {deletionDialog && (
-            <div className="absolute inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
-              <Card className="w-full max-w-md border-destructive/20 shadow-xl">
-                <CardContent className="p-6 space-y-5">
-                  <div className="flex items-center gap-3 text-destructive">
-                    <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold leading-tight">تنبيه: نقطة مستخدمة</h3>
-                      <p className="text-sm opacity-90 font-medium">
-                        أنت تحاول حذف نقطة ({deletionDialog.stationName})
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm border">
-                    {deletionDialog.affectedUsers.length > 0 && (
-                      <p className="font-medium text-foreground">
-                        هذه النقطة مخصصة حالياً لـ{" "}
-                        <span className="font-bold text-destructive">
-                          {deletionDialog.affectedUsers.length} طلاب
-                        </span>{" "}
-                        كنقطة تجمع افتراضية.
-                      </p>
-                    )}
-                    {deletionDialog.isTripActive && (
-                      <p className="font-medium text-amber-600 dark:text-amber-500">
-                        الرحلة النشطة حالياً تمر بهذه النقطة! يُفضل عدم الحذف أثناء الرحلة.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="p-4 border rounded-xl bg-card hover:bg-muted/30 transition-colors">
-                      <Label className="text-sm font-bold mb-2 block cursor-pointer">
-                        الخيار الأول: نقل الطلاب لنقطة أخرى
-                      </Label>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        سيتم تحديث ملفات الطلاب لتصبح النقطة الجديدة هي الافتراضية.
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <select
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          value={reassignStationId}
-                          onChange={(e) => setReassignStationId(e.target.value)}
-                        >
-                          <option value="" disabled>
-                            اختر نقطة بديلة...
-                          </option>
-                          {localStations
-                            .filter((s) => s.id !== deletionDialog.stationId)
-                            .map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                        </select>
-                        <Button
-                          onClick={() => executeDelete(deletionDialog.stationId, reassignStationId)}
-                          disabled={!reassignStationId || saving}
-                          className="shrink-0"
-                        >
-                          تطبيق النقل والحذف
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border rounded-xl bg-card hover:bg-muted/30 transition-colors">
-                      <Label className="text-sm font-bold text-destructive mb-2 block">
-                        الخيار الثاني: إزالة التخصيص
-                      </Label>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        لن يتم تعيين نقطة بديلة. سيُطلب من الطلاب اختيار نقطة جديدة عند الدخول
-                        للتطبيق.
-                      </p>
-                      <Button
-                        variant="destructive"
-                        onClick={() => executeDelete(deletionDialog.stationId, null)}
-                        disabled={saving}
-                        className="w-full"
-                      >
-                        حذف وإزالة التخصيص
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setDeletionDialog(null)}
-                      disabled={saving}
-                    >
-                      إلغاء
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Global Modals */}
+      {newStationDialog && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="text-lg font-bold">إضافة نقطة جديدة</h3>
+
+              <div className="space-y-2">
+                <Label>اسم النقطة</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="مثال: محطة الكورنيش"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>التفاصيل (اختياري)</Label>
+                <Input
+                  value={newDetail}
+                  onChange={(e) => setNewDetail(e.target.value)}
+                  placeholder="مثال: بجوار البنك الأهلي"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>وقت الوصول المتوقع</Label>
+                <Input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button className="flex-1" onClick={confirmAdd} disabled={!newName}>
+                  إضافة
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setNewStationDialog(null)}
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {deletionDialog && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-md border-destructive/20 shadow-xl my-8">
+            <CardContent className="p-6 space-y-5">
+              <div className="flex items-center gap-3 text-destructive">
+                <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold leading-tight">تنبيه: نقطة مستخدمة</h3>
+                  <p className="text-sm opacity-90 font-medium">
+                    أنت تحاول حذف نقطة ({deletionDialog.stationName})
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm border">
+                {deletionDialog.affectedUsers.length > 0 && (
+                  <p className="font-medium text-foreground">
+                    هذه النقطة مخصصة حالياً لـ{" "}
+                    <span className="font-bold text-destructive">
+                      {deletionDialog.affectedUsers.length} طلاب
+                    </span>{" "}
+                    كنقطة تجمع افتراضية.
+                  </p>
+                )}
+                {deletionDialog.isTripActive && (
+                  <p className="font-medium text-amber-600 dark:text-amber-500">
+                    الرحلة النشطة حالياً تمر بهذه النقطة! يُفضل عدم الحذف أثناء الرحلة.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 border rounded-xl bg-card hover:bg-muted/30 transition-colors">
+                  <Label className="text-sm font-bold mb-2 block cursor-pointer">
+                    الخيار الأول: نقل الطلاب لنقطة أخرى
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    سيتم تحديث ملفات الطلاب لتصبح النقطة الجديدة هي الافتراضية.
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={reassignStationId}
+                      onChange={(e) => setReassignStationId(e.target.value)}
+                    >
+                      <option value="" disabled>
+                        اختر نقطة بديلة...
+                      </option>
+                      {localStations
+                        .filter((s) => s.id !== deletionDialog.stationId)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                    </select>
+                    <Button
+                      onClick={() => executeDelete(deletionDialog.stationId, reassignStationId)}
+                      disabled={!reassignStationId || saving}
+                      className="shrink-0"
+                    >
+                      تطبيق النقل والحذف
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-4 border rounded-xl bg-card hover:bg-muted/30 transition-colors">
+                  <Label className="text-sm font-bold text-destructive mb-2 block">
+                    الخيار الثاني: إزالة التخصيص
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    لن يتم تعيين نقطة بديلة. سيُطلب من الطلاب اختيار نقطة جديدة عند الدخول
+                    للتطبيق.
+                  </p>
+                  <Button
+                    variant="destructive"
+                    onClick={() => executeDelete(deletionDialog.stationId, null)}
+                    disabled={saving}
+                    className="w-full"
+                  >
+                    حذف وإزالة التخصيص
+                  </Button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setDeletionDialog(null)}
+                  disabled={saving}
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Mobile Save Floating Button */}
-      <div className="md:hidden fixed bottom-16 ltr:right-4 rtl:left-4 z-40">
+      <div className="md:hidden fixed bottom-20 ltr:right-4 rtl:left-4 z-40">
         <Button
           onClick={handleSave}
           disabled={!isDirty || saving}

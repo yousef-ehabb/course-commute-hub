@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [retryKey]);
 
-  const isEmailVerified = user?.emailVerified ?? false;
+  const isEmailVerified = role === "admin" ? true : (user?.emailVerified ?? false);
 
   const signIn = useCallback<AuthContextValue["signIn"]>(async (email, password) => {
     const { getFirebaseAuth } = await import("@/lib/firebase");
@@ -168,30 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+    const { getFirebaseAuth } = await import("@/lib/firebase");
     const { GoogleAuthProvider, signInWithPopup } = await import("firebase/auth");
-    const { ref, get, set } = await import("firebase/database");
 
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
-    const cred = await signInWithPopup(auth, provider);
-    const u = cred.user;
-
-    const db = getFirebaseDb();
-    const profileRef = ref(db, `rakeb/users/${u.uid}`);
-    const snap = await get(profileRef);
-    if (!snap.exists()) {
-      const newProfile: UserProfile = {
-        uid: u.uid,
-        fullName: u.displayName || "طالب جديد",
-        phone: u.phoneNumber || "",
-        nationalId: "",
-        defaultStation: "",
-        role: "student",
-        createdAt: Date.now(),
-      };
-      await set(profileRef, newProfile);
-    }
+    await signInWithPopup(auth, provider);
   }, []);
 
   const signUp = useCallback<AuthContextValue["signUp"]>(async (email, password, data) => {

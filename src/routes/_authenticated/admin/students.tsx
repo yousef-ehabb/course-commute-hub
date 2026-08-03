@@ -3,8 +3,11 @@ import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useStations } from "@/contexts/StationsContext";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
+import { useBoardingRecords } from "@/hooks/useBoardingRecords";
+import { useVehicles } from "@/hooks/useVehicles";
 import { getStationName } from "@/utils/stationResolver";
-import { Download } from "lucide-react";
+import { getVehicleLabel } from "@/utils/vehicleResolver";
+import { Download, Search, SearchX, MapPin, Phone, PhoneCall } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 export const Route = createFileRoute("/_authenticated/admin/students")({
   component: StudentsPage,
@@ -17,6 +20,9 @@ interface StudentRecord {
   station: string;
   nationalId: string;
   isRidingToday: boolean;
+  isBoarded?: boolean;
+  vehicleName?: string;
+  customLocation?: { lat: number; lng: number; name?: string };
 }
 
 type FilterType = "all" | "riding" | "not_riding";
@@ -24,6 +30,8 @@ type FilterType = "all" | "riding" | "not_riding";
 function StudentsPage() {
   const { stations } = useStations();
   const { getAllStudentsStatus } = useTodayStatus();
+  const { recordsByStudent } = useBoardingRecords();
+  const { vehicles } = useVehicles();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [users, setUsers] = useState<any[]>([]);
@@ -38,7 +46,11 @@ function StudentsPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u })));
+          setUsers(
+            Object.entries(val)
+              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
+              .filter((u: any) => u.role !== "admin"),
+          );
         } else {
           setUsers([]);
         }
@@ -50,7 +62,13 @@ function StudentsPage() {
   const students = useMemo<StudentRecord[]>(() => {
     const allStatus = getAllStudentsStatus(users);
     return allStatus.map((u) => {
-      const stationName = getStationName(u.station, stations);
+      const stationName = getStationName(u.station, stations, u.customLocation?.name);
+      const record = recordsByStudent[u.id];
+      const isBoarded = record?.status === "boarded";
+      const vehicleName = isBoarded && record?.vehicleId
+        ? getVehicleLabel(record.vehicleId, vehicles)
+        : undefined;
+
       return {
         id: u.id,
         name: u.fullName || "غير معروف",
@@ -58,9 +76,12 @@ function StudentsPage() {
         nationalId: u.nationalId || "---",
         station: stationName,
         isRidingToday: u.status === "riding",
+        isBoarded,
+        vehicleName,
+        customLocation: u.customLocation,
       };
     });
-  }, [getAllStudentsStatus, users, stations]);
+  }, [getAllStudentsStatus, users, stations, recordsByStudent, vehicles]);
 
   const filteredStudents = students.filter((s) => {
     const matchesSearch = s.name.includes(searchTerm) || s.phone.includes(searchTerm);
@@ -104,17 +125,17 @@ function StudentsPage() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-margin-mobile md:px-margin-desktop py-stack-md pb-24">
+    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 pb-24">
       {/* Header */}
-      <header className="w-full sticky top-0 z-10 bg-surface/80 backdrop-blur-md shadow-sm flex items-center justify-between py-4 mb-stack-md -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0">
+      <header className="w-full sticky top-0 z-10 bg-background/80 backdrop-blur-md shadow-xs flex items-center justify-between py-4 mb-4 -mx-4 px-4 md:mx-0 md:px-0">
         <button
           onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95 duration-150"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-95 text-xs font-semibold"
         >
-          <span className="material-symbols-outlined text-[20px]">download</span>
-          <span className="font-label-md text-label-md">تصدير إلى Excel</span>
+          <Download className="w-4 h-4" />
+          <span>تصدير إلى Excel</span>
         </button>
-        <h1 className="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">
           الطلاب
         </h1>
         {/* Invisible spacer to perfectly center the title against the button */}
@@ -122,21 +143,21 @@ function StudentsPage() {
       </header>
 
       {/* Search Bar Section */}
-      <div className="relative w-full mb-stack-lg">
+      <div className="relative w-full mb-4">
         <input
-          className="w-full h-14 pr-12 pl-4 rounded-2xl border border-outline-variant bg-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-body-lg text-body-lg text-on-surface shadow-sm placeholder:text-on-surface-variant/50"
+          className="w-full h-12 pr-11 pl-4 rounded-xl border border-border bg-card focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground shadow-xs placeholder:text-muted-foreground"
           placeholder="ابحث بالاسم أو الموبايل..."
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-on-surface-variant">
-          <span className="material-symbols-outlined">search</span>
+        <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted-foreground">
+          <Search className="w-4 h-4" />
         </div>
       </div>
 
       {/* Filter Chips Section */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-stack-sm mb-stack-lg pb-2 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0">
+      <div className="flex overflow-x-auto gap-2 mb-4 pb-1 -mx-4 px-4 md:mx-0 md:px-0">
         <FilterChip
           label="الكل"
           active={filterType === "all"}
@@ -156,7 +177,7 @@ function StudentsPage() {
 
       {/* Student List */}
       <motion.div 
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
         initial={mounted ? false : "hidden"}
         animate="show"
         variants={{
@@ -168,9 +189,9 @@ function StudentsPage() {
         }}
       >
         {filteredStudents.length === 0 && (
-          <div className="text-center text-on-surface-variant py-16 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant">
-            <span className="material-symbols-outlined text-[48px] text-outline-variant/50">search_off</span>
-            <p className="font-title-md text-title-md">لا توجد نتائج مطابقة</p>
+          <div className="text-center text-muted-foreground py-12 flex flex-col items-center justify-center gap-2 bg-card rounded-2xl border border-dashed border-border">
+            <SearchX className="w-10 h-10 text-muted-foreground/40" />
+            <p className="text-sm font-medium">لا توجد نتائج مطابقة</p>
           </div>
         )}
 
@@ -185,45 +206,62 @@ function StudentsPage() {
                 hidden: { opacity: 0, y: 10 },
                 show: { opacity: 1, y: 0 }
               }}
-              className="bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-outline-variant/40 hover:border-primary/30 hover:shadow-md transition-all group"
+              className="bg-card p-4 sm:p-5 rounded-2xl shadow-xs border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
             >
-              <div className="flex justify-between items-start gap-4 mb-4">
-                <div className="flex flex-col gap-1.5">
-                  <h2 className="font-title-lg text-title-lg text-on-surface group-hover:text-primary transition-colors">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
                     {student.name}
                   </h2>
-                  <div className="flex items-center gap-1.5 text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px]">location_on</span>
-                    <p className="font-body-md text-body-md">{student.station}</p>
+                  <div className="flex items-center gap-1.5 text-muted-foreground flex-wrap">
+                    <MapPin className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <p className="text-xs font-medium">{student.station}</p>
+                    {student.customLocation?.lat && student.customLocation?.lng && (
+                      <a
+                        href={`https://maps.google.com/?q=${student.customLocation.lat},${student.customLocation.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-primary/20"
+                      >
+                        🗺️ فتح الخريطة
+                      </a>
+                    )}
                   </div>
                 </div>
-                <div
-                  className={`px-3 py-1.5 rounded-full font-label-sm text-label-sm tracking-normal flex items-center gap-1.5 border ${
-                    isRiding
-                      ? "bg-primary/10 text-primary border-primary/20"
-                      : "bg-surface-container text-on-surface-variant border-outline-variant/30"
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${isRiding ? "bg-primary" : "bg-on-surface-variant"}`}
-                  />
-                  {isRiding ? "تم تأكيد الحضور" : "لم يتم التأكيد"}
+                <div className="flex flex-wrap items-center gap-2">
+                  {student.isBoarded && (
+                    <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
+                      ✓ تم الصعود {student.vehicleName ? `• ${student.vehicleName}` : ""}
+                    </div>
+                  )}
+                  <div
+                    className={`px-2.5 py-1 rounded-full text-xs tracking-normal flex items-center gap-1.5 border font-medium ${
+                      isRiding
+                        ? "bg-primary/10 text-primary border-primary/20"
+                        : "bg-muted text-muted-foreground border-border/40"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${isRiding ? "bg-primary" : "bg-muted-foreground"}`}
+                    />
+                    {isRiding ? "تم تأكيد الحضور" : "لم يتم التأكيد"}
+                  </div>
                 </div>
               </div>
 
-              <div className="h-px w-full bg-outline-variant/30 mb-4"></div>
+              <div className="h-px w-full bg-border/40 mb-3"></div>
 
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-on-surface-variant" dir="ltr">
-                  <span className="material-symbols-outlined text-[18px]">call</span>
-                  <span className="font-body-md text-body-md tracking-wider">{student.phone}</span>
+                <div className="flex items-center gap-2 text-muted-foreground" dir="ltr">
+                  <Phone className="w-4 h-4" />
+                  <span className="text-xs font-medium tracking-wider">{student.phone}</span>
                 </div>
                 <a
                   href={`tel:${student.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 text-primary bg-primary/5 hover:bg-primary/10 px-4 py-2 rounded-lg font-label-md transition-colors active:scale-95 duration-150"
+                  className="flex items-center gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors active:scale-95 duration-150"
                 >
-                  <span className="material-symbols-outlined text-[18px]">phone_in_talk</span>
+                  <PhoneCall className="w-3.5 h-3.5" />
                   اتصال
                 </a>
               </div>
@@ -247,10 +285,10 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`px-6 py-2.5 rounded-full font-label-md text-label-md whitespace-nowrap transition-all duration-200 active:scale-95 border ${
+      className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 border ${
         active
-          ? "bg-primary text-white border-primary shadow-sm"
-          : "bg-surface-container-lowest text-on-surface-variant border-outline-variant/60 hover:bg-surface-container hover:text-on-surface"
+          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+          : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
       }`}
     >
       {label}

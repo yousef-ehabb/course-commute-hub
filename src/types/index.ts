@@ -6,6 +6,7 @@ export interface UserProfile {
   phone: string;
   nationalId: string;
   defaultStation: string;
+  customLocation?: { lat: number; lng: number; name?: string };
   role: UserRole;
   courseId?: string;
   createdAt: number;

@@ -5,7 +5,7 @@ import { StatsCards } from "@/components/admin/StatsCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useStations } from "@/contexts/StationsContext";
-import { getStationName } from "@/utils/stationResolver";
+import { getStationName, isStationSelected } from "@/utils/stationResolver";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useTripStatus } from "@/hooks/useTripStatus";
 import { Car, BusFront, Bus, MapPin, Navigation } from "lucide-react";
@@ -33,7 +33,11 @@ function DashboardPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u })));
+          setUsers(
+            Object.entries(val)
+              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
+              .filter((u: any) => u.role !== "admin"),
+          );
         } else {
           setUsers([]);
         }
@@ -52,16 +56,16 @@ function DashboardPage() {
     const allStatus = getAllStudentsStatus(users);
 
     allStatus.forEach((user) => {
-      if (user.status === "riding") {
+      const hasSelectedStation = isStationSelected(user.station);
+
+      if (user.status === "riding" && hasSelectedStation) {
         riders++;
-        if (user.station) {
-          const stName = getStationName(user.station, stations);
-          counts[stName] = (counts[stName] || 0) + 1;
-        }
+        const stName = getStationName(user.station, stations);
+        counts[stName] = (counts[stName] || 0) + 1;
         if (user.boarded) {
           boarded++;
         }
-      } else if (user.status === "cancelled") {
+      } else if (user.status === "cancelled" && hasSelectedStation) {
         cancelled++;
       }
     });
@@ -109,8 +113,8 @@ function DashboardPage() {
   return (
     <div className="space-y-6 pt-4 pb-20">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">الرئيسية</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">نظرة عامة على رحلات اليوم</p>
+        <h1 className="text-2xl font-bold text-foreground">الرئيسية</h1>
+        <p className="text-muted-foreground mt-1">نظرة عامة على رحلات اليوم</p>
       </div>
 
       {/* Active Trip Status */}
@@ -143,7 +147,7 @@ function DashboardPage() {
           asChild
           variant="outline"
           size="lg"
-          className="h-14 text-base rounded-[16px] shadow-sm bg-white hover:bg-gray-50 border-gray-200"
+          className="h-14 text-base rounded-[16px] shadow-sm bg-card hover:bg-muted border-border"
         >
           <Link to="/admin/stations">
             <MapPin className="w-5 h-5 ml-2 text-primary" />
@@ -170,14 +174,15 @@ function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={stationCounts}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 25 }}
                 >
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
+                    tick={{ fill: "currentColor", fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
-                    interval="preserveStartEnd"
+                    interval={0}
+                    height={40}
                   />
                   <YAxis
                     tick={{ fill: "#6b7280", fontSize: 11 }}

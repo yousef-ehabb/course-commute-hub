@@ -121,6 +121,22 @@ function StudentHome() {
     }
   }
 
+  async function updateCustomLocation(loc: { lat: number; lng: number; name: string }) {
+    if (!user) return;
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, update } = await import("firebase/database");
+      await update(ref(getFirebaseDb(), `rakeb/users/${user.uid}`), {
+        defaultStation: "custom",
+        customLocation: loc,
+      });
+      toast.success("تم تحديد نقطة التجمع المخصصة بنجاح");
+    } catch (e) {
+      console.error("Failed to update custom location:", e);
+      toast.error("فشل في تحديث نقطة التجمع المخصصة");
+    }
+  }
+
   const handleStationChoice = async (type: "temporary" | "permanent") => {
     if (!pendingStation) return;
     setDrawerOpen(false);
@@ -136,57 +152,37 @@ function StudentHome() {
     setPendingStation(null);
   };
 
-  async function updateStatus(newRiding: boolean, newStation: string) {
+  async function updateStatus(
+    newRiding: boolean,
+    newStation: string,
+    customLoc?: { lat: number; lng: number; name: string }
+  ) {
     if (!user || !newStation) return;
     setBusy(true);
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, set } = await import("firebase/database");
+      const path = `rakeb/dailyStatus/default/${activeDateKey}/${user.uid}`;
 
-    const saveToFirebase = async (customLoc?: { lat: number; lng: number }) => {
-      try {
-        const { getFirebaseDb } = await import("@/lib/firebase");
-        const { ref, set, remove } = await import("firebase/database");
-        const path = `rakeb/dailyStatus/default/${activeDateKey}/${user.uid}`;
+      const updateData: Record<string, any> = {
+        status: newRiding ? "riding" : "cancelled",
+        station: newStation,
+        fullName: profile?.fullName || "طالب",
+        phone: profile?.phone || "",
+        updatedAt: getServerTime(),
+      };
 
-        if (newRiding && newStation === defaultStationId) {
-          await remove(ref(getFirebaseDb(), path));
-        } else {
-          const data: any = {
-            status: newRiding ? "riding" : "cancelled",
-            station: newStation,
-            updatedAt: getServerTime(),
-            fullName: profile?.fullName ?? "",
-            phone: profile?.phone ?? "",
-          };
-          if (customLoc) {
-            data.customLocation = customLoc;
-          }
-          await set(ref(getFirebaseDb(), path), data);
-        }
-        toast.success(newRiding ? "تم تأكيد الحضور بنجاح" : "تم إلغاء تأكيد الحضور لليوم");
-      } catch (e) {
-        toast.error((e as Error).message);
-      } finally {
-        setBusy(false);
+      if (newStation === "custom" && (customLoc || profile?.customLocation)) {
+        updateData.customLocation = customLoc || profile?.customLocation;
       }
-    };
 
-    if (newStation === "custom" && newRiding) {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            saveToFirebase({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          },
-          (err) => {
-            toast.error("فشل في تحديد موقعك الجغرافي. يرجى تفعيل إذن الموقع.");
-            setBusy(false);
-          },
-          { enableHighAccuracy: true },
-        );
-      } else {
-        toast.error("متصفحك لا يدعم تحديد الموقع الجغرافي.");
-        setBusy(false);
-      }
-    } else {
-      await saveToFirebase();
+      await set(ref(getFirebaseDb(), path), updateData);
+      toast.success(newRiding ? "تم تأكيد الحضور بنجاح" : "تم إلغاء تأكيد الحضور لليوم");
+    } catch (e) {
+      console.error("Failed to update status:", e);
+      toast.error((e as Error).message || "حدث خطأ أثناء تحديث الحالة");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -266,14 +262,17 @@ function StudentHome() {
       {riding && (
         <StationPicker
           currentStationId={station}
+          customLocationName={profile?.customLocation?.name}
+          customLocationCoords={profile?.customLocation ? { lat: profile.customLocation.lat, lng: profile.customLocation.lng } : null}
           stations={stations}
-          onChange={async (newStation) => {
+          onChange={async (newStation, customLoc) => {
             const isDefaultInvalid =
               !profile?.defaultStation || !stations.find((s) => s.id === profile.defaultStation);
 
-            if (newStation === "custom") {
+            if (newStation === "custom" && customLoc) {
               setStation(newStation);
-              if (riding) updateStatus(true, newStation);
+              await updateCustomLocation(customLoc);
+              if (riding) updateStatus(true, newStation, customLoc);
             } else if (isDefaultInvalid) {
               setStation(newStation);
               await updateDefaultStation(newStation);

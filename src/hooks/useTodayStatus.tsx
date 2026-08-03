@@ -18,7 +18,7 @@ export interface DailyRecord {
   fullName: string;
   phone: string;
   boarded?: boolean;
-  customLocation?: { lat: number; lng: number };
+  customLocation?: { lat: number; lng: number; name?: string };
   updatedAt?: number;
   [key: string]: any;
 }

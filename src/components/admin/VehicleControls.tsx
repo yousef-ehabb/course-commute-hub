@@ -87,7 +87,7 @@ export function VehicleControls({
       </div>
 
       {/* Metrics Row */}
-      <div className="flex items-center justify-between py-3 bg-muted/30 rounded-xl px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 bg-muted/30 rounded-xl px-4 gap-3">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 p-2 rounded-lg text-primary">
             <Bus className="w-5 h-5" />
@@ -108,7 +108,7 @@ export function VehicleControls({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 border-r border-border/50 pr-4 mr-4">
+        <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-r border-border/50 pt-2.5 sm:pt-0 sm:pr-4 sm:mr-4">
           <div className="bg-primary/10 p-2 rounded-lg text-primary">
             <svg
               xmlns="http://www.w3.org/2000/svg"

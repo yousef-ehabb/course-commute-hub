@@ -18,7 +18,7 @@ import {
 import { MapPin, TrendingUp, Users, CheckCircle2, UserCheck, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStations } from "@/contexts/StationsContext";
-import { getStationName } from "@/utils/stationResolver";
+import { getStationName, isStationSelected } from "@/utils/stationResolver";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -65,7 +65,9 @@ function StatsPage() {
         (snap) => {
           const val = snap.val();
           if (val) {
-            const usersList = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
+            const usersList = Object.entries(val)
+              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
+              .filter((u: any) => u.role !== "admin");
             setUsers(usersList);
             setTotalUsers(usersList.length);
           } else {
@@ -116,8 +118,10 @@ function StatsPage() {
             // Process explicit records first
             const explicitIds = new Set<string>();
             Object.values(dayData).forEach((u: any) => {
+              if (u.role === "admin") return;
               explicitIds.add(u.id);
-              if (u.status === "riding") {
+              const hasSelectedStation = isStationSelected(u.station);
+              if (u.status === "riding" && hasSelectedStation) {
                 riders++;
                 totalRidersAllTime++;
                 if (u.boarded) boarded++;
@@ -131,10 +135,11 @@ function StatsPage() {
 
             // Add implicit riders (students who don't have an explicit record for this day)
             users.forEach((user) => {
-              if (user.role === "student" && !explicitIds.has(user.uid)) {
+              const hasSelectedStation = isStationSelected(user.defaultStation);
+              if (user.role === "student" && hasSelectedStation && !explicitIds.has(user.uid)) {
                 riders++;
                 totalRidersAllTime++;
-                const station = user.defaultStation || "unknown";
+                const station = user.defaultStation;
                 if (stationTotals[station] !== undefined) {
                   stationTotals[station]++;
                 }

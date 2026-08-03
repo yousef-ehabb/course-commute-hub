@@ -91,8 +91,8 @@ function SettingsPage() {
     <div className="space-y-6 pt-4 pb-20">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">الإعدادات</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة إعدادات النظام والتطبيق</p>
+          <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
+          <p className="text-muted-foreground mt-1">إدارة إعدادات النظام والتطبيق</p>
         </div>
         <Button className="hidden md:flex gap-2 bg-primary" onClick={handleSave}>
           <Save className="w-4 h-4" />
@@ -111,10 +111,10 @@ function SettingsPage() {
             <CardDescription>تحكم في أوقات غلق التسجيل للطلاب</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between pb-4 border-b border-border/50">
               <div>
-                <label className="text-sm font-medium">إغلاق التسجيل يدوياً</label>
-                <p className="text-xs text-gray-500">منع الطلاب من تغيير حالتهم فوراً وبشكل دائم</p>
+                <label className="text-sm font-medium text-foreground">إغلاق التسجيل يدوياً</label>
+                <p className="text-xs text-muted-foreground">منع الطلاب من تغيير حالتهم فوراً وبشكل دائم</p>
               </div>
               <Switch
                 checked={forceLock}
@@ -123,27 +123,27 @@ function SettingsPage() {
               />
             </div>
 
-            <div className={`flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 ${forceLock ? "opacity-50 pointer-events-none" : ""}`}>
+            <div className={`flex items-center justify-between pb-4 border-b border-border/50 ${forceLock ? "opacity-50 pointer-events-none" : ""}`}>
               <div>
-                <label className="text-sm font-medium">تفعيل غلق التسجيل التلقائي</label>
-                <p className="text-xs text-gray-500">منع الطلاب من تغيير حالتهم بعد وقت محدد</p>
+                <label className="text-sm font-medium text-foreground">تفعيل غلق التسجيل التلقائي</label>
+                <p className="text-xs text-muted-foreground">منع الطلاب من تغيير حالتهم بعد وقت محدد</p>
               </div>
               <Switch checked={cutoffEnabled} onCheckedChange={setCutoffEnabled} />
             </div>
 
             <div className={`space-y-2 ${(!cutoffEnabled || forceLock) ? "opacity-50 pointer-events-none" : ""}`}>
-              <label className="text-sm font-medium">وقت غلق التسجيل يومياً</label>
+              <label className="text-sm font-medium text-foreground">وقت غلق التسجيل يومياً</label>
               <input
                 type="time"
                 value={cutoffTime}
                 onChange={(e) => setCutoffTime(e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full p-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <p className="text-xs text-gray-500">الوقت بصيغة 24 ساعة (مثال: 22:00 = 10 مساءً)</p>
+              <p className="text-xs text-muted-foreground">الوقت بصيغة 24 ساعة (مثال: 22:00 = 10 مساءً)</p>
             </div>
 
-            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-              <label className="text-sm font-medium">تاريخ الرحلة القادمة (اليوم الفعال)</label>
+            <div className="pt-4 border-t border-border/50">
+              <label className="text-sm font-medium text-foreground">تاريخ الرحلة القادمة (اليوم الفعال)</label>
               <div className="flex items-center gap-3 mt-2">
                 <input
                   type="date"
@@ -160,10 +160,10 @@ function SettingsPage() {
                       toast.error("فشل في تحديث تاريخ الرحلة");
                     }
                   }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full p-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 هذا هو تاريخ الرحلة التي سيتم التسجيل لها. موعد غلق التسجيل سيكون <b>اليوم الذي يسبق هذا التاريخ</b> في الوقت المحدد أعلاه.
               </p>
             </div>
@@ -181,36 +181,36 @@ function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-4">
-              <span className="font-medium w-1/3">ميكروباص</span>
+              <span className="font-medium w-1/3 text-foreground">ميكروباص</span>
               <input
                 type="number"
                 value={vehicleLimits.micro}
                 onChange={(e) =>
                   setVehicleLimits((prev) => ({ ...prev, micro: parseInt(e.target.value) || 0 }))
                 }
-                className="w-2/3 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-center"
+                className="w-2/3 p-2 border border-border rounded-lg bg-card text-foreground text-center"
               />
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="font-medium w-1/3">ميني باص</span>
+              <span className="font-medium w-1/3 text-foreground">ميني باص</span>
               <input
                 type="number"
                 value={vehicleLimits.mini}
                 onChange={(e) =>
                   setVehicleLimits((prev) => ({ ...prev, mini: parseInt(e.target.value) || 0 }))
                 }
-                className="w-2/3 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-center"
+                className="w-2/3 p-2 border border-border rounded-lg bg-card text-foreground text-center"
               />
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="font-medium w-1/3">أتوبيس كبير</span>
+              <span className="font-medium w-1/3 text-foreground">أتوبيس كبير</span>
               <input
                 type="number"
                 value={vehicleLimits.bus}
                 onChange={(e) =>
                   setVehicleLimits((prev) => ({ ...prev, bus: parseInt(e.target.value) || 0 }))
                 }
-                className="w-2/3 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-center"
+                className="w-2/3 p-2 border border-border rounded-lg bg-card text-foreground text-center"
               />
             </div>
           </CardContent>
@@ -233,14 +233,14 @@ function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 border border-dashed border-gray-300 dark:border-gray-700 text-center">
-              <p className="text-gray-500">واجهة إدارة نقاط التجمع قيد التطوير...</p>
+            <div className="bg-muted/30 rounded-xl p-8 border border-dashed border-border text-center">
+              <p className="text-muted-foreground">واجهة إدارة نقاط التجمع قيد التطوير...</p>
             </div>
           </CardContent>
         </Card>
       </div>
       {/* Mobile Save Floating Button */}
-      <div className="md:hidden fixed bottom-16 ltr:right-4 rtl:left-4 z-40">
+      <div className="md:hidden fixed bottom-20 ltr:right-4 rtl:left-4 z-40">
         <Button
           onClick={handleSave}
           className="rounded-full w-14 h-14 shadow-lg bg-primary text-white flex items-center justify-center p-0"

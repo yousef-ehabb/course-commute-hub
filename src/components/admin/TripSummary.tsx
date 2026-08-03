@@ -1,6 +1,7 @@
 import { Users, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import type { DailyRecord } from "@/hooks/useTodayStatus";
+import { isStationSelected } from "@/utils/stationResolver";
 
 interface TripSummaryProps {
   passengers: DailyRecord[];
@@ -10,8 +11,10 @@ interface TripSummaryProps {
 export function TripSummary({ passengers, stations }: TripSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  // Only consider riding passengers
-  const ridingPassengers = passengers.filter((p) => p.status === "riding");
+  // Only consider riding passengers who have selected a valid station
+  const ridingPassengers = passengers.filter(
+    (p) => p.status === "riding" && isStationSelected(p.station),
+  );
 
   // Calculate total riding students
   const totalStudents = ridingPassengers.length;

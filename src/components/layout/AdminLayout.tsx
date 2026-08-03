@@ -101,22 +101,22 @@ export function AdminLayout() {
 
       {/* Bottom Navigation (Mobile & Tablet) */}
       <nav className="lg:hidden fixed bottom-0 w-full z-50 bg-card/80 backdrop-blur-xl shadow-nav border-t border-border/50">
-        <div className="flex overflow-x-auto gap-1 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] [&::-webkit-scrollbar]:hidden snap-x justify-around sm:justify-start">
+        <div className="flex overflow-x-auto gap-1 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] [&::-webkit-scrollbar]:hidden snap-x justify-start sm:justify-around">
           {navItems.map((item) => {
             const isActive = currentPath.startsWith(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="snap-center flex flex-col items-center justify-center gap-1 py-2 flex-shrink-0 min-w-[4.5rem] transition-colors"
+                className="snap-center flex flex-col items-center justify-center gap-1 py-1.5 flex-shrink-0 min-w-[3.5rem] sm:min-w-[4.5rem] transition-colors"
               >
                 <div
-                  className={`flex items-center justify-center w-12 h-8 rounded-xl transition-all duration-200 ${
+                  className={`flex items-center justify-center w-10 sm:w-12 h-7 sm:h-8 rounded-xl transition-all duration-200 ${
                     isActive ? "bg-primary/10" : ""
                   }`}
                 >
                   <item.icon
-                    className={`w-6 h-6 transition-colors duration-200 ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 ${
                       isActive ? "text-primary" : "text-muted-foreground"
                     }`}
                     strokeWidth={isActive ? 2.2 : 1.8}
@@ -124,7 +124,7 @@ export function AdminLayout() {
                 </div>
                 <span
                   className={`text-[10px] font-medium transition-colors duration-200 ${
-                    isActive ? "text-primary" : "text-muted-foreground"
+                    isActive ? "text-primary font-bold" : "text-muted-foreground"
                   }`}
                 >
                   {item.name}

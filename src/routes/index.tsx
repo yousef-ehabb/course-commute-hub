@@ -53,7 +53,7 @@ function Index() {
             <span>جاي ولا الدور الجاي؟</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold leading-tight text-foreground tracking-tight max-w-3xl mx-auto">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-foreground tracking-tight max-w-3xl mx-auto">
             كل حاجه تخص باص التدريب <span className="text-primary">في مكان واحد</span>
           </h1>
 

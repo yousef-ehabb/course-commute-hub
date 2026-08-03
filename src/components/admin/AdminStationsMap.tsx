@@ -10,8 +10,17 @@ import MapResizer from "@/components/MapResizer";
 setupLeaflet();
 
 
+export interface CustomStudentMarker {
+  id: string;
+  studentName: string;
+  locationName: string;
+  lat: number;
+  lng: number;
+}
+
 interface AdminStationsMapProps {
   stations: Station[];
+  customLocationMarkers?: CustomStudentMarker[];
   onAddStation?: (lat: number, lng: number) => void;
   activeStationId?: string | null;
 }
@@ -29,6 +38,7 @@ function MapEvents({ onAddStation }: { onAddStation?: (lat: number, lng: number)
 
 export default function AdminStationsMap({
   stations,
+  customLocationMarkers = [],
   onAddStation,
   activeStationId,
 }: AdminStationsMapProps) {
@@ -60,6 +70,26 @@ export default function AdminStationsMap({
                 <span>{station.time}</span>
                 <MapPin className="w-4 h-4" />
               </div>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+
+      {customLocationMarkers.map((clm) => (
+        <Marker key={clm.id} position={[clm.lat, clm.lng]}>
+          <Popup className="font-cairo">
+            <div className="text-right rtl p-1">
+              <div className="text-[11px] font-bold text-primary mb-1">📍 موقع مخصص لانتظار الطالب</div>
+              <div className="font-bold text-base text-gray-900 mb-0.5">{clm.studentName}</div>
+              <div className="text-xs font-semibold text-gray-600 mb-2">الموقع: {clm.locationName}</div>
+              <a
+                href={`https://maps.google.com/?q=${clm.lat},${clm.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-xs font-bold text-white bg-primary px-3 py-1.5 rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+              >
+                🗺️ التوجه إلى الموقع
+              </a>
             </div>
           </Popup>
         </Marker>

@@ -71,15 +71,18 @@ function LoginPage() {
       if (currentUser) {
         const snap = await get(ref(getFirebaseDb(), `rakeb/users/${currentUser.uid}`));
         const profile = snap.val();
-        if (profile?.role === "admin") {
-          navigate({ to: "/admin/dashboard", replace: true });
+        if (profile) {
+          if (profile.role === "admin") {
+            navigate({ to: "/admin/dashboard", replace: true });
+          } else {
+            navigate({ to: "/student/home", replace: true });
+          }
+          toast.success("تم تسجيل الدخول بنجاح مع Google");
         } else {
-          navigate({ to: "/student/home", replace: true });
+          toast.info("لم يتم العثور على حساب لبريدك الإلكتروني، يرجى إكمال بيانات التسجيل أولاً.");
+          navigate({ to: "/register", replace: true });
         }
-      } else {
-        navigate({ to: "/student/home", replace: true });
       }
-      toast.success("تم تسجيل الدخول بنجاح مع Google");
     } catch (err) {
       toast.error(getAuthErrorMessage(err));
     } finally {

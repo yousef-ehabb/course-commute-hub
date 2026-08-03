@@ -135,18 +135,20 @@ export function ActiveVehicles({
                         )}
                       </h3>
                       <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
-                        <span>الركاب: {vehicle.occupiedSeats}/{vehicle.capacity}</span>
+                        <span className="shrink-0">الركاب: {vehicle.occupiedSeats}/{vehicle.capacity}</span>
                         {isControlledByOther && (
-                          <span className="flex items-center gap-1 text-orange-500 font-medium">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            المركبة تحت متابعة منسق آخر — تم التحديث{" "}
-                            {formatTimeAgo(vehicle.lastHeartbeatAt || vehicle.assignedAt || 0)}
+                          <span className="flex items-center gap-1 text-orange-500 font-medium break-words">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              المركبة تحت متابعة منسق آخر — تم التحديث{" "}
+                              {formatTimeAgo(vehicle.lastHeartbeatAt || vehicle.assignedAt || 0)}
+                            </span>
                           </span>
                         )}
                         {isControlledByMe && (
-                          <span className="flex items-center gap-1 text-primary font-medium">
-                            <Navigation className="w-3.5 h-3.5" />
-                            أنت المسؤول عن متابعة المركبة
+                          <span className="flex items-center gap-1 text-primary font-medium break-words">
+                            <Navigation className="w-3.5 h-3.5 shrink-0" />
+                            <span>أنت المسؤول عن متابعة المركبة</span>
                           </span>
                         )}
                       </div>
