@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 export function AdminLayout() {
   const routerState = useRouterState();
   const navigate = useNavigate();
-  const { profile, signOutUser } = useAuth();
+  const { user, profile, signOutUser } = useAuth();
   const currentPath = routerState.location.pathname;
 
   const navItems = [
