@@ -31,6 +31,7 @@ export interface Vehicle {
   occupiedSeats: number;
   status: VehicleStatus;
   assignedCoordinatorId: string | null;
+  assignedCoordinatorName?: string | null;
   assignedAt: number | null;
   lastHeartbeatAt: number | null;
   trackingSessionId: string | null;

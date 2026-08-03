@@ -454,12 +454,14 @@ export class TripRepository {
     dateKey: string,
     vehicleId: string,
     adminUid: string,
+    adminName?: string,
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction, get, serverTimestamp } = await import("firebase/database");
     console.log("[TripRepository.takeControl] Inputs:", {
       dateKey,
       vehicleId,
       adminUid,
+      adminName,
     });
     const path = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
     console.log(`[TripRepository.takeControl] Raw path string:`, JSON.stringify(path));
@@ -478,7 +480,7 @@ export class TripRepository {
           // The server will respond with a hash mismatch and provide the real data,
           // or reject it via security rules if the vehicle truly doesn't exist.
           console.log(`[TripRepository.takeControl] Vehicle is null. Returning dummy object.`);
-          return { assignedCoordinatorId: adminUid };
+          return { assignedCoordinatorId: adminUid, assignedCoordinatorName: adminName || null };
         }
         
         const estimatedServerTime = Date.now() + offset;
@@ -504,6 +506,9 @@ export class TripRepository {
         }
         
         vehicle.assignedCoordinatorId = adminUid;
+        if (adminName) {
+          vehicle.assignedCoordinatorName = adminName;
+        }
         vehicle.assignedAt = serverTimestamp();
         vehicle.lastHeartbeatAt = serverTimestamp();
         console.log(`[TripRepository.takeControl] Transaction step returning updated vehicle:`, vehicle);
@@ -546,6 +551,7 @@ export class TripRepository {
           return undefined;
         }
         vehicle.assignedCoordinatorId = null;
+        vehicle.assignedCoordinatorName = null;
         vehicle.assignedAt = null;
         vehicle.lastHeartbeatAt = null;
         vehicle.currentLocation = null;

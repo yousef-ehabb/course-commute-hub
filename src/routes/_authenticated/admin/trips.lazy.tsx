@@ -238,8 +238,9 @@ function TripsPage() {
   const handleTakeControl = async (vehicleId: string) => {
     if (!dbRefs || !user) return { success: false, error: "Not initialized" };
     try {
-      console.log(`[handleTakeControl] Initiating takeControl for vehicleId=${vehicleId}, user.uid=${user.uid}`);
-      const res = await TripRepository.takeControl(dbRefs.db, activeDateKey, vehicleId, user.uid);
+      const adminName = profile?.fullName || user.displayName || user.email?.split("@")[0] || "منسق";
+      console.log(`[handleTakeControl] Initiating takeControl for vehicleId=${vehicleId}, user.uid=${user.uid}, adminName=${adminName}`);
+      const res = await TripRepository.takeControl(dbRefs.db, activeDateKey, vehicleId, user.uid, adminName);
       console.log(`[handleTakeControl] takeControl completed. Result:`, res);
       if (!res.success) {
         toast.error(res.error);

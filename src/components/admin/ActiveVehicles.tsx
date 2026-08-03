@@ -86,6 +86,8 @@ export function ActiveVehicles({
     return `منذ ${minutes} دقيقة`;
   };
 
+  const stealedVehicle = vehicles.find((v) => v.id === vehicleToSteal);
+
   return (
     <>
       <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
@@ -140,7 +142,7 @@ export function ActiveVehicles({
                           <span className="flex items-center gap-1 text-orange-500 font-medium break-words">
                             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                             <span>
-                              المركبة تحت متابعة منسق آخر — تم التحديث{" "}
+                              متابعة بواسطة <strong>{vehicle.assignedCoordinatorName || "منسق آخر"}</strong> — تم التحديث{" "}
                               {formatTimeAgo(vehicle.lastHeartbeatAt || vehicle.assignedAt || 0)}
                             </span>
                           </span>
@@ -205,7 +207,7 @@ export function ActiveVehicles({
           <AlertDialogHeader>
             <AlertDialogTitle>استلام متابعة المركبة</AlertDialogTitle>
             <AlertDialogDescription>
-              هذه المركبة تتم متابعتها حاليًا بواسطة منسق آخر.
+              هذه المركبة تتم متابعتها حاليًا بواسطة المنسق <strong>{stealedVehicle?.assignedCoordinatorName || "آخر"}</strong>.
               هل تريد استلام المتابعة؟
             </AlertDialogDescription>
           </AlertDialogHeader>
