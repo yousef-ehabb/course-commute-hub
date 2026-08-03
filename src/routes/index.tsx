@@ -7,16 +7,28 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "راكب — إدارة باص التدريب" },
+      { title: "راكب" },
       {
         name: "description",
-        content: "أكد حضورك، اختر نقطة التجمع المناسبة، وتابع الباص حتى وصوله.",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
       },
-      { property: "og:title", content: "راكب — إدارة باص التدريب" },
+      { property: "og:site_name", content: "راكب" },
+      { property: "og:title", content: "راكب" },
       {
         property: "og:description",
-        content: "منصة عربية احترافية لتنظيم حضور متدربي الكورسات والفعاليات.",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
       },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "راكب" },
+      {
+        name: "twitter:description",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
+      },
+      { name: "twitter:image", content: "/og-image.png" },
       { property: "og:url", content: "/" },
     ],
     links: [{ rel: "canonical", href: "/" }],

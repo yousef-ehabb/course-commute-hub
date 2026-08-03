@@ -13,9 +13,12 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
   head: () => ({
     meta: [
-      { title: "دخول — راكب" },
-      { name: "description", content: "سجل الدخول إلى حساب راكب." },
-      { property: "og:title", content: "دخول — راكب" },
+      { title: "تسجيل الدخول — راكب" },
+      { name: "description", content: "سجل الدخول إلى حساب راكب لمتابعة وإدارة رحلات النقل." },
+      { property: "og:title", content: "تسجيل الدخول — راكب" },
+      { property: "og:description", content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا." },
+      { property: "og:image", content: "/og-image.png" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "/login" },
     ],
     links: [{ rel: "canonical", href: "/login" }],

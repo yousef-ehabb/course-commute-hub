@@ -25,8 +25,11 @@ export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "تسجيل حساب — راكب" },
-      { name: "description", content: "أنشئ حساب طالب جديد على راكب في دقيقة." },
+      { name: "description", content: "أنشئ حسابك الجديد على منصة راكب لمتابعة واختيار نقاط التجمع." },
       { property: "og:title", content: "تسجيل حساب — راكب" },
+      { property: "og:description", content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا." },
+      { property: "og:image", content: "/og-image.png" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "/register" },
     ],
     links: [{ rel: "canonical", href: "/register" }],

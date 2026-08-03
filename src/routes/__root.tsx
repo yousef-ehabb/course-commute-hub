@@ -85,12 +85,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "راكب" },
       {
         name: "description",
-        content: "نظام احترافي لإدارة مواصلات الكورسات والفعاليات — تسجيل، تتبع، وتأكيد صعود.",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
       },
-      { property: "og:title", content: "راكب " },
-      { property: "og:description", content: "سجل، اتبع الأوتوبيس، وأدر رحلاتك في مكان واحد." },
+      { property: "og:site_name", content: "راكب" },
+      { property: "og:title", content: "راكب" },
+      {
+        property: "og:description",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
+      },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:type", content: "image/png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "راكب" },
+      {
+        name: "twitter:description",
+        content: "منصة ذكية لإدارة نقل المتدربين ومتابعة الرحلات لحظيًا.",
+      },
+      { name: "twitter:image", content: "/og-image.png" },
+      { name: "theme-color", content: "#0047bb" },
+      { name: "application-name", content: "راكب" },
+      { name: "apple-mobile-web-app-title", content: "راكب" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
     ],
     links: [
       {
@@ -98,6 +117,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/logo.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
