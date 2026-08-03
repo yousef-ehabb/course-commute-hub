@@ -20,13 +20,16 @@ interface AuthContextValue {
   loading: boolean;
   configured: boolean;
   error: string | null;
+  isEmailVerified: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (
     email: string,
     password: string,
     data: Omit<UserProfile, "uid" | "role" | "createdAt">,
   ) => Promise<void>;
   signOutUser: () => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
   retryAuth: () => void;
 }
 
@@ -156,17 +159,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [retryKey]);
 
+  const isEmailVerified = user?.emailVerified ?? false;
+
   const signIn = useCallback<AuthContextValue["signIn"]>(async (email, password) => {
     const { getFirebaseAuth } = await import("@/lib/firebase");
     const { signInWithEmailAndPassword } = await import("firebase/auth");
     await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+    const { GoogleAuthProvider, signInWithPopup } = await import("firebase/auth");
+    const { ref, get, set } = await import("firebase/database");
+
+    const auth = getFirebaseAuth();
+    const provider = new GoogleAuthProvider();
+    const cred = await signInWithPopup(auth, provider);
+    const u = cred.user;
+
+    const db = getFirebaseDb();
+    const profileRef = ref(db, `rakeb/users/${u.uid}`);
+    const snap = await get(profileRef);
+    if (!snap.exists()) {
+      const newProfile: UserProfile = {
+        uid: u.uid,
+        fullName: u.displayName || "طالب جديد",
+        phone: u.phoneNumber || "",
+        nationalId: "",
+        defaultStation: "",
+        role: "student",
+        createdAt: Date.now(),
+      };
+      await set(profileRef, newProfile);
+    }
+  }, []);
+
   const signUp = useCallback<AuthContextValue["signUp"]>(async (email, password, data) => {
     const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
-    const { createUserWithEmailAndPassword } = await import("firebase/auth");
+    const { createUserWithEmailAndPassword, sendEmailVerification } = await import("firebase/auth");
     const { ref, set } = await import("firebase/database");
     const cred = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
+    
+    const actionCodeSettings = {
+      url: typeof window !== "undefined" && window.location.origin
+        ? `${window.location.origin}/student/home`
+        : "https://rakeb.vercel.app/student/home",
+      handleCodeInApp: true,
+    };
+
+    // Automatically send verification email upon successful registration
+    await sendEmailVerification(cred.user, actionCodeSettings);
+
     const newProfile: UserProfile = {
       uid: cred.user.uid,
       ...data,
@@ -174,6 +217,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: Date.now(),
     };
     await set(ref(getFirebaseDb(), `rakeb/users/${cred.user.uid}`), newProfile);
+  }, []);
+
+  const sendVerificationEmail = useCallback(async () => {
+    const { getFirebaseAuth } = await import("@/lib/firebase");
+    const { sendEmailVerification } = await import("firebase/auth");
+    const auth = getFirebaseAuth();
+    if (auth.currentUser) {
+      const actionCodeSettings = {
+        url: typeof window !== "undefined" && window.location.origin
+          ? `${window.location.origin}/student/home`
+          : "https://rakeb.vercel.app/student/home",
+        handleCodeInApp: true,
+      };
+      await sendEmailVerification(auth.currentUser, actionCodeSettings);
+    }
   }, []);
 
   const signOutUser = useCallback(async () => {
@@ -193,9 +251,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured,
       error,
+      isEmailVerified,
       signIn,
+      signInWithGoogle,
       signUp,
       signOutUser,
+      sendVerificationEmail,
       retryAuth,
     }),
     [
@@ -208,9 +269,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured,
       error,
+      isEmailVerified,
       signIn,
+      signInWithGoogle,
       signUp,
       signOutUser,
+      sendVerificationEmail,
       retryAuth,
     ],
   );

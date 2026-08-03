@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>راكب — عرض تقديمي (Capsule Edition)</title>
+<!-- Google Fonts for Bodoni Moda & Space Grotesk fallback -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ===== FONTS ===== */
+@font-face {
+  font-family: 'ABC Diatype Arabic';
+  src: url('./Fonts/abc-diatype-arabic-regular-trial.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ABC Diatype Arabic';
+  src: url('./Fonts/abc-diatype-arabic-medium-trial.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ABC Diatype Arabic';
+  src: url('./Fonts/abc-diatype-arabic-bold-trial.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ABC Diatype Arabic';
+  src: url('./Fonts/abc-diatype-arabic-black-trial.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ABC Diatype Arabic';
+  src: url('./Fonts/abc-diatype-arabic-heavy-trial.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* ===== CAPSULE DESIGN SYSTEM TOKENS ===== */
+:root {
+  --bg: #F5F5F0;
+  --fg: #1A1A1A;
+  --coral: #E85D4E;
+  --lime: #C4D94E;
+  --lavender: #C5B5E0;
+  --sky: #8BB4F7;
+  --violet: #A06CE8;
+  --yellow: #F2D160;
+  --peach: #F5B895;
+  --mint: #A8E6CF;
+  --outline: #1E1E1E;
+  --shadow: rgba(26, 26, 26, 0.08);
+  --shadow-strong: rgba(26, 26, 26, 0.14);
+  --white: #FFFFFF;
+
+  --font-display: 'ABC Diatype Arabic', 'Bodoni Moda', serif;
+  --font-body: 'ABC Diatype Arabic', 'Space Grotesk', sans-serif;
+  --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== GRAIN OVERLAY ===== */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ===== SVG ICON BASE ===== */
+.icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.icon-svg.sm { width: 16px; height: 16px; }
+.icon-svg.lg { width: 32px; height: 32px; }
+.icon-svg.xl { width: 48px; height: 48px; }
+.icon-svg.hero { width: 72px; height: 72px; }
+
+/* ===== SLIDE STAGING ===== */
+.presentation {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 4rem 5rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(40px);
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.slide.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+
+.slide.prev {
+  transform: translateX(-40px);
+}
+
+.slide-inner {
+  max-width: 1150px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.8rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* ===== STAGGER ANIMATIONS ===== */
+.stagger {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.slide.active .stagger {
+  opacity: 1;
+  transform: translateY(0);
+}
+.slide.active .stagger:nth-child(1) { transition-delay: 0.08s; }
+.slide.active .stagger:nth-child(2) { transition-delay: 0.16s; }
+.slide.active .stagger:nth-child(3) { transition-delay: 0.24s; }
+.slide.active .stagger:nth-child(4) { transition-delay: 0.32s; }
+.slide.active .stagger:nth-child(5) { transition-delay: 0.40s; }
+.slide.active .stagger:nth-child(6) { transition-delay: 0.48s; }
+.slide.active .stagger:nth-child(7) { transition-delay: 0.56s; }
+.slide.active .stagger:nth-child(8) { transition-delay: 0.64s; }
+.slide.active .stagger:nth-child(9) { transition-delay: 0.72s; }
+.slide.active .stagger:nth-child(10) { transition-delay: 0.80s; }
+
+/* ===== CAPSULE PILL COMPONENTS ===== */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 2px solid var(--outline);
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  gap: 8px;
+}
+
+.pill-coral { background: var(--coral); color: #fff; }
+.pill-lime { background: var(--lime); color: var(--fg); }
+.pill-lavender { background: var(--lavender); color: var(--fg); }
+.pill-sky { background: var(--sky); color: var(--fg); }
+.pill-violet { background: var(--violet); color: #fff; }
+.pill-yellow { background: var(--yellow); color: var(--fg); }
+.pill-peach { background: var(--peach); color: var(--fg); }
+.pill-mint { background: var(--mint); color: var(--fg); }
+.pill-white { background: var(--white); color: var(--fg); }
+.pill-cream { background: var(--bg); color: var(--fg); }
+
+/* Decorative Background Confetti Pills */
+.deco-pills {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.deco-pill {
+  position: absolute;
+  border-radius: 9999px;
+  border: 2px solid var(--outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 1.2rem;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+/* Section Header Tags */
+.header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--lavender);
+  padding: 0.45rem 1.4rem;
+  border-radius: 9999px;
+  border: 2px solid var(--outline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+/* Pillar Card */
+.pillar-card {
+  background: var(--white);
+  border: 2px solid var(--outline);
+  border-radius: 2rem;
+  padding: 2rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 8px 8px 0 var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+}
+.pillar-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 12px 12px 0 var(--shadow-strong);
+}
+
+.card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+/* Stat Pill Tile */
+.stat-pill {
+  background: var(--white);
+  border: 2px solid var(--outline);
+  border-radius: 2rem;
+  padding: 1.8rem 1.5rem;
+  text-align: center;
+  box-shadow: 6px 6px 0 var(--shadow);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.stat-pill:hover {
+  transform: translateY(-3px);
+  box-shadow: 10px 10px 0 var(--shadow-strong);
+}
+.stat-number {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+.stat-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fg);
+  opacity: 0.8;
+}
+
+/* TYPOGRAPHY STYLES */
+h1.main-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+h2.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+h3.card-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--fg);
+}
+p.subtitle {
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  color: var(--fg);
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 800px;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1.5rem;
+  width: 100%;
+}
+.card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+
+/* Flowchart Nodes */
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 2px solid var(--outline);
+  border-radius: 9999px;
+  padding: 0.9rem 1.6rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  box-shadow: 6px 6px 0 var(--shadow);
+  white-space: nowrap;
+}
+.flow-step.problem {
+  background: var(--coral);
+  color: #fff;
+}
+.flow-arrow {
+  color: var(--outline);
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0 4px;
+}
+
+/* Stepper Horizontal */
+.stepper-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+.stepper-h-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 100px;
+  position: relative;
+}
+.stepper-h-dot {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 4px 4px 0 var(--shadow);
+  font-weight: 700;
+}
+.stepper-h-step.done .stepper-h-dot { background: var(--lime); }
+.stepper-h-step.current .stepper-h-dot { background: var(--sky); box-shadow: 6px 6px 0 var(--shadow-strong); }
+.stepper-h-line {
+  position: absolute;
+  top: 25px;
+  right: 50%;
+  width: 100%;
+  height: 4px;
+  background: var(--outline);
+  z-index: 1;
+}
+.stepper-h-step:last-child .stepper-h-line { display: none; }
+.stepper-h-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 10px;
+  text-align: center;
+  max-width: 100px;
+}
+
+/* Stepper Vertical */
+.stepper-v {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 650px;
+}
+.stepper-v-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+}
+.stepper-v-dot {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+.stepper-v-step.done .stepper-v-dot { background: var(--lime); }
+.stepper-v-step.current .stepper-v-dot { background: var(--sky); }
+.stepper-v-line {
+  position: absolute;
+  right: 21px;
+  top: 44px;
+  width: 3px;
+  height: calc(100% - 44px);
+  background: var(--outline);
+  z-index: 1;
+}
+.stepper-v-step:last-child .stepper-v-line { display: none; }
+.stepper-v-content {
+  padding: 4px 0 20px 0;
+}
+.stepper-v-content h4 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+.stepper-v-content p {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+/* Mockup Frame */
+.capsule-mockup {
+  background: var(--white);
+  border: 2px solid var(--outline);
+  border-radius: 2rem;
+  padding: 2rem;
+  box-shadow: 12px 12px 0 var(--shadow);
+  width: 100%;
+  max-width: 450px;
+}
+
+/* Mobile Phone Frame Component (Capsule Style) */
+.mobile-phone-frame {
+  width: 240px;
+  height: 470px;
+  background: var(--white);
+  border: 2.5px solid var(--outline);
+  border-radius: 2.2rem;
+  padding: 8px;
+  box-shadow: 10px 10px 0 var(--shadow);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.mobile-phone-frame:hover {
+  transform: translateY(-4px);
+  box-shadow: 14px 14px 0 var(--shadow-strong);
+}
+.mobile-phone-notch {
+  width: 80px;
+  height: 16px;
+  background: var(--outline);
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  position: absolute;
+  top: 8px;
+  z-index: 10;
+}
+.mobile-phone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 1.6rem;
+  overflow: hidden;
+  border: 1.5px solid var(--outline);
+  background: #f8f9fb;
+}
+.mobile-phone-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+
+/* Interactive Toggle Pill */
+.mock-toggle-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--mint);
+  border: 2px solid var(--outline);
+  border-radius: 9999px;
+  padding: 1.2rem 2rem;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--shadow);
+  transition: var(--transition);
+}
+.mock-toggle-pill.off {
+  background: var(--coral);
+  color: #fff;
+}
+.mock-switch-knob {
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--outline);
+  position: relative;
+  transition: var(--transition);
+}
+.mock-switch-knob::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: var(--transition);
+}
+.mock-toggle-pill.off .mock-switch-knob::after {
+  right: auto;
+  left: 3px;
+}
+
+/* Mindmap / Orbit */
+.orbit-composition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.orbit-center-node {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: var(--lime);
+  border: 2px solid var(--outline);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  box-shadow: 8px 8px 0 var(--shadow);
+  z-index: 2;
+}
+
+/* Navigation UI */
+.nav-dots {
+  position: fixed;
+  left: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 100;
+}
+.nav-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--outline);
+  background: transparent;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.nav-dot.active {
+  background: var(--outline);
+  transform: scale(1.3);
+}
+
+.slide-counter {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--fg);
+  opacity: 0.6;
+  z-index: 100;
+  direction: ltr;
+}
+
+.nav-hint {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fg);
+  opacity: 0.5;
+  z-index: 100;
+}
+
+.overview-btn {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 200;
+  padding: 0.6rem 1.2rem;
+  border-radius: 9999px;
+  border: 2px solid var(--outline);
+  background: var(--white);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--shadow);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.overview-btn:hover {
+  background: var(--yellow);
+  transform: translateY(-2px);
+}
+
+.brand-logo-badge {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 200;
+  padding: 0.35rem 0.9rem;
+  border-radius: 9999px;
+  border: 2px solid var(--outline);
+  background: var(--white);
+  box-shadow: 4px 4px 0 var(--shadow);
+  display: flex;
+  align-items: center;
+  transition: var(--transition);
+}
+.brand-logo-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0 var(--shadow-strong);
+}
+
+/* OVERVIEW GRID MODE */
+.presentation.overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 2rem 2rem 5rem 2rem;
+  overflow-y: auto;
+  align-content: flex-start;
+}
+.presentation.overview .slide {
+  position: relative;
+  opacity: 1 !important;
+  pointer-events: all !important;
+  transform: none !important;
+  width: calc(25% - 12px);
+  height: 200px;
+  flex: none;
+  padding: 1rem;
+  cursor: pointer;
+  border: 2px solid var(--outline);
+  border-radius: 1rem;
+  overflow: hidden;
+  font-size: 6px;
+  background: var(--white);
+  box-shadow: 4px 4px 0 var(--shadow);
+  transition: var(--transition);
+}
+.presentation.overview .slide:hover {
+  border-color: var(--coral);
+  transform: scale(1.03);
+}
+.presentation.overview .slide.active {
+  border-color: var(--coral);
+  box-shadow: 6px 6px 0 var(--coral);
+}
+.presentation.overview .slide .stagger {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 900px) {
+  .slide { padding: 2rem 1.5rem 5rem; }
+  .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+  .presentation.overview .slide { width: calc(50% - 8px); height: 130px; }
+  .nav-dots { display: none; }
+}
+@media (max-width: 600px) {
+  .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr; }
+  .presentation.overview .slide { width: 100%; height: 110px; }
+}
+</style>
+</head>
+<body>
+
+<!-- GRAIN OVERLAY -->
+<div class="grain-overlay"></div>
+
+<!-- HIDDEN SVG ICON SPRITE -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-bus" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="3"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><line x1="7" y1="17" x2="7" y2="18.5"/><line x1="17" y1="17" x2="17" y2="18.5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></symbol>
+  <symbol id="i-gps" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-trending-down" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-minibus" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="12" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="6.5" cy="20" r="1.5"/><circle cx="17.5" cy="20" r="1.5"/><line x1="6.5" y1="17" x2="6.5" y2="18.5"/><line x1="17.5" y1="17" x2="17.5" y2="18.5"/><line x1="8" y1="5" x2="8" y2="10"/><line x1="12" y1="5" x2="12" y2="10"/><line x1="16" y1="5" x2="16" y2="10"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+</svg>
+
+<!-- OVERVIEW BUTTON & BRAND LOGO BADGE -->
+<div class="brand-logo-badge">
+  <img src="./RakebLogo.png" alt="Rakeb Logo" style="height: 28px; width: auto; object-fit: contain;">
+</div>
+
+<button class="overview-btn" id="overviewBtn" title="عرض شامل (Esc)">
+  <svg class="icon-svg sm"><use href="#i-grid"/></svg>
+  عرض شامل
+</button>
+
+<!-- VERTICAL NAVIGATION DOTS -->
+<div class="nav-dots" id="navDots"></div>
+
+<!-- PRESENTATION CONTAINER -->
+<div class="presentation" id="deck">
+
+  <!-- SLIDE 1: COVER -->
+  <section class="slide" data-slide="0" style="background: radial-gradient(ellipse at 20% 80%, rgba(196, 217, 78, 0.18) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(139, 180, 247, 0.15) 0%, transparent 50%), var(--bg);">
+    <div class="deco-pills">
+      <div class="deco-pill pill-yellow" style="top: 15%; right: 10%; transform: rotate(12deg);">VISION</div>
+      <div class="deco-pill pill-sky" style="bottom: 20%; right: 15%; transform: rotate(-15deg);">INTELLIGENT</div>
+      <div class="deco-pill pill-coral" style="top: 25%; left: 8%; transform: rotate(-8deg);">SWIFT</div>
+      <div class="deco-pill pill-lime" style="bottom: 18%; left: 12%; transform: rotate(18deg);">FLEET</div>
+    </div>
+    <div class="slide-inner">
+      <div class="stagger" style="margin-bottom: 0.5rem;">
+        <img src="./RakebLogo.png" alt="Rakeb Logo" style="height: 100px; width: auto; object-fit: contain; filter: drop-shadow(4px 4px 0 var(--shadow));">
+      </div>
+      <div class="stagger title-pill">منصة إدارة النقل الذكية</div>
+      <h1 class="stagger main-title">راكب</h1>
+      <p class="subtitle stagger">تحويل عمليات النقل اليدوية المعقدة إلى نظام رقمي ذكي ومتكامل لطلاب الكورسات والمعسكرات</p>
+      <div class="stagger" style="margin-top: 1rem; display: flex; gap: 10px;">
+        <span class="pill pill-mint" style="padding: 0.4rem 1.2rem; font-size: 0.75rem;">Phase 1 &bull; مكتمل</span>
+        <span class="pill pill-mint" style="padding: 0.4rem 1.2rem; font-size: 0.75rem;">Phase 2 &bull; مكتمل</span>
+        <span class="pill pill-lavender" style="padding: 0.4rem 1.2rem; font-size: 0.75rem;">Phase 3 &bull; قيد التخطيط</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: THE PROBLEM TODAY -->
+  <section class="slide" data-slide="1" style="background: radial-gradient(ellipse at 100% 0%, rgba(232, 93, 78, 0.08) 0%, transparent 40%), var(--bg);">
+    <div class="slide-inner">
+      <div class="stagger header-pill"><svg class="icon-svg sm"><use href="#i-alert"/></svg> التحديات الحالية</div>
+      <h2 class="stagger section-title">المشكلة اليوم</h2>
+      <p class="stagger subtitle">كل يوم تدريب، المنسقين بيعانوا من ضغوطات تشغيلية كبيرة</p>
+      <div class="card-grid cols-3 stagger">
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-file"/></svg></div>
+          <h3 class="card-title">Google Forms كل مرة</h3>
+          <p>الطالب بيملأ بياناته من الصفر كل يوم — مفيش حساب ثابت ولا تحقق منظم من البيانات.</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-msg"/></svg></div>
+          <h3 class="card-title">50-100 رسالة WhatsApp</h3>
+          <p>تأكيد الحضور رسالة برسالة — تواصل عشوائي والرسائل بتضيع وسط محادثات الطلاب.</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-phone"/></svg></div>
+          <h3 class="card-title">10-20 مكالمة تليفونية</h3>
+          <p>تنسيق مباشر ومكالمات متكررة لمعرفة مكان الطالب المتأخر — إرهاق نفسي للمنسقين.</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-eye"/></svg></div>
+          <h3 class="card-title">لا يوجد تتبع حي</h3>
+          <p>الطلاب مش عارفين الباص فين ولا متى هيوصل المحطة المحتاجة — توتر وانتظار.</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-clipboard"/></svg></div>
+          <h3 class="card-title">تسجيل حضور يدوي</h3>
+          <p>تسجيل ورقي أو عبر شات — مفيش سجل رقمي دقيق يوضح مين ركب ومين غاب.</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-chart"/></svg></div>
+          <h3 class="card-title">فرز Excel يدوي</h3>
+          <p>جمع وسحب البيانات في شيتات يدويًا — احتمالية أخطاء عالية وتوزيع عشوائي.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: CURRENT WORKFLOW -->
+  <section class="slide" data-slide="2">
+    <div class="slide-inner">
+      <div class="stagger header-pill"><svg class="icon-svg sm"><use href="#i-refresh"/></svg> مسار العمل القديم</div>
+      <h2 class="stagger section-title">سير العمل الحالي قبل راكب</h2>
+      <p class="stagger subtitle">7 خطوات معقدة تعتمد على الجهد البشري — الخطوات الحمراء تشير لنقاط التعطل</p>
+      <div class="stagger" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin: 1.5rem 0;">
+        <div class="flow-step problem"><svg class="icon-svg sm"><use href="#i-file"/></svg> 1. Google Forms</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step"><svg class="icon-svg sm"><use href="#i-chart"/></svg> 2. Google Sheets</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step"><svg class="icon-svg sm"><use href="#i-layers"/></svg> 3. فرز Excel</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step problem"><svg class="icon-svg sm"><use href="#i-msg"/></svg> 4. WhatsApp</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step"><svg class="icon-svg sm"><use href="#i-check"/></svg> 5. تأكيد يدوي</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step problem"><svg class="icon-svg sm"><use href="#i-phone"/></svg> 6. مكالمات</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="flow-step problem"><svg class="icon-svg sm"><use href="#i-bus"/></svg> 7. تنفيذ بدون تتبع</div>
+      </div>
+      <div class="stagger pill pill-coral" style="padding: 0.8rem 2rem; font-size: 0.95rem;">
+        <svg class="icon-svg"><use href="#i-clock"/></svg> النتيجة: ضياع أكثر من 45 دقيقة يومياً في التخطيط والتأكيد فقط!
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: WHY INEFFICIENT -->
+  <section class="slide" data-slide="3">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--peach);"><svg class="icon-svg sm"><use href="#i-alert"/></svg> تحليل القصور</div>
+      <h2 class="stagger section-title">لماذا يُعد سير العمل الحالي غير كفء؟</h2>
+      <div class="card-grid cols-3 stagger">
+        <div class="pillar-card">
+          <div class="card-icon" style="background: var(--yellow);"><svg class="icon-svg"><use href="#i-globe"/></svg></div>
+          <h3 class="card-title">1. غياب المركزية</h3>
+          <p>البيانات موزعة بين Google Forms وGoogle Sheets ومجموعات WhatsApp، مما يعيق الوصول إلى مصدر موحد وموثوق للمعلومات.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="card-icon" style="background: var(--peach);"><svg class="icon-svg"><use href="#i-settings"/></svg></div>
+          <h3 class="card-title">2. الاعتماد على الإجراءات اليدوية</h3>
+          <p>تعتمد معظم العمليات على تدخل بشري متكرر، مما يستهلك وقت المنسقين ويزيد احتمالية حدوث الأخطاء.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="card-icon" style="background: var(--sky);"><svg class="icon-svg"><use href="#i-clock"/></svg></div>
+          <h3 class="card-title">3. غياب المتابعة اللحظية</h3>
+          <p>لا تتوفر رؤية فورية لحالة الحافلات أو حضور الطلاب، فتصل المعلومات متأخرة ويصعب اتخاذ قرارات سريعة.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="card-icon" style="background: var(--lavender);"><svg class="icon-svg"><use href="#i-file"/></svg></div>
+          <h3 class="card-title">4. ضعف الاستفادة من البيانات التاريخية</h3>
+          <p>لا توجد سجلات منظمة للرحلات السابقة، مما يحد من القدرة على تحليل الأداء وتحسين التخطيط المستقبلي.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-trending-down"/></svg></div>
+          <h3 class="card-title">5. محدودية قابلية التوسع</h3>
+          <p>كلما زاد عدد الطلاب أو المعسكرات، ازدادت التعقيدات التشغيلية وارتفع العبء الإداري بصورة ملحوظة.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: THE SOLUTION: RAKEB -->
+  <section class="slide" data-slide="4" style="background: radial-gradient(ellipse at 50% 50%, rgba(196, 217, 78, 0.12) 0%, transparent 60%), var(--bg);">
+    <div class="slide-inner" style="max-width: 1200px;">
+      <div class="stagger header-pill" style="background: var(--lime);"><svg class="icon-svg sm"><use href="#i-zap"/></svg> الرؤية الشاملة</div>
+      <h2 class="stagger section-title">تعريف الحل: راكب</h2>
+      <p class="stagger subtitle">منصة رقمية موحدة تدير منظومة النقل بالكامل بذكاء وسلاسة — من التسجيل وحتى الوصول</p>
+      
+      <div class="card-grid cols-4 stagger" style="margin-top: 0.5rem;">
+        <div class="pillar-card" style="background: var(--white); border-color: var(--outline);">
+          <div class="card-icon" style="background: var(--coral); color: #fff;"><svg class="icon-svg"><use href="#i-file"/></svg></div>
+          <h3 class="card-title" style="color: var(--coral);">1. تسجيل رقمي موحد</h3>
+          <p>• <strong>حسابات ثابتة:</strong> الطالب يسجل مرة واحدة فقط ببيانات شخصية محققة.</p>
+          <p>• <strong>نقاط تجمع مختارة:</strong> تحديد نقطة الركوب الأساسية مسبقاً لربط الطلاب بالمحطات.</p>
+          <p>• <strong>تحقق ذكي:</strong> منع تكرار الأرقام القومية وتفادي أخطاء الإدخال اليدوي.</p>
+        </div>
+
+        <div class="pillar-card" style="background: var(--white); border-color: var(--outline);">
+          <div class="card-icon" style="background: var(--yellow);"><svg class="icon-svg"><use href="#i-zap"/></svg></div>
+          <h3 class="card-title" style="color: var(--fg);">2. إدارة تشغيلية يومية</h3>
+          <p>• <strong>تأكيد الحضور بضغطة:</strong> مفتاح Toggle بسيط للغاية "هحضر / مش هحضر".</p>
+          <p>• <strong>موعد نهائي آلي (Cutoff):</strong> غلق التسجيل تلقائياً قبل بدء التخطيط التلقائي.</p>
+          <p>• <strong>تخطيط الحافلات والسعة:</strong> حساب فوري للمركبات المطلوبة حسب أعداد الحضور.</p>
+        </div>
+
+        <div class="pillar-card" style="background: var(--white); border-color: var(--outline);">
+          <div class="card-icon" style="background: var(--sky);"><svg class="icon-svg"><use href="#i-gps"/></svg></div>
+          <h3 class="card-title" style="color: var(--blue);">3. تتبع حي ومباشر</h3>
+          <p>• <strong>بث GPS حقيقي:</strong> المنسق يبث الموقع اللحظي للمركبة مباشرة على الخريطة.</p>
+          <p>• <strong>Timeline المحطات:</strong> مؤشر مرئي لموقع الحافلة بالنسبة للمحطة القادمة.</p>
+          <p>• <strong>شفافية الحالات:</strong> الطلاب يشاهدون المركبات المتاحة وحالة امتلاء السعة.</p>
+        </div>
+
+        <div class="pillar-card" style="background: var(--white); border-color: var(--outline);">
+          <div class="card-icon" style="background: var(--lavender);"><svg class="icon-svg"><use href="#i-chart"/></svg></div>
+          <h3 class="card-title" style="color: var(--violet);">4. تحليلات وقاعدة بيانات</h3>
+          <p>• <strong>أرشيف الرحلات:</strong> توثيق كل رحلة ببيانات الحضور والركوب والمدة الزمنية.</p>
+          <p>• <strong>سجل تدقيق (Audit Log):</strong> تتبع جميع العمليات (من سجّل، من ألغى، وبأي وقت).</p>
+          <p>• <strong>تصدير التقارير:</strong> استخراج بيانات دقيقة بصيغ Excel وPDF للإدارة.</p>
+        </div>
+      </div>
+
+      <div class="stagger pill pill-lime" style="padding: 0.6rem 2rem; font-size: 0.88rem; font-weight: 700; margin-top: 0.5rem;">
+        <svg class="icon-svg sm"><use href="#i-star"/></svg> راكب ليس مجرد متتبع حافلات — بل نظام تشغيل كامل (OS) لإدارة النقل لجميع الأطراف
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: GOALS BY NUMBERS -->
+  <section class="slide" data-slide="5">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--yellow);"><svg class="icon-svg sm"><use href="#i-target"/></svg> المستهدفات التشغيلية</div>
+      <h2 class="stagger section-title">الأهداف بالأرقام</h2>
+      <p class="stagger subtitle">نتائج ملموسة تهدف لتخفيف العبء وزيادة الاحترافية</p>
+      <div class="card-grid cols-4 stagger">
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--coral);" data-count="70" data-prefix="↓" data-suffix="%">0%</div>
+          <div class="stat-label">تخفيض وقت التخطيط</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--violet);" data-count="90" data-prefix="↓" data-suffix="%">0%</div>
+          <div class="stat-label">تخفيض رسائل WhatsApp</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--lime);" data-count="0" data-static="صفر">صفر</div>
+          <div class="stat-label">مكالمات لتأكيد الحضور</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--sky);" data-count="100" data-suffix="%">0%</div>
+          <div class="stat-label">توثيق رقمي فوري</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: USERS: STUDENT -->
+  <section class="slide" data-slide="6">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--sky);"><svg class="icon-svg sm"><use href="#i-user"/></svg> أدوار النظام</div>
+      <h2 class="stagger section-title">المستخدمون: الطالب</h2>
+      <div class="pillar-card stagger" style="max-width: 650px; background: var(--white);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+          <div class="card-icon" style="background: var(--sky);"><svg class="icon-svg"><use href="#i-user"/></svg></div>
+          <div>
+            <h3 class="card-title">دور الطالب (Student)</h3>
+            <span style="font-size: 0.75rem; opacity: 0.6; font-weight: 700;">صلاحيات: قراءة محدودة + كتابة حالته فقط</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.6rem 1.2rem;"><svg class="icon-svg sm"><use href="#i-check"/></svg> تسجيل حساب ثابت مرة واحدة ببياناته الشخصية</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.6rem 1.2rem;"><svg class="icon-svg sm"><use href="#i-pin"/></svg> اختيار نقطة التجمع الافتراضية للركوب</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.6rem 1.2rem;"><svg class="icon-svg sm"><use href="#i-zap"/></svg> تأكيد الحضور اليومي بضغطة زر واحدة (Toggle)</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.6rem 1.2rem;"><svg class="icon-svg sm"><use href="#i-map"/></svg> تتبع موقع الحافلة حياً ومعرفة حالة ركوبه</div>
+        </div>
+        <div class="pill pill-yellow" style="margin-top: 12px; font-size: 0.8rem; padding: 0.6rem 1.2rem;">
+          <svg class="icon-svg sm"><use href="#i-alert"/></svg> تنويه هامي: الطالب لا يختار المركبة بنفسه لضمان مرونة التوزيع.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: USERS: COORDINATOR -->
+  <section class="slide" data-slide="7">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--mint);"><svg class="icon-svg sm"><use href="#i-shield"/></svg> أدوار النظام</div>
+      <h2 class="stagger section-title">المستخدمون: المنسق والمسؤول</h2>
+      <div class="pillar-card stagger" style="max-width: 750px; background: var(--white);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+          <div class="card-icon" style="background: var(--lime);"><svg class="icon-svg"><use href="#i-shield"/></svg></div>
+          <div>
+            <h3 class="card-title">دور المنسق (Coordinator / Admin)</h3>
+            <span style="font-size: 0.75rem; opacity: 0.6; font-weight: 700;">صلاحيات: قراءة وكتابة وتحكم كامل في العمليات</span>
+          </div>
+        </div>
+        <div class="card-grid cols-2" style="gap: 10px; margin-top: 10px;">
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-users"/></svg> مراجعة كشوف الحضور المؤكدة</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-bus"/></svg> تخطيط وإضافة المركبات والسعات</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-play"/></svg> بدء يوم النقل وإدارته</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-target"/></svg> أخذ مسؤولية مركبة (Take Control)</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-gps"/></svg> بث موقع الـ GPS للطلاب</div>
+          <div class="pill pill-cream" style="justify-content: flex-start; padding: 0.55rem 1rem;"><svg class="icon-svg sm"><use href="#i-check"/></svg> تسجيل ركوب الطلاب بالمحطات</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: STUDENT JOURNEY -->
+  <section class="slide" data-slide="8">
+    <div class="slide-inner" style="max-width: 1100px;">
+      <div class="stagger header-pill" style="background: var(--sky);"><svg class="icon-svg sm"><use href="#i-map"/></svg> رحلة المستخدم</div>
+      <h2 class="stagger section-title">رحلة الطالب — خطوة بخطوة</h2>
+      <p class="stagger subtitle">تجربة سلسة وموجهة لا تتطلب استفسارات جانبية</p>
+      
+      <div style="display: flex; gap: 2.5rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="stepper-v stagger" style="max-width: 500px;">
+          <div class="stepper-v-step done">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-file"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>1. التسجيل الرقمي (4 خطوات)</h4>
+              <p>حساب ثابت مرة واحدة فقط دون تكرار الإدخال.</p>
+            </div>
+          </div>
+          <div class="stepper-v-step done">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-zap"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>2. تفعيل الحضور (Toggle)</h4>
+              <p>نقرة واحدة يومية لتأكيد الركوب.</p>
+            </div>
+          </div>
+          <div class="stepper-v-step current">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-gps"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>3. التتبع الحي للمحطات</h4>
+              <p>متابعة موقع الحافلة والوصول في الوقت المحدد.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mobile-phone-frame stagger">
+          <div class="mobile-phone-notch"></div>
+          <div class="mobile-phone-screen">
+            <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (1).png" alt="Student Registration Mobile Screenshot">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: STUDENT PAGE: TOGGLE -->
+  <section class="slide" data-slide="9">
+    <div class="slide-inner" style="max-width: 1150px;">
+      <div class="stagger header-pill" style="background: var(--lime);"><svg class="icon-svg sm"><use href="#i-zap"/></svg> الواجهة البصرية</div>
+      <h2 class="stagger section-title">صفحة الطالب: مفتاح الحضور اليومي</h2>
+      <p class="stagger subtitle">تأكيد الحضور والاعتذار بضغطة زر واحدة — مع تغيير فوري لحالة الركوب والمحطة في التطبيق</p>
+
+      <div style="display: flex; gap: 2rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <!-- State 1: Attending -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;" class="stagger">
+          <div class="pill pill-lime" style="padding: 0.4rem 1.2rem; font-size: 0.8rem; font-weight: 700;">
+            <svg class="icon-svg sm" style="color:var(--lime);"><use href="#i-check"/></svg> حالة الحضور (هحضر اليوم)
+          </div>
+          <div class="mobile-phone-frame">
+            <div class="mobile-phone-notch"></div>
+            <div class="mobile-phone-screen">
+              <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (14).png" alt="Student Home Attending State">
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Control Pill Widget -->
+        <div class="capsule-mockup stagger" style="text-align: center; max-width: 340px; padding: 1.5rem;">
+          <div style="font-weight: 800; font-size: 1rem; margin-bottom: 0.8rem; color: var(--fg);">تجربة المفتاح التفاعلي</div>
+          
+          <div class="mock-toggle-pill" id="mockToggle" onclick="toggleMockPill()">
+            <span style="font-weight: 800; font-size: 0.95rem;" id="mockText">هحضر النهارده</span>
+            <div class="mock-switch-knob"></div>
+          </div>
+
+          <div style="margin-top: 1rem; font-size: 0.82rem; opacity: 0.75; display: flex; align-items: center; justify-content: center; gap: 6px;" id="mockStationInfo">
+            <svg class="icon-svg sm"><use href="#i-pin"/></svg> محطة أسوان المركزية
+          </div>
+          <p style="font-size: 0.72rem; opacity: 0.55; margin-top: 0.8rem;">(اضغط للتبديل بين الحالتين)</p>
+        </div>
+
+        <!-- State 2: Not Attending -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;" class="stagger">
+          <div class="pill pill-coral" style="padding: 0.4rem 1.2rem; font-size: 0.8rem; font-weight: 700;">
+            <svg class="icon-svg sm" style="color:var(--coral);"><use href="#i-x"/></svg> حالة الاعتذار (مش هحضر)
+          </div>
+          <div class="mobile-phone-frame">
+            <div class="mobile-phone-notch"></div>
+            <div class="mobile-phone-screen">
+              <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (15).png" alt="Student Home Absent State">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 11: LIVE TRACKING PAGE -->
+  <section class="slide" data-slide="10">
+    <div class="slide-inner" style="max-width: 1100px;">
+      <div class="stagger header-pill" style="background: var(--sky);"><svg class="icon-svg sm"><use href="#i-map"/></svg> الخريطة اللحظية</div>
+      <h2 class="stagger section-title">صفحة التتبع الحي للمركبات</h2>
+      <p class="stagger subtitle">بث مباشر للـ GPS ومسار المحطات على الموبايل</p>
+
+      <div style="display: flex; gap: 2.5rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="mobile-phone-frame stagger">
+          <div class="mobile-phone-notch"></div>
+          <div class="mobile-phone-screen">
+            <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (6).png" alt="Live Tracking Mobile Screenshot">
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; max-width: 380px;" class="stagger">
+          <div class="pillar-card" style="padding: 1.2rem; background: var(--white);">
+            <div style="font-weight: 800; font-size: 1rem; color: var(--green); margin-bottom: 4px;"><svg class="icon-svg sm" style="color:var(--lime);"><use href="#i-bus"/></svg> مركبتي الحالية</div>
+            <p style="font-size: 0.82rem;">المركبة المخصصة للطالب مع المسار المباشر والمحطة القادمة.</p>
+          </div>
+          <div class="pillar-card" style="padding: 1.2rem; background: var(--white);">
+            <div style="font-weight: 800; font-size: 1rem; color: var(--blue); margin-bottom: 4px;"><svg class="icon-svg sm" style="color:var(--sky);"><use href="#i-bus"/></svg> مركبات متاحة</div>
+            <p style="font-size: 0.82rem;">عرض بقية المركبات النشطة في نفس الخط بشفافية كاملة.</p>
+          </div>
+          <div class="pillar-card" style="padding: 1.2rem; background: var(--white);">
+            <div style="font-weight: 800; font-size: 1rem; color: var(--coral); margin-bottom: 4px;"><svg class="icon-svg sm" style="color:var(--coral);"><use href="#i-bus"/></svg> ممتلئة السعة</div>
+            <p style="font-size: 0.82rem;">تحديث فوري لحالة المركبات المكتملة لمنع الازدحام.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 12: COORDINATOR JOURNEY -->
+  <section class="slide" data-slide="11">
+    <div class="slide-inner" style="max-width: 1100px;">
+      <div class="stagger header-pill" style="background: var(--mint);"><svg class="icon-svg sm"><use href="#i-shield"/></svg> رحلة العمليات</div>
+      <h2 class="stagger section-title">رحلة المنسق — خطوة بخطوة</h2>
+      <p class="stagger subtitle">تحكم شامل في تشغيل النقل من تطبيق الموبايل</p>
+      
+      <div style="display: flex; gap: 2.5rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="stepper-v stagger" style="max-width: 480px;">
+          <div class="stepper-v-step done">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-key"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>1. تسجيل الدخول بحساب Admin</h4>
+              <p>الانتقال للوحة التحكم وإدارة يوم النقل.</p>
+            </div>
+          </div>
+          <div class="stepper-v-step done">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-users"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>2. مراجعة الحضور وتخطيط المركبات</h4>
+              <p>التحقق من عدد الطلاب وتحديد السعة المطلوبة.</p>
+            </div>
+          </div>
+          <div class="stepper-v-step current">
+            <div class="stepper-v-line"></div>
+            <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-play"/></svg></div>
+            <div class="stepper-v-content">
+              <h4>3. بدء اليوم والتحكم بالمركبة</h4>
+              <p>أخذ مسؤولية الحافلة (Take Control) وتفعيل GPS.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mobile-phone-frame stagger">
+          <div class="mobile-phone-notch"></div>
+          <div class="mobile-phone-screen">
+            <img src="./Screenshots/screencapture-rakeb-vercel-app-admin-dashboard-2026-08-03-10_43_14.png" alt="Admin Dashboard Mobile Screenshot">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 13: VEHICLE PLANNING -->
+  <section class="slide" data-slide="12">
+    <div class="slide-inner" style="max-width: 1100px;">
+      <div class="stagger header-pill" style="background: var(--yellow);"><svg class="icon-svg sm"><use href="#i-bus"/></svg> التخطيط الذكي</div>
+      <h2 class="stagger section-title">تخطيط المركبات والسعة</h2>
+      <p class="stagger subtitle">حساب تلقائي ودقيق للسعة الاستيعابية عبر شاشة المنسق</p>
+
+      <div style="display: flex; gap: 2.5rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="mobile-phone-frame stagger">
+          <div class="mobile-phone-notch"></div>
+          <div class="mobile-phone-screen">
+            <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (5).png" alt="Vehicle Planning Mobile Screenshot">
+          </div>
+        </div>
+
+        <div class="pillar-card stagger" style="max-width: 480px; background: var(--white);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg); padding-bottom: 12px;">
+            <span style="font-weight: 700;">عدد الطلاب المؤكدين:</span>
+            <span style="font-size: 1.3rem; font-weight: 900; color: var(--coral);">42 طالب</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg); padding-bottom: 12px; margin-top: 10px;">
+            <span style="font-weight: 700;"><svg class="icon-svg sm"><use href="#i-bus"/></svg> أتوبيس (50 مقعد)</span>
+            <span style="font-weight: 700; color: var(--sky);">+1 مركبة</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <span style="font-weight: 700;">السعة الاستيعابية الإجمالية:</span>
+            <span style="font-size: 1.3rem; font-weight: 900; color: var(--lime);">50 مقعد (كافية)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 14: MULTI-VEHICLE LOGIC -->
+  <section class="slide" data-slide="13">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--violet); color: #fff;"><svg class="icon-svg sm"><use href="#i-refresh"/></svg> منطق التشغيل</div>
+      <h2 class="stagger section-title">منطق المركبات المتعددة</h2>
+      
+      <div class="stagger" style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <div class="pill pill-sky" style="padding: 0.8rem 1.5rem;">planned (مخططة)</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="pill pill-lime" style="padding: 0.8rem 1.5rem;">running (قيد التحرك)</div>
+        <span class="flow-arrow">&larr;</span>
+        <div class="pill pill-coral" style="padding: 0.8rem 1.5rem;">full / ended (مكتملة)</div>
+      </div>
+
+      <div class="pillar-card stagger" style="max-width: 600px; text-align: center; margin-top: 1rem; background: var(--yellow);">
+        <h3 class="card-title" style="margin-bottom: 8px;"><svg class="icon-svg sm" style="color:var(--yellow);"><use href="#i-star"/></svg> القاعدة الذهبية</h3>
+        <p style="font-weight: 700;">"كل المركبات تسير على نفس المسار، والطالب لا يختار مركبة محددة."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 15: REAL-TIME BOARDING -->
+  <section class="slide" data-slide="14">
+    <div class="slide-inner" style="max-width: 1100px;">
+      <div class="stagger header-pill" style="background: var(--mint);"><svg class="icon-svg sm"><use href="#i-check"/></svg> الأمان والدقة</div>
+      <h2 class="stagger section-title">تسجيل الحضور اللحظي والركوب</h2>
+      <p class="stagger subtitle">تأكيد الركوب نقرة بنقرة من شاشة المنسق</p>
+
+      <div style="display: flex; gap: 2.5rem; align-items: center; justify-content: center; width: 100%; margin-top: 1rem; flex-wrap: wrap;">
+        <div class="mobile-phone-frame stagger">
+          <div class="mobile-phone-notch"></div>
+          <div class="mobile-phone-screen">
+            <img src="./Screenshots/rakeb.vercel.app_(iPhone 14 Pro Max) (8).png" alt="Boarding List Mobile Screenshot">
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px; max-width: 450px;" class="stagger">
+          <div class="pillar-card" style="padding: 1.4rem;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: var(--lime); margin-bottom: 6px;"><svg class="icon-svg sm"><use href="#i-check"/></svg> تسجيل بضغطة واحدة + Undo</div>
+            <p style="font-size: 0.85rem;">المنسق يسجل ركوب الطالب بنقرة واحدة عند المحطة مع إمكانية التراجع الفوري.</p>
+          </div>
+          <div class="pillar-card" style="padding: 1.4rem;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: var(--sky); margin-bottom: 6px;"><svg class="icon-svg sm"><use href="#i-lock"/></svg> معاملات آمنة (Atomic Transactions)</div>
+            <p style="font-size: 0.85rem;">Firebase Security Rules تضمن عدم تجاوز السعة المحددة لكل مركبة تلقائياً.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 16: BEFORE / AFTER -->
+  <section class="slide" data-slide="15">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--coral); color: #fff;"><svg class="icon-svg sm"><use href="#i-refresh"/></svg> المقارنة الفعالة</div>
+      <h2 class="stagger section-title">قبل / بعد — مقارنة مباشرة</h2>
+      <div class="card-grid cols-2 stagger">
+        <div class="pillar-card" style="border-color: var(--coral); background: #fff5f5;">
+          <h3 class="card-title" style="color: var(--coral); margin-bottom: 1rem;"><svg class="icon-svg sm" style="color:var(--coral);"><use href="#i-x"/></svg> النظام القديم</h3>
+          <p>• وقت تخطيط: 45+ دقيقة يومياً</p>
+          <p>• دقة البيانات: أخطاء يدوية متكررة</p>
+          <p>• التواصل: 50-100 رسالة WhatsApp</p>
+          <p>• التتبع: عشوائي وبدون رؤية حية</p>
+        </div>
+        <div class="pillar-card" style="border-color: var(--lime); background: #f7fbe8;">
+          <h3 class="card-title" style="color: var(--fg); margin-bottom: 1rem;"><svg class="icon-svg sm" style="color:var(--lime);"><use href="#i-check"/></svg> منصة راكب</h3>
+          <p>• وقت تخطيط: أقل من 5 دقائق</p>
+          <p>• دقة البيانات: 100% توثيق رقمي موحد</p>
+          <p>• التواصل: صفر رسائل ومكالمات</p>
+          <p>• التتبع: خريطة حيّة دقيقة لجميع المركبات</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 17: TECH STACK -->
+  <section class="slide" data-slide="16">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--lavender);"><svg class="icon-svg sm"><use href="#i-code"/></svg> البنية التقنية</div>
+      <h2 class="stagger section-title">التقنيات المستخدمة</h2>
+      <div class="card-grid cols-4 stagger">
+        <div class="pillar-card" style="align-items: center; text-align: center; padding: 1.2rem;">
+          <div style="font-weight: 800;">React 19</div>
+          <span style="font-size: 0.75rem; opacity: 0.6;">Frontend Framework</span>
+        </div>
+        <div class="pillar-card" style="align-items: center; text-align: center; padding: 1.2rem;">
+          <div style="font-weight: 800;">Firebase RTDB</div>
+          <span style="font-size: 0.75rem; opacity: 0.6;">Realtime Database</span>
+        </div>
+        <div class="pillar-card" style="align-items: center; text-align: center; padding: 1.2rem;">
+          <div style="font-weight: 800;">Leaflet JS</div>
+          <span style="font-size: 0.75rem; opacity: 0.6;">Interactive Maps</span>
+        </div>
+        <div class="pillar-card" style="align-items: center; text-align: center; padding: 1.2rem;">
+          <div style="font-weight: 800;">TypeScript</div>
+          <span style="font-size: 0.75rem; opacity: 0.6;">Type Safety</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 18: KPIS -->
+  <section class="slide" data-slide="17">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--yellow);"><svg class="icon-svg sm"><use href="#i-chart"/></svg> قياس الأثر</div>
+      <h2 class="stagger section-title">مؤشرات الأداء والنجاح (KPIs)</h2>
+      <div class="card-grid cols-4 stagger">
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--lime);" data-count="5" data-prefix="<" data-suffix="m">0</div>
+          <div class="stat-label">وقت التخطيط اليومي</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--coral);" data-count="0" data-static="صفر">0</div>
+          <div class="stat-label">رسائل تواصل يدوي</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--sky);" data-count="80" data-prefix="≥" data-suffix="%">0%</div>
+          <div class="stat-label">معدل تبني الطلاب</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-number" style="color: var(--violet);" data-count="100" data-suffix="%">0%</div>
+          <div class="stat-label">دقة بيانات الحضور</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 19: PILOT PLAN -->
+  <section class="slide" data-slide="18">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--peach);"><svg class="icon-svg sm"><use href="#i-calendar"/></svg> التشرير والتطبيق</div>
+      <h2 class="stagger section-title">خطة التشغيل التجريبي</h2>
+      <div class="card-grid cols-4 stagger" style="margin-top: 1rem;">
+        <div class="pillar-card">
+          <div style="font-weight: 800; color: var(--coral);">المرحلة 1: الإعداد</div>
+          <p style="font-size: 0.8rem;">تهيئة الحسابات ونقاط التجمع وتدريب المنسقين.</p>
+        </div>
+        <div class="pillar-card">
+          <div style="font-weight: 800; color: var(--yellow);">المرحلة 2: تجريب محدود</div>
+          <p style="font-size: 0.8rem;">اختبار النظام مع 10-15 طالب بالتوازي مع القديم.</p>
+        </div>
+        <div class="pillar-card">
+          <div style="font-weight: 800; color: var(--sky);">المرحلة 3: التوسع</div>
+          <p style="font-size: 0.8rem;">توسيع التجربة لـ 30-50 طالب وتقليل الاعتماد القديم.</p>
+        </div>
+        <div class="pillar-card">
+          <div style="font-weight: 800; color: var(--lime);">المرحلة 4: الاعتماد</div>
+          <p style="font-size: 0.8rem;">إيقاف النظام القديم والتحول الرقمي الكامل 100%.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 20: ROADMAP -->
+  <section class="slide" data-slide="19">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--sky);"><svg class="icon-svg sm"><use href="#i-map"/></svg> التطوير المستقبلي</div>
+      <h2 class="stagger section-title">خارطة الطريق المستقبلية</h2>
+      <div class="stepper-v stagger">
+        <div class="stepper-v-step done">
+          <div class="stepper-v-line"></div>
+          <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-check"/></svg></div>
+          <div class="stepper-v-content">
+            <h4>Phase 1 &bull; النظام الأساسي (مكتمل)</h4>
+            <p>التسجيل، الحضور اليومي، التتبع الحي، رحلة واحدة.</p>
+          </div>
+        </div>
+        <div class="stepper-v-step done">
+          <div class="stepper-v-line"></div>
+          <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-check"/></svg></div>
+          <div class="stepper-v-content">
+            <h4>Phase 2 &bull; المركبات المتعددة (مكتمل)</h4>
+            <p>تخطيط حافلات متعددة، تعيين منسقين، وركوب مشترك.</p>
+          </div>
+        </div>
+        <div class="stepper-v-step current">
+          <div class="stepper-v-line"></div>
+          <div class="stepper-v-dot"><svg class="icon-svg sm"><use href="#i-clock"/></svg></div>
+          <div class="stepper-v-content">
+            <h4>Phase 3 &bull; كورسات متعددة (قيد التخطيط)</h4>
+            <p>إدارة كورسات ومعسكرات متعددة في نفس الوقت.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 21: RISKS -->
+  <section class="slide" data-slide="20">
+    <div class="slide-inner">
+      <div class="stagger header-pill" style="background: var(--coral); color: #fff;"><svg class="icon-svg sm"><use href="#i-shield"/></svg> إدارة المخاطر</div>
+      <h2 class="stagger section-title">المخاطر وكيف نتعامل معها</h2>
+      <div class="card-grid cols-2 stagger">
+        <div class="pillar-card">
+          <h3 class="card-title" style="color: var(--coral);">انقطاع الإنترنت المفاجئ</h3>
+          <p>تعتمد المنصة على التخزين المحلي Offline Persistence مع إعادة المزامنة عند عودة الاتصال.</p>
+        </div>
+        <div class="pillar-card">
+          <h3 class="card-title" style="color: var(--yellow);">تداخل المنسقين على مركبة</h3>
+          <p>استخدام Atomic Transactions لمنع التحكم المزدوج وتعيين مسؤول واحد لكل حافلة.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 22: CLOSING -->
+  <section class="slide" data-slide="21" style="background: radial-gradient(ellipse at 50% 50%, rgba(242, 209, 96, 0.2) 0%, transparent 60%), var(--bg);">
+    <div class="deco-pills">
+      <div class="deco-pill pill-lime" style="top: 20%; right: 12%; transform: rotate(-10deg);">READY</div>
+      <div class="deco-pill pill-sky" style="bottom: 25%; left: 10%; transform: rotate(14deg);">LAUNCH</div>
+    </div>
+    <div class="slide-inner">
+      <div class="stagger" style="margin-bottom: 0.5rem;">
+        <img src="./RakebLogo.png" alt="Rakeb Logo" style="height: 80px; width: auto; object-fit: contain; filter: drop-shadow(4px 4px 0 var(--shadow));">
+      </div>
+      <div class="stagger title-pill">الختام والدعوة للعمل</div>
+      <h1 class="stagger main-title" style="font-size: clamp(2.2rem, 5vw, 4.5rem); max-width: 900px; margin: 1rem 0;">
+        "راكب — لأن وقت المنسقين أثمن من إنه يتصرف على WhatsApp"
+      </h1>
+      <div class="pillar-card stagger" style="max-width: 500px; text-align: center; background: var(--white);">
+        <h3 class="card-title" style="color: var(--lime);"><svg class="icon-svg sm" style="color:var(--lime);"><use href="#i-rocket"/></svg> جاهزين نبدأ التجربة المحدودة!</h3>
+        <p style="margin-top: 6px; font-weight: 700;">10-15 طالب &bull; 2-3 منسقين &bull; أسبوعين اختبار</p>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /presentation -->
+
+<!-- SLIDE COUNTER & NAV HINT -->
+<div class="slide-counter" id="slideCounter">1 / 22</div>
+<div class="nav-hint">استخدم أسهم الكيبورد للتحكم &bull; Esc للعرض الشامل</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+  let isOverview = false;
+
+  const navDotsContainer = document.getElementById('navDots');
+  const slideCounter = document.getElementById('slideCounter');
+  const overviewBtn = document.getElementById('overviewBtn');
+
+  // Build Nav Dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    dot.title = 'شريحة ' + (i + 1);
+    dot.addEventListener('click', () => goTo(i));
+    navDotsContainer.appendChild(dot);
+  });
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= total || idx === current) return;
+    if (isOverview) toggleOverview();
+    
+    slides[current].classList.remove('active');
+    slides[current].classList.toggle('prev', idx > current);
+    
+    current = idx;
+    
+    slides[current].classList.remove('prev');
+    slides[current].classList.add('active');
+    
+    updateUI();
+    animateCounters(slides[current]);
+  }
+
+  function updateUI() {
+    slideCounter.textContent = (current + 1) + ' / ' + total;
+    const dots = Array.from(navDotsContainer.children);
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === current);
+    });
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  // Keyboard navigation
+  document.onkeydown = function(e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); prev(); } // RTL right arrow = prev
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); next(); } // RTL left arrow = next
+    else if (e.key === 'ArrowUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); next(); }
+    else if (e.key === 'Escape') { toggleOverview(); }
+    else if (e.key === ' ' && !isOverview) { e.preventDefault(); next(); }
+  };
+
+  // Touch Swipe
+  let startX = 0, startY = 0;
+  document.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+    if (dx > 0) prev();
+    else next();
+  }, { passive: true });
+
+  // Overview Mode
+  function toggleOverview() {
+    isOverview = !isOverview;
+    deck.classList.toggle('overview', isOverview);
+    if (!isOverview) {
+      slides.forEach((s, i) => {
+        s.classList.toggle('active', i === current);
+        s.classList.remove('prev');
+      });
+    } else {
+      slides.forEach(s => s.classList.remove('active', 'prev'));
+    }
+  }
+  overviewBtn.addEventListener('click', toggleOverview);
+
+  deck.addEventListener('click', (e) => {
+    if (!isOverview) return;
+    const sl = e.target.closest('.slide');
+    if (!sl) return;
+    const idx = slides.indexOf(sl);
+    if (idx >= 0) {
+      isOverview = true;
+      toggleOverview();
+      slides.forEach(s => s.classList.remove('active', 'prev'));
+      current = idx;
+      slides[current].classList.add('active');
+      updateUI();
+      animateCounters(slides[current]);
+    }
+  });
+
+  // Animated KPI Counter Numbers
+  function animateCounters(slide) {
+    slide.querySelectorAll('.stat-number[data-count]').forEach(el => {
+      const staticVal = el.getAttribute('data-static');
+      if (staticVal) { el.textContent = staticVal; return; }
+      const target = parseInt(el.dataset.count);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      let startTime = null;
+      const duration = 1200;
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        const progress = Math.min((ts - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const val = Math.round(eased * target);
+        el.textContent = prefix + val + suffix;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  // Interactive Mockup Toggle
+  window.toggleMockPill = function() {
+    const t = document.getElementById('mockToggle');
+    const txt = document.getElementById('mockText');
+    if (t.classList.contains('off')) {
+      t.classList.remove('off');
+      txt.textContent = 'هحضر النهارده';
+    } else {
+      t.classList.add('off');
+      txt.textContent = 'مش هحضر';
+    }
+  };
+
+  // Init
+  slides[0].classList.add('active');
+  updateUI();
+  setTimeout(() => animateCounters(slides[0]), 400);
+
+})();
+</script>
+</body>
+</html>

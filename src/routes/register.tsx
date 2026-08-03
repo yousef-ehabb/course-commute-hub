@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw } from "lucide-react";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
-  const { signUp, configured } = useAuth();
+  const { signUp, signInWithGoogle, sendVerificationEmail, configured } = useAuth();
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const navigate = useNavigate();
 
@@ -45,6 +45,59 @@ function RegisterPage() {
   const [nationalId, setNationalId] = useState("");
   const [station, setStation] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+  const [googleUid, setGoogleUid] = useState("");
+
+  async function handleGoogleSignUp() {
+    if (!configured) return toast.error("Firebase غير مهيأ بعد. أضف مفاتيح الاتصال أولاً.");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      const { getFirebaseAuth } = await import("@/lib/firebase");
+      const currentUser = getFirebaseAuth().currentUser;
+      if (currentUser) {
+        setIsGoogleUser(true);
+        setGoogleUid(currentUser.uid);
+        if (currentUser.displayName) setFullName(currentUser.displayName);
+        if (currentUser.email) setEmail(currentUser.email);
+        toast.success("تم الدخول بـ Google! يرجى إكمال بياناتك وموقع التجمع.");
+        changeStep(2);
+      } else {
+        navigate({ to: "/student/home", replace: true });
+      }
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err));
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleCompleteGoogleRegistration() {
+    if (!validateStep2() || !validateStep3()) return;
+    setLoading(true);
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, set } = await import("firebase/database");
+      const userProfile = {
+        uid: googleUid,
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        nationalId: nationalId.trim(),
+        defaultStation: station,
+        role: "student",
+        createdAt: Date.now(),
+      };
+      await set(ref(getFirebaseDb(), `rakeb/users/${googleUid}`), userProfile);
+      toast.success("تم إكمال حسابك بنجاح! أهلاً بك في راكب 🎉");
+      navigate({ to: "/student/home", replace: true });
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Set default station if available
   useEffect(() => {
@@ -171,7 +224,7 @@ function RegisterPage() {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="flex flex-col items-center text-center space-y-6"
+              className="flex flex-col items-center text-center space-y-5"
             >
               <div className="space-y-3">
                 <h1 className="text-2xl font-bold text-foreground">أهلاً بيك 👋</h1>
@@ -179,10 +232,50 @@ function RegisterPage() {
                   هتحتاج دقيقة واحدة بس علشان تنشئ حسابك وتبدأ تستخدم التطبيق.
                 </p>
               </div>
-              <Button onClick={nextStep} className="w-full" size="lg">
-                يلا نبدأ
-              </Button>
-              <p className="mt-6 text-center text-[13px] text-muted-foreground">
+
+              <div className="w-full space-y-3">
+                <Button onClick={nextStep} className="w-full" size="lg" disabled={googleLoading}>
+                  يلا نبدأ بالبريد الإلكتروني
+                </Button>
+
+                <div className="relative my-2 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border" />
+                  </div>
+                  <span className="relative bg-card px-2 text-xs text-muted-foreground">أو</span>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2 border-border"
+                  size="lg"
+                  disabled={googleLoading}
+                  onClick={handleGoogleSignUp}
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  {googleLoading ? "جارٍ التسجيل..." : "التسجيل السريع بـ Google"}
+                </Button>
+              </div>
+
+              <p className="mt-4 text-center text-[13px] text-muted-foreground">
                 عندك حساب؟{" "}
                 <Link to="/login" className="font-semibold text-primary hover:underline">
                   دخول
@@ -205,7 +298,7 @@ function RegisterPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold">المعلومات الشخصية</h2>
                   <span className="text-[13px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                    1 من 3
+                    {isGoogleUser ? "1 من 2" : "1 من 3"}
                   </span>
                 </div>
               </div>
@@ -267,7 +360,7 @@ function RegisterPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold">نقطة التجمع</h2>
                   <span className="text-[13px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                    2 من 3
+                    {isGoogleUser ? "2 من 2" : "2 من 3"}
                   </span>
                 </div>
               </div>
@@ -307,11 +400,24 @@ function RegisterPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={prevStep} className="w-12 p-0 shrink-0">
+                <Button variant="outline" onClick={prevStep} className="w-12 p-0 shrink-0" disabled={loading}>
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-                <Button onClick={nextStep} className="w-full">
-                  التالي
+                <Button
+                  onClick={isGoogleUser ? handleCompleteGoogleRegistration : nextStep}
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      جارٍ الحفظ...
+                    </>
+                  ) : isGoogleUser ? (
+                    "إتمام التسجيل"
+                  ) : (
+                    "التالي"
+                  )}
                 </Button>
               </div>
             </motion.div>
@@ -404,17 +510,50 @@ function RegisterPage() {
               className="flex flex-col items-center text-center space-y-5 py-4"
             >
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                <CheckCircle2 className="h-8 w-8 text-primary" />
+                <Mail className="h-8 w-8 text-primary" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold">حسابك جاهز! ✅</h2>
+                <h2 className="text-2xl font-bold">تم إرسال رابط التأكيد! 📧</h2>
                 <p className="text-[15px] leading-relaxed text-muted-foreground">
-                  تقدر دلوقتي تبدأ تستخدم الويبسايت وتتابع باص التدريب.
+                  أرسلنا رابط تأكيد إلى بريدك الإلكتروني <strong>{email}</strong>. يرجى فتح بريدك الإلكتروني والضغط على الرابط لتأكيد حسابك.
+                </p>
+                <p className="text-[13px] text-muted-foreground/80 pt-1">
+                  (تأكد أيضاً من فحص مجلد الرسائل غير المرغوب فيها Spam)
                 </p>
               </div>
-              <Button onClick={() => navigate({ to: "/student/home" })} className="w-full mt-4" size="lg">
-                ابدأ
-              </Button>
+
+              <div className="w-full space-y-3 pt-2">
+                <Button onClick={() => navigate({ to: "/student/home" })} className="w-full" size="lg">
+                  متابعة إلى الصفحة الرئيسية
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  disabled={resending}
+                  onClick={async () => {
+                    setResending(true);
+                    try {
+                      await sendVerificationEmail();
+                      toast.success("تم إعادة إرسال رابط التأكيد بنجاح");
+                    } catch (err) {
+                      toast.error("حدث خطأ أثناء إرسال البريد الإلكتروني");
+                    } finally {
+                      setResending(false);
+                    }
+                  }}
+                >
+                  {resending ? (
+                    <>
+                      <RefreshCw className="ml-2 h-3.5 w-3.5 animate-spin" />
+                      جارٍ الإرسال...
+                    </>
+                  ) : (
+                    "لم تصلك الرسالة؟ إعادة الإرسال"
+                  )}
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
