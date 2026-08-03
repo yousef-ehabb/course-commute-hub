@@ -80,7 +80,7 @@ function TripsPage() {
   const { vehicles, totalCapacity, loaded: vehiclesLoaded } = useVehicles();
   const { recordsByStudent } = useBoardingRecords();
   const { activeDateKey, serverTimeOffset } = useActiveDate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
