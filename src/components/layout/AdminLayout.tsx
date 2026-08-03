@@ -47,16 +47,16 @@ export function AdminLayout() {
               Admin
             </span>
           </div>
-          {profile && (
-            <div className="flex items-center gap-4">
-              <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-                {profile.fullName}
+          {(profile || user) && (
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="text-xs sm:text-sm font-medium text-foreground truncate max-w-[130px] sm:max-w-[220px]">
+                {profile?.fullName || user?.displayName || user?.email?.split("@")[0]}
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive shrink-0"
                 title="تسجيل الخروج"
               >
                 <LogOut className="w-5 h-5" />
