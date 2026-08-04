@@ -18,6 +18,17 @@ import { isStationSelected } from "@/utils/stationResolver";
 import { toast } from "sonner";
 import { Flag, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LongPressButton } from "@/components/ui/LongPressButton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   startTrip,
@@ -100,6 +111,7 @@ function TripsPage() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"trip" | "passengers">("trip");
   const [mounted, setMounted] = useState(false);
+  const [showEndTripDialog, setShowEndTripDialog] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -427,7 +439,7 @@ function TripsPage() {
       displayedVehicle.nextStationId === "creativa" ||
       (displayedVehicle.lastStationId === stations[stations.length - 1]?.id && !displayedVehicle.currentStationId)
     ) {
-      await handleEndTrip();
+      setShowEndTripDialog(true);
       return;
     }
 
@@ -706,23 +718,23 @@ function TripsPage() {
                       : "الباص في طريقه إلى النقطة التالية. اضغط لتأكيد التوقف وتسجيل صعود الركاب."}
                   </p>
 
-                  <Button
+                  <LongPressButton
                     size="lg"
-                    onClick={handleArriveAtStation}
+                    onComplete={handleArriveAtStation}
                     className="w-full sm:w-auto px-8 gap-2 font-semibold shadow-sm"
                   >
                     {isHeadingToCreativa ? (
                       <>
                         <Flag className="w-5 h-5" strokeWidth={2} />
-                        الوصول إلى كرياتيفا وإنهاء الرحلة
+                        الوصول إلى كرياتيفا وإنهاء الرحلة (اضغط مطولاً)
                       </>
                     ) : (
                       <>
                         <span className="text-lg">📍</span>
-                        الوصول للنقطة التالية
+                        الوصول للنقطة التالية (اضغط مطولاً)
                       </>
                     )}
-                  </Button>
+                  </LongPressButton>
                 </motion.div>
               )}
 
@@ -790,6 +802,29 @@ function TripsPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={showEndTripDialog} onOpenChange={setShowEndTripDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من رغبتك في إنهاء الرحلة؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيؤدي هذا الإجراء إلى إنهاء مسار المركبة الحالي وإعلام جميع الطلاب بأنه تم اكتمال الرحلة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowEndTripDialog(false);
+                handleEndTrip();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              إنهاء الرحلة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

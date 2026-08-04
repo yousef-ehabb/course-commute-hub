@@ -1,5 +1,6 @@
 import { Bus, MapPin, Play, Square, UserMinus, CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LongPressButton } from "@/components/ui/LongPressButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
@@ -174,37 +175,16 @@ export function VehicleControls({
           {(status === "running" || status === "full") && (
             <>
               {onDepartStation && (
-                <Button
+                <LongPressButton
                   size="lg"
-                  className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md active:scale-95 transition-transform"
-                  onClick={onDepartStation}
+                  className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md"
+                  onComplete={onDepartStation}
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  تحرك
-                </Button>
+                  تحرك (اضغط مطولاً)
+                </LongPressButton>
               )}
-              {onEndVehicle && (
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  className="flex-1 h-12 rounded-xl text-base gap-2 font-bold shadow-md active:scale-95 transition-transform"
-                  onClick={onEndVehicle}
-                  disabled={endVehicleDisabled || endVehicleLoading}
-                >
-                  {endVehicleLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      جاري الإنهاء...
-                    </>
-                  ) : (
-                    <>
-                      <Square className="w-5 h-5 fill-current" />
-                      إنهاء مسار المركبة
-                    </>
-                  )}
-                </Button>
-              )}
-              {/* Optional override to release control if needed? Usually they stay on it until ended */}
+              {/* Manual End Trip button removed to enforce happy path (ends automatically upon arrival at final station). */}
             </>
           )}
 
