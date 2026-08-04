@@ -132,7 +132,7 @@ function TripsPage() {
           setUsers(
             Object.entries(val)
               .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role !== "admin"),
+              .filter((u: any) => u.role === "student"),
           );
         } else {
           setUsers([]);

@@ -67,7 +67,7 @@ function StatsPage() {
           if (val) {
             const usersList = Object.entries(val)
               .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role !== "admin");
+              .filter((u: any) => u.role === "student");
             setUsers(usersList);
             setTotalUsers(usersList.length);
           } else {
@@ -118,7 +118,7 @@ function StatsPage() {
             // Process explicit records first
             const explicitIds = new Set<string>();
             Object.values(dayData).forEach((u: any) => {
-              if (u.role === "admin") return;
+              if (u.role !== "student") return;
               explicitIds.add(u.id);
               const hasSelectedStation = isStationSelected(u.station);
               if (u.status === "riding" && hasSelectedStation) {
