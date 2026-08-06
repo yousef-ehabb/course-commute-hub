@@ -43,6 +43,7 @@ interface TripHistoryRecord {
   status?: string;
   currentStationId?: string;
   nextStationId?: string;
+  createdAt?: number;
   [key: string]: unknown;
 }
 
