@@ -52,7 +52,18 @@ export function useAdminLocationTracking() {
       };
       
       status.addEventListener("change", handleChange);
-      return () => status.removeEventListener("change", handleChange);
+      
+      const handleFocus = () => {
+        navigator.permissions.query({ name: "geolocation" })
+          .then(s => { if (isMounted) setPermissionState(s.state as PermissionState); })
+          .catch(() => {});
+      };
+      window.addEventListener("focus", handleFocus);
+      
+      return () => {
+        status.removeEventListener("change", handleChange);
+        window.removeEventListener("focus", handleFocus);
+      };
     }).catch(() => {
       if (isMounted) setPermissionState("unknown");
     });
@@ -105,6 +116,9 @@ export function useAdminLocationTracking() {
         if (!isMounted) return;
         if (err.code === err.PERMISSION_DENIED) {
           setPermissionState("denied");
+        } else {
+          // Ignore transient errors like POSITION_UNAVAILABLE (2) or TIMEOUT (3)
+          console.debug("[LocationTracking] Transient error ignored:", err.message);
         }
       },
       { enableHighAccuracy: true }
