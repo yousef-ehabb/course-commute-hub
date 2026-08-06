@@ -45,6 +45,7 @@ function parseVehicles(raw: Record<string, any> | null): Vehicle[] {
     occupiedSeats: v.occupiedSeats ?? 0,
     status: v.status ?? "planned",
     assignedCoordinatorId: v.assignedCoordinatorId ?? null,
+    assignedCoordinatorName: v.assignedCoordinatorName ?? null,
     assignedAt: v.assignedAt ?? null,
     lastHeartbeatAt: v.lastHeartbeatAt ?? null,
     trackingSessionId: v.trackingSessionId ?? null,
