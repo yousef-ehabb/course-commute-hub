@@ -36,7 +36,7 @@ function DashboardPage() {
           setUsers(
             Object.entries(val)
               .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role === "student"),
+              .filter((u: any) => u.role !== "admin"),
           );
         } else {
           setUsers([]);

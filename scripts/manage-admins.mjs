@@ -67,6 +67,11 @@ const NEW_ADMINS = [
     password: "Password123!",
     displayName: "يسرى عمرو",
   },
+  {
+    email: "admin7@rakeb.com",
+    password: "Password123!",
+    displayName: "أروى ابوالسعود",
+  },
 ];
 
 // Sign in and get idToken + uid
@@ -195,6 +200,15 @@ async function main() {
   console.log("  Creating new admin accounts...");
   console.log("═══════════════════════════════════════════════\n");
 
+  // Get an existing admin token to write new admin profiles
+  let adminToken;
+  try {
+    const admin1SignIn = await signIn("admin1@rakeb.com", "Password123!");
+    adminToken = admin1SignIn.idToken;
+  } catch (e) {
+    console.error("Could not sign in as admin1 to get admin token:", e);
+  }
+
   for (const admin of NEW_ADMINS) {
     try {
       let signUpData;
@@ -216,7 +230,7 @@ async function main() {
       await writeProfile(
         signUpData.localId,
         admin.displayName,
-        signUpData.idToken
+        adminToken || signUpData.idToken
       );
       console.log(`✅ ${admin.email} → ${admin.displayName}`);
     } catch (err) {

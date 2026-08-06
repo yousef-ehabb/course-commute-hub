@@ -611,6 +611,15 @@ export class TripRepository {
       await update(ref(db), {
         [`rakeb/vehicles/default/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(1)
       });
+
+      // Synchronize back to dailyStatus so dashboard stats (stats.lazy.tsx) count boarded students correctly
+      const dailyPath = `rakeb/dailyStatus/default/${activeDateKey}/${studentId}`;
+      try {
+        await update(ref(db), { [`${dailyPath}/boarded`]: true });
+      } catch (err) {
+        console.warn("[TripRepository] Could not sync boardStudent to dailyStatus:", err);
+      }
+
       return { success: true };
     } catch (err) {
       // 3. Rollback on capacity failure (e.g. over capacity rejected by security rules)
@@ -654,6 +663,15 @@ export class TripRepository {
       await update(ref(db), {
         [`rakeb/vehicles/default/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(-1)
       });
+
+      // Synchronize back to dailyStatus so dashboard stats remain correct
+      const dailyPath = `rakeb/dailyStatus/default/${activeDateKey}/${studentId}`;
+      try {
+        await update(ref(db), { [`${dailyPath}/boarded`]: null });
+      } catch (err) {
+        console.warn("[TripRepository] Could not sync unboardStudent to dailyStatus:", err);
+      }
+
       return { success: true };
     } catch (err) {
       // 3. Rollback on failure

@@ -115,6 +115,7 @@ export async function startDay(params: StartDayParams): Promise<void> {
   const updates: Record<string, unknown> = {};
 
   updates[`${tripPath}/status`] = "waiting_at_station"; // active phase
+  updates[`${tripPath}/startedAt`] = now;
   updates[`${tripPath}/updatedAt`] = now;
   updates[`${tripPath}/updatedBy`] = adminUid;
 
@@ -238,6 +239,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
 
   const historyEntry = {
     ...(tripSnapshot ?? {}),
+    startedAt,
     status: "completed",
     endedAt: now,
     completedAt: now,

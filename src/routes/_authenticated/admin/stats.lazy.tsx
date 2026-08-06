@@ -21,6 +21,7 @@ import { useStations } from "@/contexts/StationsContext";
 import { getStationName, isStationSelected } from "@/utils/stationResolver";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveDate } from "@/contexts/ActiveDateContext";
 
 export const Route = createLazyFileRoute("/_authenticated/admin/stats")({
   component: StatsPage,
@@ -30,6 +31,7 @@ const dayNamesArabic = ["الأحد", "الإثنين", "الثلاثاء", "ا�
 
 function StatsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeDateKey } = useActiveDate();
   const { stations, loading: stationsLoading } = useStations();
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -39,9 +41,11 @@ function StatsPage() {
   });
   const [avgRiders, setAvgRiders] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [users, setUsers] = useState<UserProfile[]>([]);
   const [trendText, setTrendText] = useState("لا تتوفر بيانات كافية");
   const [stationBreakdown, setStationBreakdown] = useState<{ name: string; count: number }[]>([]);
+
+  const [rawUsers, setRawUsers] = useState<UserProfile[] | null>(null);
+  const [rawDailyStatus, setRawDailyStatus] = useState<any>(undefined);
 
   useEffect(() => {
     if (authLoading) return;
@@ -67,10 +71,11 @@ function StatsPage() {
           if (val) {
             const usersList = Object.entries(val)
               .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role === "student");
-            setUsers(usersList);
+              .filter((u: any) => u.role !== "admin");
+            setRawUsers(usersList);
             setTotalUsers(usersList.length);
           } else {
+            setRawUsers([]);
             setTotalUsers(0);
           }
         },
@@ -83,121 +88,7 @@ function StatsPage() {
       unsubDaily = onValue(
         ref(db, "rakeb/dailyStatus/default"),
         (snap) => {
-          const val = snap.val();
-          if (!val) {
-            setChartData([]);
-            setTopStation({ name: "لا توجد بيانات", avg: 0 });
-            setAvgRiders(0);
-            setStationBreakdown(stations.map((s) => ({ name: s.name, count: 0 })));
-            setLoading(false);
-            return;
-          }
-
-          const dates = Object.keys(val).sort();
-          let totalRidersAllTime = 0;
-          const stationTotals: Record<string, number> = {};
-          stations.forEach((s) => {
-            stationTotals[s.id] = 0;
-          });
-          stationTotals["custom"] = 0;
-
-          const chartItems = dates.map((dateStr) => {
-            const parts = dateStr.split("-").map(Number);
-            let dayLabel = dateStr;
-            if (parts.length === 3) {
-              const d = new Date(parts[0], parts[1] - 1, parts[2]);
-              const dayName = dayNamesArabic[d.getDay()] || "";
-              dayLabel = `${dayName} (${parts[2]}/${parts[1]})`;
-            }
-
-            const dayData = val[dateStr] || {};
-            let riders = 0;
-            let cancelled = 0;
-            let boarded = 0;
-
-            // Process explicit records first
-            const explicitIds = new Set<string>();
-            Object.values(dayData).forEach((u: any) => {
-              if (u.role !== "student") return;
-              explicitIds.add(u.id);
-              const hasSelectedStation = isStationSelected(u.station);
-              if (u.status === "riding" && hasSelectedStation) {
-                riders++;
-                totalRidersAllTime++;
-                if (u.boarded) boarded++;
-                if (u.station && stationTotals[u.station] !== undefined) {
-                  stationTotals[u.station]++;
-                }
-              } else if (u.status === "cancelled") {
-                cancelled++;
-              }
-            });
-
-            // Add implicit riders (students who don't have an explicit record for this day)
-            users.forEach((user) => {
-              const hasSelectedStation = isStationSelected(user.defaultStation);
-              if (user.role === "student" && hasSelectedStation && !explicitIds.has(user.uid)) {
-                riders++;
-                totalRidersAllTime++;
-                const station = user.defaultStation;
-                if (stationTotals[station] !== undefined) {
-                  stationTotals[station]++;
-                }
-              }
-            });
-
-            const rate = Math.min(100, Math.round((riders / 50) * 100));
-
-            return {
-              dateStr,
-              day: dayLabel,
-              riders,
-              cancelled,
-              boarded,
-              rate,
-            };
-          });
-
-          const activeDaysCount = Math.max(1, dates.length);
-          const calculatedAvg = Math.round(totalRidersAllTime / activeDaysCount);
-
-          // Find top used station
-          let maxCount = -1;
-          let maxId = "";
-          Object.entries(stationTotals).forEach(([stId, cnt]) => {
-            if (cnt > maxCount) {
-              maxCount = cnt;
-              maxId = stId;
-            }
-          });
-
-          const topStName = maxId ? getStationName(maxId, stations) : "غير محدد";
-          const topStAvg = Math.round((maxCount > 0 ? maxCount : 0) / activeDaysCount);
-
-          // Trend text
-          if (chartItems.length >= 2) {
-            const latest = chartItems[chartItems.length - 1].riders;
-            const prev = chartItems[chartItems.length - 2].riders;
-            if (prev > 0) {
-              const diff = Math.round(((latest - prev) / prev) * 100);
-              setTrendText(`${diff >= 0 ? "+" : ""}${diff}% عن اليوم السابق`);
-            } else {
-              setTrendText("بيانات جديدة اليوم");
-            }
-          } else {
-            setTrendText("أول يوم مسجل");
-          }
-
-          setChartData(chartItems);
-          setTopStation({ name: topStName, avg: topStAvg });
-          setAvgRiders(calculatedAvg);
-          setStationBreakdown(
-            stations.map((s) => ({
-              name: s.name,
-              count: stationTotals[s.id] || 0,
-            })),
-          );
-          setLoading(false);
+          setRawDailyStatus(snap.val());
         },
         (error) => {
           console.error("[Stats] Failed to load daily status:", error);
@@ -213,7 +104,134 @@ function StatsPage() {
       unsubDaily?.();
       unsubUsers?.();
     };
-  }, [user, authLoading, stations, users]);
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    if (stationsLoading || rawUsers === null || rawDailyStatus === undefined) {
+      return;
+    }
+
+    const val = rawDailyStatus || {};
+    const datesSet = new Set(Object.keys(val));
+    if (activeDateKey) {
+      datesSet.add(activeDateKey);
+    }
+    const dates = Array.from(datesSet).sort();
+
+    if (dates.length === 0) {
+      setChartData([]);
+      setTopStation({ name: "لا توجد بيانات", avg: 0 });
+      setAvgRiders(0);
+      setStationBreakdown(stations.map((s) => ({ name: s.name, count: 0 })));
+      setLoading(false);
+      return;
+    }
+
+    let totalRidersAllTime = 0;
+    const stationTotals: Record<string, number> = {};
+    stations.forEach((s) => {
+      stationTotals[s.id] = 0;
+    });
+    stationTotals["custom"] = 0;
+
+    const chartItems = dates.map((dateStr) => {
+      const parts = dateStr.split("-").map(Number);
+      let dayLabel = dateStr;
+      if (parts.length === 3) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        const dayName = dayNamesArabic[d.getDay()] || "";
+        dayLabel = `${dayName} (${parts[2]}/${parts[1]})`;
+      }
+
+      const dayData = val[dateStr] || {};
+      let riders = 0;
+      let cancelled = 0;
+      let boarded = 0;
+
+      // Process explicit records first
+      const explicitIds = new Set<string>();
+      Object.entries(dayData).forEach(([uid, u]: [string, any]) => {
+        if (u.role === "admin") return;
+        explicitIds.add(uid);
+        const hasSelectedStation = isStationSelected(u.station);
+        if (u.status === "riding" && hasSelectedStation) {
+          riders++;
+          totalRidersAllTime++;
+          if (u.boarded) boarded++;
+          if (u.station && stationTotals[u.station] !== undefined) {
+            stationTotals[u.station]++;
+          }
+        } else if (u.status === "cancelled") {
+          cancelled++;
+        }
+      });
+
+      // Add implicit riders (students who don't have an explicit record for this day)
+      rawUsers.forEach((u) => {
+        const hasSelectedStation = isStationSelected(u.defaultStation);
+        if (u.role === "student" && hasSelectedStation && !explicitIds.has(u.uid)) {
+          riders++;
+          totalRidersAllTime++;
+          const station = u.defaultStation;
+          if (stationTotals[station] !== undefined) {
+            stationTotals[station]++;
+          }
+        }
+      });
+
+      const rate = Math.min(100, Math.round((riders / 50) * 100));
+
+      return {
+        dateStr,
+        day: dayLabel,
+        riders,
+        cancelled,
+        boarded,
+        rate,
+      };
+    });
+
+    const activeDaysCount = Math.max(1, dates.length);
+    const calculatedAvg = Math.round(totalRidersAllTime / activeDaysCount);
+
+    // Find top used station
+    let maxCount = -1;
+    let maxId = "";
+    Object.entries(stationTotals).forEach(([stId, cnt]) => {
+      if (cnt > maxCount) {
+        maxCount = cnt;
+        maxId = stId;
+      }
+    });
+
+    const topStName = maxId ? getStationName(maxId, stations) : "غير محدد";
+    const topStAvg = Math.round((maxCount > 0 ? maxCount : 0) / activeDaysCount);
+
+    // Trend text
+    if (chartItems.length >= 2) {
+      const latest = chartItems[chartItems.length - 1].riders;
+      const prev = chartItems[chartItems.length - 2].riders;
+      if (prev > 0) {
+        const diff = Math.round(((latest - prev) / prev) * 100);
+        setTrendText(`${diff >= 0 ? "+" : ""}${diff}% عن اليوم السابق`);
+      } else {
+        setTrendText("بيانات جديدة اليوم");
+      }
+    } else {
+      setTrendText("أول يوم مسجل");
+    }
+
+    setChartData(chartItems);
+    setTopStation({ name: topStName, avg: topStAvg });
+    setAvgRiders(calculatedAvg);
+    setStationBreakdown(
+      stations.map((s) => ({
+        name: s.name,
+        count: stationTotals[s.id] || 0,
+      })),
+    );
+    setLoading(false);
+  }, [rawDailyStatus, rawUsers, stations, stationsLoading]);
 
   if (stationsLoading || loading) {
     return (

@@ -22,6 +22,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useStations } from "@/contexts/StationsContext";
+import { getStationName, isStationSelected } from "@/utils/stationResolver";
+import type { UserProfile } from "@/types";
 
 export const Route = createLazyFileRoute("/_authenticated/admin/history")({
   component: HistoryPage,
@@ -64,7 +67,12 @@ function formatTimestamp(ts: number | undefined): string {
 }
 
 function HistoryPage() {
+  const { stations, loading: stationsLoading } = useStations();
   const [historyMap, setHistoryMap] = useState<Record<string, TripHistoryRecord> | null>(null);
+  const [usersMap, setUsersMap] = useState<Record<string, UserProfile>>({});
+  const [dailyStatusMap, setDailyStatusMap] = useState<Record<string, Record<string, any>>>({});
+  const [boardingMap, setBoardingMap] = useState<Record<string, Record<string, any>>>({});
+  
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [searchDate, setSearchDate] = useState("");
@@ -78,22 +86,61 @@ function HistoryPage() {
     let unsubscribe: (() => void) | null = null;
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
-      const { ref, onValue } = await import("firebase/database");
+      const { ref, onValue, get } = await import("firebase/database");
       const db = getFirebaseDb();
-      const historyRef = ref(db, "rakeb/tripHistory/default");
+      
+      // Fetch users map once
+      try {
+        const usersSnap = await get(ref(db, "rakeb/users"));
+        if (usersSnap.exists()) {
+          setUsersMap(usersSnap.val());
+        }
+      } catch (err) {
+        console.error("Failed to load users map:", err);
+      }
 
+      // Fetch daily statuses map once
+      try {
+        const dailySnap = await get(ref(db, "rakeb/dailyStatus/default"));
+        if (dailySnap.exists()) {
+          setDailyStatusMap(dailySnap.val());
+        }
+      } catch (err) {
+        console.error("Failed to load daily statuses:", err);
+      }
+
+      // Subscribe to history
+      const historyRef = ref(db, "rakeb/tripHistory/default");
       unsubscribe = onValue(
         historyRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            setHistoryMap(snapshot.val() as Record<string, TripHistoryRecord>);
+        async (snap) => {
+          if (snap.exists()) {
+            const data = snap.val();
+            setHistoryMap(data);
+            
+            // Fetch boarding records per dateKey because root read is restricted by rules
+            const boardingMapTemp: Record<string, any> = {};
+            await Promise.all(
+              Object.keys(data).map(async (dateKey) => {
+                try {
+                  const bSnap = await get(ref(db, `rakeb/boardingRecords/${dateKey}`));
+                  if (bSnap.exists()) {
+                    boardingMapTemp[dateKey] = bSnap.val();
+                  }
+                } catch (e) {
+                  console.error(`Failed to fetch boarding for ${dateKey}:`, e);
+                }
+              })
+            );
+            setBoardingMap(boardingMapTemp);
           } else {
             setHistoryMap({});
+            setBoardingMap({});
           }
           setLoading(false);
         },
         (error) => {
-          console.error("[HistoryPage] Failed to fetch history:", error);
+          console.error("Failed to load history:", error);
           setLoading(false);
         },
       );
@@ -141,7 +188,54 @@ function HistoryPage() {
     setEndDateFilter("");
   };
 
-  if (loading) {
+  // Helper to categorize students for a specific date
+  const getStudentsForDay = (dateKey: string) => {
+    const dayData = dailyStatusMap[dateKey] || {};
+    const dayBoarding = boardingMap[dateKey] || {};
+    const boarded: { name: string; stationName: string }[] = [];
+    const absent: { name: string; stationName: string }[] = [];
+    const cancelled: { name: string; stationName: string }[] = [];
+
+    // First process explicit records
+    const explicitIds = new Set<string>();
+    Object.entries(dayData).forEach(([uid, record]: [string, any]) => {
+      const u = usersMap[uid];
+      if (!u || u.role !== "student") return;
+      explicitIds.add(uid);
+      
+      const stName = getStationName(u.defaultStation, stations);
+      const studentName = u.fullName || (u as any).name || "غير معروف";
+      
+      if (record.status === "cancelled") {
+        cancelled.push({ name: studentName, stationName: stName });
+      } else if (record.status === "riding") {
+        const isBoarded = dayBoarding[uid]?.status === "boarded" || record.boarded === true;
+        if (isBoarded) {
+          boarded.push({ name: studentName, stationName: stName });
+        } else {
+          absent.push({ name: studentName, stationName: stName });
+        }
+      }
+    });
+
+    // Process implicit riders (no explicit record, but registered and has station)
+    Object.entries(usersMap).forEach(([uid, u]) => {
+      if (u.role === "student" && isStationSelected(u.defaultStation) && !explicitIds.has(uid)) {
+        const stName = getStationName(u.defaultStation, stations);
+        const studentName = u.fullName || (u as any).name || "غير معروف";
+        const isBoarded = dayBoarding[uid]?.status === "boarded" || dayData[uid]?.boarded === true;
+        if (isBoarded) {
+          boarded.push({ name: studentName, stationName: stName });
+        } else {
+          absent.push({ name: studentName, stationName: stName });
+        }
+      }
+    });
+
+    return { boarded, absent, cancelled };
+  };
+
+  if (loading || stationsLoading) {
     return (
       <div className="space-y-5 pt-2 pb-20">
         <div>
@@ -266,8 +360,29 @@ function HistoryPage() {
           {sortedTrips.map((trip) => {
             const isExpanded = !!expandedKeys[trip.dateKey];
             const durationText = formatDurationMs(trip.tripDuration);
-            const startTimeText = formatTimestamp(trip.startedAt);
+            const startTimeText = formatTimestamp(trip.startedAt || trip.createdAt as number);
             const endTimeText = formatTimestamp(trip.endedAt || trip.completedAt);
+            
+            const { boarded, absent, cancelled } = getStudentsForDay(trip.dateKey);
+            const boardedCount = boarded.length;
+            const expectedCount = (trip.totalExpectedPassengers && trip.totalExpectedPassengers > 0)
+              ? trip.totalExpectedPassengers
+              : (boarded.length + absent.length);
+            
+            const dayBoarding = boardingMap[trip.dateKey] || {};
+            const boardedRecords = Object.values(dayBoarding).filter((r: any) => r.status === "boarded");
+            const firstBoardingRecord = boardedRecords.find((r: any) => r.boardedByCoordinatorId);
+            const coordinatorId = firstBoardingRecord ? (firstBoardingRecord as any).boardedByCoordinatorId : null;
+            
+            const coordUser = coordinatorId ? usersMap[coordinatorId] : null;
+            const coordName = coordUser ? (coordUser.fullName || (coordUser as any).name || coordinatorId) : null;
+            
+            const enderUser = trip.completedBy ? usersMap[trip.completedBy] : null;
+            const enderName = enderUser ? (enderUser.fullName || (enderUser as any).name || trip.completedBy) : (trip.completedBy || "النظام");
+            
+            const displayAdminName = coordName || enderName;
+            
+            const showEnderNote = coordinatorId && trip.completedBy && coordinatorId !== trip.completedBy;
 
             return (
               <motion.div
@@ -329,9 +444,13 @@ function HistoryPage() {
                     <div className="bg-muted/50 rounded-xl p-2.5 flex items-center gap-2">
                       <Users className="w-4 h-4 text-primary shrink-0" />
                       <div>
-                        <div className="text-[10px] text-muted-foreground">الركاب المتوقعون</div>
+                        <div className="text-[10px] text-muted-foreground">الحضور / المتوقع</div>
                         <div className="text-xs font-bold text-foreground">
-                          {trip.totalExpectedPassengers ?? 0}
+                          <span dir="ltr" className="inline-flex items-center gap-1">
+                            <span className="text-emerald-600">{boardedCount}</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span>{expectedCount}</span>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -359,18 +478,23 @@ function HistoryPage() {
                     <div className="bg-muted/50 rounded-xl p-2.5 flex items-center gap-2">
                       <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                       <div>
-                        <div className="text-[10px] text-muted-foreground">منفذ الإنهاء</div>
-                        <div className="text-[11px] font-semibold text-foreground truncate max-w-[90px]">
-                          {trip.completedBy ? trip.completedBy.substring(0, 8) : "النظام"}
+                        <div className="text-[10px] text-muted-foreground">المنسق</div>
+                        <div className="text-[11px] font-semibold text-foreground truncate" title={displayAdminName}>
+                          {displayAdminName}
                         </div>
+                        {showEnderNote && (
+                          <div className="text-[9px] text-muted-foreground mt-0.5 leading-tight truncate max-w-[140px]" title={`تم الإنهاء بواسطة: ${enderName}`}>
+                            (تم الإنهاء: {enderName})
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Expanded Detail Panel */}
                   {isExpanded && (
-                    <div className="pt-3 border-t border-border/50 space-y-3 animate-in fade-in-50 duration-200">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-muted/30 p-3 rounded-xl">
+                    <div className="pt-3 border-t border-border/50 space-y-4 animate-in fade-in-50 duration-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-muted/30 p-3 rounded-xl">
                         <div>
                           <span className="text-muted-foreground block text-[11px]">
                             وقت البدء:
@@ -383,18 +507,72 @@ function HistoryPage() {
                           </span>
                           <span className="font-medium text-foreground">{endTimeText}</span>
                         </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {/* Boarded Students */}
                         <div>
-                          <span className="text-muted-foreground block text-[11px]">
-                            معرف المستخدم الآدمن:
-                          </span>
-                          <span className="font-mono text-foreground">
-                            {trip.completedBy || "غير مسجل"}
-                          </span>
+                          <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1.5">
+                            <UserCheck className="w-4 h-4" />
+                            الطلاب الحاضرين ({boarded.length})
+                          </h4>
+                          {boarded.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">لا يوجد</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {boarded.map((s, i) => (
+                                <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Absent Students */}
+                        <div>
+                          <h4 className="text-xs font-bold text-destructive mb-2 flex items-center gap-1.5">
+                            <UserX className="w-4 h-4" />
+                            الطلاب الغائبين ({absent.length})
+                          </h4>
+                          {absent.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">لا يوجد</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {absent.map((s, i) => (
+                                <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Cancelled Students */}
+                        <div>
+                          <h4 className="text-xs font-bold text-amber-600 mb-2 flex items-center gap-1.5">
+                            <ShieldAlert className="w-4 h-4" />
+                            الاعتذارات ({cancelled.length})
+                          </h4>
+                          {cancelled.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">لا يوجد</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {cancelled.map((s, i) => (
+                                <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {Boolean(trip.status) && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground pt-2">
                           حالة الأرشفة:{" "}
                           <span className="text-foreground font-medium">{String(trip.status)}</span>
                         </div>

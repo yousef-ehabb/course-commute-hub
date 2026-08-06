@@ -132,7 +132,7 @@ function TripsPage() {
           setUsers(
             Object.entries(val)
               .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role === "student"),
+              .filter((u: any) => u.role !== "admin"),
           );
         } else {
           setUsers([]);
@@ -402,7 +402,17 @@ function TripsPage() {
 
 
   const handleDepartStation = async () => {
-    if (!dbRefs || !displayedVehicle || !displayedVehicle.currentStationId || !isControllingDisplayed) return;
+    if (!dbRefs || !displayedVehicle) return;
+
+    if (!isControllingDisplayed) {
+      toast.error("يرجى استلام المركبة أولاً لتتمكن من تحريكها");
+      return;
+    }
+
+    if (!displayedVehicle.currentStationId) {
+      toast.error("المركبة في حالة حركة بالفعل");
+      return;
+    }
 
     const currentIndex = stations.findIndex((s) => s.id === displayedVehicle.currentStationId);
     const isLastPickupStation = currentIndex === stations.length - 1;
@@ -661,7 +671,7 @@ function TripsPage() {
                 isLocationEnabled={isLocationEnabled}
                 onTakeControl={handleStartTrip}
                 onReleaseControl={() => handleReleaseControl(displayedVehicle.id)}
-                onDepartStation={handleDepartStation}
+                onDepartStation={(displayedVehicle.currentStationId && isControllingDisplayed) ? handleDepartStation : undefined}
                 onEndVehicle={handleEndTrip}
                 endVehicleDisabled={isCompleting || !isControllingDisplayed}
                 endVehicleLoading={isCompleting}
