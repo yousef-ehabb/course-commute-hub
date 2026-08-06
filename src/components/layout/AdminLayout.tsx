@@ -12,12 +12,16 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { Button } from "@/components/ui/button";
+import { useAdminLocationTracking } from "@/hooks/useAdminLocationTracking";
+import { LocationBadge } from "@/components/admin/LocationBadge";
 
 export function AdminLayout() {
   const routerState = useRouterState();
   const navigate = useNavigate();
   const { user, profile, signOutUser } = useAuth();
   const currentPath = routerState.location.pathname;
+  
+  const { isDriving, permissionState, requestPermission } = useAdminLocationTracking();
 
   const navItems = [
     { name: "الرئيسية", icon: LayoutDashboard, path: "/admin/dashboard" },
@@ -49,6 +53,12 @@ export function AdminLayout() {
           </div>
           {(profile || user) && (
             <div className="flex items-center gap-2 sm:gap-4">
+              {isDriving && (
+                <LocationBadge
+                  permissionState={permissionState}
+                  requestPermission={requestPermission}
+                />
+              )}
               <div className="text-xs sm:text-sm font-medium text-foreground truncate max-w-[130px] sm:max-w-[220px]">
                 {profile?.fullName || user?.displayName || user?.email?.split("@")[0]}
               </div>

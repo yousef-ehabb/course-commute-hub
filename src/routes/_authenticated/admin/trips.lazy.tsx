@@ -107,7 +107,6 @@ function TripsPage() {
   const [dbRefs, setDbRefs] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const watchIdRef = useRef<number | null>(null);
-  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"trip" | "passengers">("trip");
   const [mounted, setMounted] = useState(false);
@@ -156,61 +155,6 @@ function TripsPage() {
     () => passengers.filter((p) => p.status === "riding" && isStationSelected(p.station)).length,
     [passengers],
   );
-
-  // ── Independent Vehicle GPS Tracking (Phase 2b) ───────────────────────
-
-  const vehiclesRef = useRef(vehicles);
-  useEffect(() => {
-    vehiclesRef.current = vehicles;
-  }, [vehicles]);
-
-  const lastLocationUpdateRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (tripStatus === "pending" || !dbRefs) return;
-
-    if (!("geolocation" in navigator)) return;
-
-    const id = navigator.geolocation.watchPosition(
-      async (pos) => {
-        setIsLocationEnabled(true);
-        const now = Date.now();
-        // Throttle updates to once every 10 seconds
-        if (now - lastLocationUpdateRef.current < 10000) return;
-
-        const myVehicles = vehiclesRef.current.filter((v) => v.assignedCoordinatorId === user?.uid);
-        if (myVehicles.length === 0) return;
-
-        lastLocationUpdateRef.current = now;
-
-        const location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          updatedAt: now,
-        };
-
-        try {
-          await Promise.all(
-            myVehicles.map((v) =>
-              TripRepository.updateLocation(dbRefs.db, activeDateKey, v.id, user!.uid, location)
-            )
-          );
-        } catch (locErr) {
-          console.warn("[Trips] Location update failed:", locErr);
-        }
-      },
-      () => {
-        setIsLocationEnabled(false);
-        const myVehicles = vehiclesRef.current.filter((v) => v.assignedCoordinatorId === user?.uid);
-        if (myVehicles.length > 0) {
-          toast.error("فشل تتبع الموقع. يرجى تفعيل إذن الـ GPS في متصفحك.");
-        }
-      },
-      { enableHighAccuracy: true }
-    );
-
-    return () => navigator.geolocation.clearWatch(id);
-  }, [displayedVehicle?.status, dbRefs, activeDateKey, user?.uid]);
 
   // ── Vehicle Planning Handlers ───────────────────────────────────────────
 
@@ -668,7 +612,6 @@ function TripsPage() {
             <>
               <VehicleControls
                 vehicle={displayedVehicle}
-                isLocationEnabled={isLocationEnabled}
                 onTakeControl={handleStartTrip}
                 onReleaseControl={() => handleReleaseControl(displayedVehicle.id)}
                 onDepartStation={(displayedVehicle.currentStationId && isControllingDisplayed) ? handleDepartStation : undefined}

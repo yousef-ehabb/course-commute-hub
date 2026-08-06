@@ -12,7 +12,6 @@ interface VehicleControlsProps {
   onReleaseControl: () => void;
   onDepartStation?: () => void;
   onEndVehicle?: () => void;
-  isLocationEnabled: boolean;
   canTakeControl: boolean;
   endVehicleLoading?: boolean;
   endVehicleDisabled?: boolean;
@@ -24,7 +23,6 @@ export function VehicleControls({
   onReleaseControl,
   onDepartStation,
   onEndVehicle,
-  isLocationEnabled,
   canTakeControl,
   endVehicleLoading,
   endVehicleDisabled,
@@ -79,10 +77,6 @@ export function VehicleControls({
           <h2 className="text-lg font-bold text-foreground">
             إدارة {vehicle.type === "bus" ? "الأتوبيس" : "الميكروباص"}
           </h2>
-          <p className="text-[12px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
-            {isLocationEnabled ? "GPS مفعل" : "GPS غير مفعل"}
-          </p>
         </div>
         {statusChip}
       </div>
