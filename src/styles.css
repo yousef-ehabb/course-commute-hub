@@ -3,6 +3,46 @@
 @import "tw-animate-css";
 
 @font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Shamel';
   src: url('/fonts/ArbFONTS-FFShamelFamily-SansOneBook.ttf') format('truetype');
   font-weight: 400;
@@ -21,8 +61,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Shamel", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Shamel", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Thmanyah Sans", "Shamel", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Thmanyah Sans", "Shamel", ui-sans-serif, system-ui, sans-serif;
 }
 
 .material-symbols-outlined {
@@ -175,6 +215,7 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
