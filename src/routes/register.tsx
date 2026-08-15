@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw, KeyRound } from "lucide-react";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import { StationPicker } from "@/components/student/StationPicker";
@@ -59,6 +59,8 @@ function RegisterPage() {
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [googleUid, setGoogleUid] = useState("");
   const [isReEnrolling, setIsReEnrolling] = useState(false);
+  const [courseCode, setCourseCode] = useState("");
+  const [courseValidating, setCourseValidating] = useState(false);
 
   // Pre-fill form fields from archived profile when re-enrolling
   useEffect(() => {
@@ -114,7 +116,7 @@ function RegisterPage() {
         role: "student",
         createdAt: Date.now(),
         ...(station === "custom" && customLocation ? { customLocation } : {}),
-        ...(courseIdFromUrl ? { courseId: courseIdFromUrl } : {}),
+        courseId: courseIdFromUrl || "default",
       };
       await set(ref(getFirebaseDb(), `rakeb/users/${googleUid}`), userProfile);
 
@@ -250,7 +252,7 @@ function RegisterPage() {
         nationalId: nationalId.trim(),
         defaultStation: station,
         ...(station === "custom" && customLocation ? { customLocation } : {}),
-        ...(courseIdFromUrl ? { courseId: courseIdFromUrl } : {}),
+        courseId: courseIdFromUrl || "default",
       });
       // Registration successful! Move to success step
       setStep(5);
@@ -295,6 +297,85 @@ function RegisterPage() {
   const prevStep = () => {
     changeStep(step - 1);
   };
+
+  async function handleCourseCodeSubmit() {
+    const code = courseCode.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    if (!code) {
+      toast.error("يرجى إدخال كود الدورة");
+      return;
+    }
+    setCourseValidating(true);
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, get } = await import("firebase/database");
+      const snap = await get(ref(getFirebaseDb(), `rakeb/courses/${code}`));
+      if (!snap.exists() && code !== "default") {
+        toast.error("كود الدورة غير صحيح. تأكد من الرابط أو الكود من المشرف.");
+        return;
+      }
+      navigate({ to: "/register", search: { course: code } });
+    } catch (err) {
+      toast.error("حدث خطأ أثناء التحقق من كود الدورة");
+    } finally {
+      setCourseValidating(false);
+    }
+  }
+
+  if (!courseIdFromUrl) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-8">
+        <div className="mb-6 w-full max-w-sm flex justify-center">
+          <Link to="/">
+            <RakebLogo size="lg" />
+          </Link>
+        </div>
+        <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-elevated">
+          <div className="flex flex-col items-center text-center space-y-5">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <KeyRound className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-foreground">كود الدورة</h1>
+              <p className="text-[15px] leading-relaxed text-muted-foreground">
+                أدخل كود الدورة اللي بعتهولك المشرف علشان تقدر تسجل.
+              </p>
+            </div>
+            <div className="w-full space-y-3">
+              <Input
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+                placeholder="مثال: course-2026"
+                dir="ltr"
+                className="text-center"
+                onKeyDown={(e) => e.key === "Enter" && handleCourseCodeSubmit()}
+              />
+              <Button
+                onClick={handleCourseCodeSubmit}
+                className="w-full"
+                size="lg"
+                disabled={courseValidating}
+              >
+                {courseValidating ? (
+                  <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    جارٍ التحقق...
+                  </>
+                ) : (
+                  "متابعة"
+                )}
+              </Button>
+            </div>
+            <p className="text-[13px] text-muted-foreground">
+              الكود موجود في رابط التسجيل اللي المشرف بعتهولك.{" "}
+              <Link to="/login" className="font-semibold text-primary hover:underline">
+                عندك حساب؟ سجل دخول
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-8">
