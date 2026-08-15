@@ -168,7 +168,7 @@ function RegisterPage() {
         [`rakeb/archivedUsersIndex/${user.uid}`]: null,
       });
 
-      toast.success("تم تسجيلك في الدورة الجديدة بنجاح! أهلاً بك مجدداً 🎉");
+      toast.success("تم تسجيلك في الكورس الجديد بنجاح! أهلاً بك مجدداً 🎉");
       navigate({ to: "/student/home", replace: true });
     } catch (err) {
       toast.error(getAuthErrorMessage(err));
@@ -301,7 +301,7 @@ function RegisterPage() {
   async function handleCourseCodeSubmit() {
     const code = courseCode.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
     if (!code) {
-      toast.error("يرجى إدخال كود الدورة");
+      toast.error("يرجى إدخال كود الكورس");
       return;
     }
     setCourseValidating(true);
@@ -310,12 +310,12 @@ function RegisterPage() {
       const { ref, get } = await import("firebase/database");
       const snap = await get(ref(getFirebaseDb(), `rakeb/courses/${code}`));
       if (!snap.exists() && code !== "default") {
-        toast.error("كود الدورة غير صحيح. تأكد من الرابط أو الكود من المشرف.");
+        toast.error("كود الكورس غير صحيح. تأكد من الرابط أو الكود من المشرف.");
         return;
       }
       navigate({ to: "/register", search: { course: code } });
     } catch (err) {
-      toast.error("حدث خطأ أثناء التحقق من كود الدورة");
+      toast.error("حدث خطأ أثناء التحقق من كود الكورس");
     } finally {
       setCourseValidating(false);
     }
@@ -335,9 +335,9 @@ function RegisterPage() {
               <KeyRound className="h-8 w-8 text-primary" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-foreground">كود الدورة</h1>
+              <h1 className="text-2xl font-bold text-foreground">كود الكورس</h1>
               <p className="text-[15px] leading-relaxed text-muted-foreground">
-                أدخل كود الدورة اللي بعتهولك المشرف علشان تقدر تسجل.
+                أدخل كود الكورس اللي بعتهولك المشرف علشان تقدر تسجل.
               </p>
             </div>
             <div className="w-full space-y-3">
@@ -395,7 +395,7 @@ function RegisterPage() {
             <span className="text-lg">👋</span>
             <div>
               <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-200">أهلاً بعودتك!</h3>
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">بياناتك محفوظة من الدورة السابقة. راجعها وأكمل التسجيل في الدورة الجديدة.</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">بياناتك محفوظة من الكورس السابق. راجعها وأكمل التسجيل في الكورس الجديد.</p>
             </div>
           </div>
         </div>
@@ -601,7 +601,7 @@ function RegisterPage() {
                       جارٍ الحفظ...
                     </>
                   ) : isReEnrolling ? (
-                    "تسجيل في الدورة الجديدة ✨"
+                    "تسجيل في الكورس الجديد ✨"
                   ) : isGoogleUser ? (
                     "إتمام التسجيل"
                   ) : (

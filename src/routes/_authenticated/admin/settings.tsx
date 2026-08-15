@@ -165,7 +165,7 @@ function SettingsPage() {
     setIsCreatingCourse(true);
     try {
       await createCourse(newCourseId, newCourseName);
-      toast.success(`تم إنشاء الدورة "${newCourseName.trim()}" بنجاح!`, {
+      toast.success(`تم إنشاء الكورس "${newCourseName.trim()}" بنجاح!`, {
         action: {
           label: "نسخ رابط التسجيل",
           onClick: () => copyRegisterLink(newCourseId.trim().toLowerCase()),
@@ -176,7 +176,7 @@ function SettingsPage() {
       setCreateDialogOpen(false);
     } catch (e: any) {
       console.error("[Settings] Create course failed:", e);
-      toast.error(e?.message || "حدث خطأ أثناء إنشاء الدورة");
+      toast.error(e?.message || "حدث خطأ أثناء إنشاء الكورس");
     } finally {
       setIsCreatingCourse(false);
     }
@@ -188,16 +188,16 @@ function SettingsPage() {
     try {
       if (actionType === "archive") {
         await archiveCourse(actionTargetCourse.id);
-        toast.success(`تم أرشفة الدورة "${actionTargetCourse.name}" ونقل طلابها للأرشيف.`);
+        toast.success(`تم أرشفة الكورس "${actionTargetCourse.name}" ونقل طلابه للأرشيف.`);
       } else if (actionType === "delete") {
         await deleteCourse(actionTargetCourse.id);
-        toast.success(`تم حذف الدورة "${actionTargetCourse.name}" وجميع بياناتها بنجاح.`);
+        toast.success(`تم حذف الكورس "${actionTargetCourse.name}" وجميع بياناته بنجاح.`);
       }
       setActionTargetCourse(null);
       setActionType(null);
     } catch (e: any) {
       console.error(`[Settings] ${actionType} course failed:`, e);
-      toast.error(e?.message || `حدث خطأ أثناء تنفيذ الإجراء على الدورة`);
+      toast.error(e?.message || `حدث خطأ أثناء تنفيذ الإجراء على الكورس`);
     } finally {
       setActionLoading(false);
     }
@@ -207,7 +207,7 @@ function SettingsPage() {
   const allDisplayCourses: CourseInfo[] = [
     {
       id: "default",
-      name: "الدورة الأساسية",
+      name: "الكورس الأساسي",
       adminUid: "system",
       status: "active",
       createdAt: 0,
@@ -221,7 +221,7 @@ function SettingsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
-          <p className="text-muted-foreground mt-1">إدارة إعدادات النظام والدورات</p>
+          <p className="text-muted-foreground mt-1">إدارة إعدادات النظام والكورسات</p>
         </div>
         <Button className="hidden md:flex gap-2 bg-primary" onClick={handleSave}>
           <Save className="w-4 h-4" />
@@ -235,7 +235,7 @@ function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
-              إعدادات التسجيل للدورة الحالية ({courseId})
+              إعدادات التسجيل للكورس الحالي ({courseId})
             </CardTitle>
             <CardDescription>تحكم في أوقات غلق التسجيل للطلاب</CardDescription>
           </CardHeader>
@@ -297,7 +297,7 @@ function SettingsPage() {
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                هذا هو تاريخ الرحلة التي سيتم التسجيل لها للدورة الحالية.
+                هذا هو تاريخ الرحلة التي سيتم التسجيل لها للكورس الحالي.
               </p>
             </div>
           </CardContent>
@@ -345,10 +345,10 @@ function SettingsPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Archive className="w-5 h-5 text-primary" />
-                  إدارة الدورات
+                  إدارة الكورسات
                 </CardTitle>
                 <CardDescription>
-                  إنشاء دورات جديدة، التبديل بينها، نسخ روابط التسجيل، والأرشفة أو الحذف
+                  إنشاء كورسات جديدة، التبديل بينها، نسخ روابط التسجيل، والأرشفة أو الحذف
                 </CardDescription>
               </div>
 
@@ -356,19 +356,19 @@ function SettingsPage() {
                 <AlertDialogTrigger asChild>
                   <Button className="gap-2 shrink-0">
                     <PlusCircle className="w-4 h-4" />
-                    دورة جديدة
+                    كورس جديد
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>إنشاء دورة جديدة</AlertDialogTitle>
+                    <AlertDialogTitle>إنشاء كورس جديد</AlertDialogTitle>
                     <AlertDialogDescription>
-                      أدخل تفاصيل الدورة الجديدة. سيتم إنشاء رابط تسجيل مخصص لها فوراً.
+                      أدخل تفاصيل الكورس الجديد. سيتم إنشاء رابط تسجيل مخصص له فوراً.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">اسم الدورة</label>
+                      <label className="text-sm font-medium">اسم الكورس</label>
                       <Input
                         placeholder="مثال: الدفعة 42 (مسار الويب)"
                         value={newCourseName}
@@ -377,7 +377,7 @@ function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">معرف الدورة (بالإنجليزية وبدون مسافات)</label>
+                      <label className="text-sm font-medium">معرف الكورس (بالإنجليزية وبدون مسافات)</label>
                       <Input
                         placeholder="مثال: intake-42"
                         value={newCourseId}
@@ -392,7 +392,7 @@ function SettingsPage() {
                       onClick={handleCreateCourseSubmit}
                       disabled={isCreatingCourse || !newCourseId.trim() || !newCourseName.trim()}
                     >
-                      {isCreatingCourse ? "جاري الإنشاء..." : "إنشاء الدورة"}
+                      {isCreatingCourse ? "جاري الإنشاء..." : "إنشاء الكورس"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -404,10 +404,10 @@ function SettingsPage() {
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
-                قائمة الدورات المتاحة
+                قائمة الكورسات المتاحة
               </h4>
               <span className="text-xs text-muted-foreground bg-muted px-2.5 py-0.5 rounded-md font-medium">
-                {allDisplayCourses.length} دورات
+                {allDisplayCourses.length} كورسات
               </span>
             </div>
 
@@ -437,13 +437,13 @@ function SettingsPage() {
                         {isCurrent ? (
                           <span className="text-[11px] bg-primary text-primary-foreground px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
                             <Check className="w-3 h-3" />
-                            الدورة المعروضة حالياً
+                            الكورس المعروض حالياً
                           </span>
                         ) : (
                           <button
                             onClick={() => {
                               setCourseId(c.id);
-                              toast.success(`تم التبديل إلى دورة "${c.name}"`);
+                              toast.success(`تم التبديل إلى كورس "${c.name}"`);
                             }}
                             className="text-[11px] bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold transition-colors active:scale-95"
                           >
@@ -475,7 +475,7 @@ function SettingsPage() {
                         size="sm"
                         className="gap-1.5 text-xs font-semibold shrink-0"
                         onClick={() => copyRegisterLink(c.id)}
-                        title="نسخ رابط تسجيل الطلاب لهذه الدورة"
+                        title="نسخ رابط تسجيل الطلاب لهذا الكورس"
                       >
                         <Copy className="w-3.5 h-3.5 text-primary" />
                         <span>نسخ الرابط</span>
@@ -534,25 +534,25 @@ function SettingsPage() {
         <AlertDialogContent className="max-w-[380px] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-center text-base">
-              {actionType === "archive" ? "أرشفة الدورة" : "حذف الدورة نهائياً"}
+              {actionType === "archive" ? "أرشفة الكورس" : "حذف الكورس نهائياً"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center text-sm leading-relaxed">
               {actionType === "archive" ? (
                 <>
-                  هل أنت متأكد من أرشفة دورة{" "}
+                  هل أنت متأكد من أرشفة كورس{" "}
                   <strong className="text-foreground">"{actionTargetCourse?.name}"</strong>؟
                   <br />
                   <span className="text-xs text-amber-700 dark:text-amber-400 block mt-2">
-                    سيتم نقل جميع طلاب هذه الدورة للأرشيف، وسيمكنهم التسجيل في الدورات الجديدة ببياناتهم المحفوظة.
+                    سيتم نقل جميع طلاب هذا الكورس للأرشيف، وسيمكنهم التسجيل في الكورسات الجديدة ببياناتهم المحفوظة.
                   </span>
                 </>
               ) : (
                 <>
-                  هل أنت متأكد من حذف دورة{" "}
+                  هل أنت متأكد من حذف كورس{" "}
                   <strong className="text-destructive">"{actionTargetCourse?.name}"</strong> بالكامل؟
                   <br />
                   <span className="text-xs text-destructive font-semibold block mt-2">
-                    سيتم مسح بيانات الدورة وسجلاتها ورحلاتها نهائياً. لا يمكن التراجع عن هذا الإجراء!
+                    سيتم مسح بيانات الكورس وسجلاته ورحلاته نهائياً. لا يمكن التراجع عن هذا الإجراء!
                   </span>
                 </>
               )}

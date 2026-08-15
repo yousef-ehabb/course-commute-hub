@@ -75,7 +75,7 @@ function LoginPage() {
         try {
           const indexSnap = await get(ref(getFirebaseDb(), `rakeb/archivedUsersIndex/${currentUser.uid}`));
           if (indexSnap?.exists()) {
-            toast.info("انتهت الدورة السابقة. يرجى التسجيل في دورة جديدة.");
+            toast.info("انتهى الكورس السابق. يرجى التسجيل في كورس جديد.");
             return;
           }
         } catch {
@@ -134,7 +134,7 @@ function LoginPage() {
         try {
           const indexSnap = await get(ref(getFirebaseDb(), `rakeb/archivedUsersIndex/${currentUser.uid}`));
           if (indexSnap?.exists()) {
-            toast.info("انتهت الدورة السابقة. يرجى التسجيل في دورة جديدة.");
+            toast.info("انتهى الكورس السابق. يرجى التسجيل في كورس جديد.");
             return;
           }
         } catch {
@@ -165,9 +165,9 @@ function LoginPage() {
                 <Archive className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div className="space-y-1.5 min-w-0">
-                <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">انتهت الدورة السابقة</h3>
+                <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">انتهى الكورس السابق</h3>
                 <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                  أهلاً <strong>{archivedProfile.profile.fullName}</strong>، دورتك السابقة انتهت. للاستمرار، سجّل في دورة جديدة وبياناتك محفوظة.
+                  أهلاً <strong>{archivedProfile.profile.fullName}</strong>، كورسك السابق انتهى. للاستمرار، سجّل في كورس جديد وبياناتك محفوظة.
                 </p>
               </div>
             </div>

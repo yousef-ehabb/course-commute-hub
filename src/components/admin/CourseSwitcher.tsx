@@ -14,7 +14,7 @@ export function CourseSwitcher() {
   const { courseId, courses, setCourseId, course } = useCourse();
 
   // If there are no custom courses created yet, show default indicator
-  const activeCourseName = course?.name || (courseId === "default" ? "الدورة الأساسية" : courseId);
+  const activeCourseName = course?.name || (courseId === "default" ? "الكورس الأساسي" : courseId);
 
   return (
     <DropdownMenu>
@@ -26,7 +26,7 @@ export function CourseSwitcher() {
 
       <DropdownMenuContent align="start" className="w-56 p-1.5 rounded-2xl shadow-elevated">
         <DropdownMenuLabel className="text-xs text-muted-foreground font-semibold px-2 py-1.5">
-          التبديل بين الدورات
+          التبديل بين الكورسات
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="my-1" />
 
@@ -38,7 +38,7 @@ export function CourseSwitcher() {
           }`}
         >
           <div className="flex flex-col">
-            <span>الدورة الأساسية</span>
+            <span>الكورس الأساسي</span>
             <span className="text-[10px] text-muted-foreground font-mono">default</span>
           </div>
           {courseId === "default" && <Check className="w-4 h-4 text-primary" />}
@@ -78,7 +78,7 @@ export function CourseSwitcher() {
             to="/admin/settings"
             className="flex items-center justify-center gap-1.5 text-center text-xs font-bold text-primary py-2 rounded-xl hover:bg-primary/10 transition-colors"
           >
-            ⚙️ إدارة وإنشاء الدورات
+            ⚙️ إدارة وإنشاء الكورسات
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

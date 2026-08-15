@@ -177,7 +177,7 @@ function StudentsPage() {
       updates[`rakeb/users/${selectedStudent.id}`] = null;
 
       await update(ref(db), updates);
-      toast.success(`تم أرشفة "${selectedStudent.name}" بنجاح. يمكنه التسجيل في دورة جديدة.`);
+      toast.success(`تم أرشفة "${selectedStudent.name}" بنجاح. يمكنه التسجيل في كورس جديد.`);
       setDialogOpen(false);
     } catch (err) {
       console.error("[Students] Archive failed:", err);
@@ -399,7 +399,7 @@ function StudentsPage() {
               <div className="text-right">
                 <p className="text-sm font-bold text-amber-800 dark:text-amber-200">أرشفة</p>
                 <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                  انتهت الدورة — الطالب يقدر يسجل في دورة جديدة
+                  انتهى الكورس — الطالب يقدر يسجل في كورس جديد
                 </p>
               </div>
             </button>

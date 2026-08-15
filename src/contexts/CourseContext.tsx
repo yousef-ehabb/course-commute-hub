@@ -130,7 +130,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
       const found = courses.find((c) => c.id === "default");
       return found || {
         id: "default",
-        name: "الدورة الأساسية",
+        name: "الكورس الأساسي",
         adminUid: "system",
         status: "active",
         createdAt: 0,
@@ -145,7 +145,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     async (id: string, name: string) => {
       const normalizedId = id.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
       if (!normalizedId || !name.trim()) {
-        throw new Error("يرجى إدخال اسم ومعرف صالح للدورة");
+        throw new Error("يرجى إدخال اسم ومعرف صالح للكورس");
       }
 
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -154,7 +154,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
 
       const existingSnap = await get(ref(db, `rakeb/courses/${normalizedId}`));
       if (existingSnap.exists()) {
-        throw new Error(`الدورة "${normalizedId}" موجودة بالفعل.`);
+        throw new Error(`الكورس "${normalizedId}" موجود بالفعل.`);
       }
 
       await set(ref(db, `rakeb/courses/${normalizedId}`), {
