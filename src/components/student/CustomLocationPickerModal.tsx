@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { MapPin, Navigation, Check, X, Loader2 } from "lucide-react";
@@ -19,9 +19,9 @@ interface CustomLocationPickerModalProps {
   initialLocation?: { lat: number; lng: number; name?: string } | null;
 }
 
-// Default fallback coordinates (e.g. Minya Creativa region)
-const DEFAULT_LAT = 28.0933;
-const DEFAULT_LNG = 30.7505;
+// Default fallback coordinates (Aswan center / Creativa region)
+const DEFAULT_LAT = 24.0889;
+const DEFAULT_LNG = 32.8998;
 
 function ClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
   useMapEvents({
@@ -29,6 +29,14 @@ function ClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, ln
       onLocationSelect(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+function RecenterMap({ position }: { position: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(position, map.getZoom());
+  }, [position, map]);
   return null;
 }
 
@@ -112,6 +120,7 @@ export function CustomLocationPickerModal({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <MapResizer />
+              <RecenterMap position={markerPosition} />
               <ClickHandler onLocationSelect={handleLocationSelect} />
               <Marker
                 position={markerPosition}

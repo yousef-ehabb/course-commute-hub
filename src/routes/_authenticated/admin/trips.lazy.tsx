@@ -242,6 +242,11 @@ function TripsPage() {
     // Phase 2c: start vehicle trip
     if (!dbRefs || !displayedVehicle || !isControllingDisplayed) return;
     try {
+      // Always ask for location when starting the trip
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(() => {}, () => {}, { enableHighAccuracy: true });
+      }
+      
       const { ref, update } = await import("firebase/database");
       const vehiclePath = `rakeb/vehicles/${activeDateKey}/${displayedVehicle.id}`;
       await update(ref(dbRefs.db, vehiclePath), {

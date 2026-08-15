@@ -16,7 +16,7 @@ interface LocationBadgeProps {
 export function LocationBadge({ permissionState, requestPermission }: LocationBadgeProps) {
   // If granted or unknown (pre-prompt or unsupported without failure), 
   // we can choose to be silent or subtle to avoid alarm fatigue.
-  if (permissionState === "granted" || permissionState === "unknown") {
+  if (permissionState === "granted") {
     return null;
   }
 
@@ -47,7 +47,7 @@ export function LocationBadge({ permissionState, requestPermission }: LocationBa
       className="h-8 flex items-center gap-1.5 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-700 transition-colors rtl:font-medium"
     >
       <AlertTriangle className="w-4 h-4" />
-      <span className="text-xs whitespace-nowrap">يرجى تفعيل الموقع</span>
+      <span className="text-xs whitespace-nowrap">الموقع غير مفعل</span>
     </Button>
   );
 }

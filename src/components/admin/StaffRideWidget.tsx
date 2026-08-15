@@ -85,11 +85,11 @@ export function StaffRideWidget() {
   ) => {
     if (!user || !activeDateKey) return;
     if (isClosed && !isBoarded) {
-      toast.error("انتهى موعد تعديل حالة الركوب لليوم.");
+      toast.error("انتهى وقت تعديل حجز الباص للنهارده.");
       return;
     }
     if (isBoarded && newStatus !== "riding") {
-      toast.error("تم تسجيل صعودك إلى الباص بالفعل، لا يمكن إلغاء الركوب إلا بعد إلغاء الصعود من قبل المشرف.");
+      toast.error("تم تسجيل صعودك للباص بالفعل، ماينفعش تلغي غير من عند المشرف.");
       return;
     }
 
@@ -109,7 +109,7 @@ export function StaffRideWidget() {
       if (newStatus === "undecided") {
         // Remove or set undecided
         await remove(ref(getFirebaseDb(), path));
-        toast.info("تم إعادة حالتك إلى «لم أحدد بعد»");
+        toast.info("تم التغيير لـ «لسه ماقررتش»");
         setShowPickerForNewRide(false);
       } else {
         const updatePayload: Record<string, any> = {
@@ -127,15 +127,15 @@ export function StaffRideWidget() {
 
         await set(ref(getFirebaseDb(), path), updatePayload);
         if (newStatus === "riding") {
-          toast.success("تم تأكيد ركوبك في الباص اليوم كراكب (موظف / مدرب) بنجاح ✓");
+          toast.success("تمام، سجلناك معانا ✓");
         } else {
-          toast.info("تم تسجيل عدم ركوبك في باص اليوم.");
+          toast.info("سجلنا إنك مش هتركب النهارده.");
         }
       }
       setIsEditing(false);
     } catch (e: any) {
       console.error("[StaffRideWidget] Update status failed:", e);
-      toast.error(e?.message || "حدث خطأ أثناء تحديث حالة الركوب");
+      toast.error(e?.message || "حصلت مشكلة أثناء تحديث حالتك");
     } finally {
       setBusy(false);
     }
@@ -168,14 +168,11 @@ export function StaffRideWidget() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-base text-foreground">مشاركتي في باص اليوم</h3>
+              <h3 className="font-bold text-base text-foreground">هتركب معانا النهارده؟</h3>
               <span className="text-[11px] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
                 موظف / مدرب
               </span>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              هل ستركب مع الطلاب في باص اليوم كراكب؟
-            </p>
           </div>
         </div>
 
@@ -184,107 +181,104 @@ export function StaffRideWidget() {
           {isBoarded ? (
             <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-500/20">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              تم الصعود {boardedVehicleLabel ? `• ${boardedVehicleLabel}` : ""}
+              ركبت خلاص {boardedVehicleLabel ? `• ${boardedVehicleLabel}` : ""}
             </span>
           ) : currentStatus === "riding" ? (
             <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1">
               <Check className="w-3.5 h-3.5" />
-              مؤكد الركوب
+              أيوه، هركب
             </span>
           ) : currentStatus === "cancelled" ? (
             <span className="bg-destructive/10 text-destructive font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1">
               <X className="w-3.5 h-3.5" />
-              لن أركب
+              لأ، مش هركب
             </span>
           ) : (
             <span className="bg-muted text-muted-foreground font-semibold text-xs px-3 py-1 rounded-full flex items-center gap-1">
               <HelpCircle className="w-3.5 h-3.5" />
-              لم تحدد بعد
+              لسه ماقررتش
             </span>
           )}
-          
-          {currentStatus !== "undecided" && !isBoarded && !isClosed && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsEditing(!isEditing)} 
-              className="h-7 text-xs px-2 ml-1 text-muted-foreground hover:text-foreground"
-            >
-              {isEditing ? "إلغاء" : "تعديل"}
-            </Button>
-          )}
-        </div>
-      </div>
 
-      {/* Decision Buttons (3-state) */}
-      {(currentStatus === "undecided" || isEditing || showPickerForNewRide) && (
-        <div className="mt-4 space-y-3">
-          <div className="grid grid-cols-3 gap-2">
-          {/* 1. Riding */}
-          <Button
-            type="button"
-            variant={currentStatus === "riding" ? "default" : "outline"}
-            size="sm"
-            disabled={busy || (isClosed && !isBoarded)}
-            onClick={() => handleStatusChange("riding")}
-            className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${
-              currentStatus === "riding"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                : "hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 hover:border-emerald-300"
-            }`}
-          >
-            {busy && currentStatus === "riding" ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Check className="w-4 h-4" />
+            {currentStatus !== "undecided" && !isBoarded && !isClosed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="h-7 text-xs px-2 ml-1 text-muted-foreground hover:text-foreground"
+              >
+                {isEditing ? "إلغاء" : "تعديل"}
+              </Button>
             )}
-            <span>نعم، سأركب</span>
-          </Button>
-
-          {/* 2. Cancelled */}
-          <Button
-            type="button"
-            variant={currentStatus === "cancelled" ? "default" : "outline"}
-            size="sm"
-            disabled={busy || isBoarded || isClosed}
-            onClick={() => handleStatusChange("cancelled")}
-            className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${
-              currentStatus === "cancelled"
-                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
-                : "hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"
-            }`}
-          >
-            {busy && currentStatus === "cancelled" ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <X className="w-4 h-4" />
-            )}
-            <span>لا، لن أركب</span>
-          </Button>
-
-          {/* 3. Undecided */}
-          <Button
-            type="button"
-            variant={currentStatus === "undecided" ? "secondary" : "outline"}
-            size="sm"
-            disabled={busy || isBoarded || isClosed}
-            onClick={() => handleStatusChange("undecided")}
-            className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${
-              currentStatus === "undecided" ? "bg-muted font-bold text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span>لم أحدد بعد</span>
-          </Button>
           </div>
         </div>
-      )}
 
-      {/* Station Picker (Visible when Riding is selected, or when they need to pick before riding) */}
-      {(currentStatus === "riding" || showPickerForNewRide) && (
-        <div className={`space-y-2.5 ${currentStatus !== "undecided" && !isEditing ? "pt-3" : "pt-2"}`}>
+        {/* Decision Buttons (3-state) */}
+        {(currentStatus === "undecided" || isEditing || showPickerForNewRide) && (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              {/* 1. Riding */}
+              <Button
+                type="button"
+                variant={currentStatus === "riding" ? "default" : "outline"}
+                size="sm"
+                disabled={busy || (isClosed && !isBoarded)}
+                onClick={() => handleStatusChange("riding")}
+                className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${currentStatus === "riding"
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                    : "hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 hover:border-emerald-300"
+                  }`}
+              >
+                {busy && currentStatus === "riding" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>أيوه، هركب</span>
+              </Button>
+
+              {/* 2. Cancelled */}
+              <Button
+                type="button"
+                variant={currentStatus === "cancelled" ? "default" : "outline"}
+                size="sm"
+                disabled={busy || isBoarded || isClosed}
+                onClick={() => handleStatusChange("cancelled")}
+                className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${currentStatus === "cancelled"
+                    ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
+                    : "hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"
+                  }`}
+              >
+                {busy && currentStatus === "cancelled" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <X className="w-4 h-4" />
+                )}
+                <span>لأ، مش هركب</span>
+              </Button>
+
+              {/* 3. Undecided */}
+              <Button
+                type="button"
+                variant={currentStatus === "undecided" ? "secondary" : "outline"}
+                size="sm"
+                disabled={busy || isBoarded || isClosed}
+                onClick={() => handleStatusChange("undecided")}
+                className={`h-11 rounded-xl text-xs sm:text-sm font-bold gap-1.5 transition-all ${currentStatus === "undecided" ? "bg-muted font-bold text-foreground" : "text-muted-foreground"
+                  }`}
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>لسه ماقررتش</span>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Station Picker (Visible when Riding is selected, or when they need to pick before riding) */}
+        {(currentStatus === "riding" || showPickerForNewRide) && (
+          <div className={`space-y-2.5 ${currentStatus !== "undecided" && !isEditing ? "pt-3" : "pt-2"}`}>
             <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
-              <span>نقطة صعودك للباص:</span>
+              <span>هتركب منين؟</span>
               <span className="text-foreground font-bold">{currentStationName}</span>
             </div>
 
@@ -294,9 +288,9 @@ export function StaffRideWidget() {
               customLocationCoords={
                 myRecord?.customLocation || profile?.customLocation
                   ? {
-                      lat: (myRecord?.customLocation || profile?.customLocation)!.lat,
-                      lng: (myRecord?.customLocation || profile?.customLocation)!.lng,
-                    }
+                    lat: (myRecord?.customLocation || profile?.customLocation)!.lat,
+                    lng: (myRecord?.customLocation || profile?.customLocation)!.lng,
+                  }
                   : null
               }
               stations={stations}
@@ -309,7 +303,7 @@ export function StaffRideWidget() {
               <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2.5 rounded-xl text-xs flex items-center gap-2">
                 <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>
-                  تم تأكيد حضورك كراكب في محطة <strong>«{currentStationName}»</strong>. سيظهر اسمك لمنسق الباص لتسجيل صعودك.
+                  تمام، سجلناك معانا في محطة <strong>«{currentStationName}»</strong>.
                 </span>
               </div>
             )}
@@ -320,9 +314,9 @@ export function StaffRideWidget() {
         {isClosed && (
           <div className={`bg-muted/60 text-muted-foreground p-2 rounded-xl text-xs flex items-center justify-center gap-1.5 ${currentStatus !== "undecided" && !isEditing ? "mt-3" : "mt-2"}`}>
             <Lock className="w-3.5 h-3.5" />
-            <span>انتهى موعد تعديل الركوب لرحلة اليوم</span>
+            <span>انتهى وقت تعديل حجز الباص للنهارده</span>
           </div>
         )}
-    </div>
-  );
+      </div>
+      );
 }
