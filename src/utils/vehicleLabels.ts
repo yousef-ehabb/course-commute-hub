@@ -52,6 +52,16 @@ export function getVehicleLabel(vehicle: Vehicle, allVehicles: Vehicle[]): strin
 }
 
 /**
+ * Convenience wrapper: look up a vehicle by ID, then return its label.
+ * Returns an empty string if the vehicle is not found.
+ */
+export function getVehicleLabelById(vehicleId: string, allVehicles: Vehicle[]): string {
+  const vehicle = allVehicles.find((v) => v.id === vehicleId);
+  if (!vehicle) return "";
+  return getVehicleLabel(vehicle, allVehicles);
+}
+
+/**
  * Returns a generic "next vehicle" label for the banner when the current one is full.
  */
 export function getNextVehicleLabel(fullVehicle: Vehicle, allVehicles: Vehicle[]): string {
