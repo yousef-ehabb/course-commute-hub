@@ -106,12 +106,13 @@ export interface StartDayParams {
   activeDateKey: string;
   serverTimeOffset: number;
   adminUid: string;
+  courseId?: string;
 }
 
 export async function startDay(params: StartDayParams): Promise<void> {
-  const { db, activeDateKey, serverTimeOffset, adminUid } = params;
+  const { db, activeDateKey, serverTimeOffset, adminUid, courseId = "default" } = params;
   const now = getServerTimestamp(serverTimeOffset);
-  const tripPath = `rakeb/trips/default/${activeDateKey}`;
+  const tripPath = `rakeb/trips/${courseId}/${activeDateKey}`;
   const updates: Record<string, unknown> = {};
 
   updates[`${tripPath}/status`] = "waiting_at_station"; // active phase
@@ -156,6 +157,7 @@ export interface CompleteTripParams {
   dailyStatusSnapshot: Record<string, unknown> | null;
   /** Total number of pickup stations on the route */
   totalStations: number;
+  courseId?: string;
 }
 
 export interface CompleteTripResult {
@@ -167,14 +169,14 @@ export interface CompleteTripResult {
 /**
  * Startup reconciliation service.
  * Performs a single database audit pass:
- * 1. Detects stale completed trips in rakeb/trips/default.
- * 2. Archives them to rakeb/tripHistory/default if missing.
+ * 1. Detects stale completed trips in rakeb/trips/{courseId}.
+ * 2. Archives them to rakeb/tripHistory/{courseId} if missing.
  * 3. Removes orphaned active trip nodes.
  * 4. Leaves the database in a clean, consistent state.
  */
-export async function reconcileOnStartup(db: Database, activeDateKey: string): Promise<void> {
+export async function reconcileOnStartup(db: Database, activeDateKey: string, courseId: string = "default"): Promise<void> {
   try {
-    await TripRepository.cleanStaleTrips(db, activeDateKey);
+    await TripRepository.cleanStaleTrips(db, activeDateKey, courseId);
   } catch (err) {
     console.warn("[TripService] Startup reconciliation pass warning:", err);
   }
@@ -193,6 +195,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
     adminUid,
     dailyStatusSnapshot,
     totalStations,
+    courseId = "default",
   } = params;
 
   const nextDateKey = getNextDateKey(activeDateKey);
@@ -202,10 +205,10 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
   // Read the current activeDateKey from Firebase. If it no longer matches
   // what the caller believes it to be, another admin (or a retry) has
   // already completed this trip. Clean up any leftover active trip node and return early.
-  const currentDateKey = await TripRepository.readActiveDateKey(db);
+  const currentDateKey = await TripRepository.readActiveDateKey(db, courseId);
   if (currentDateKey && currentDateKey !== activeDateKey) {
     // Ensure any leftover active trip for activeDateKey is cleaned up
-    await TripRepository.cleanStaleTrips(db, currentDateKey);
+    await TripRepository.cleanStaleTrips(db, currentDateKey, courseId);
     return { nextDateKey: currentDateKey, alreadyCompleted: true };
   }
 
@@ -216,6 +219,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
     db,
     activeDateKey,
     nextDateKey,
+    courseId,
   );
 
   if (!committed) {
@@ -234,6 +238,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
       const r = record as Record<string, unknown>;
       if (r.status === "riding") totalExpectedPassengers++;
       else if (r.status === "cancelled") totalCancelledPassengers++;
+      else if (r.boarded === true) totalExpectedPassengers++; // synced from boardStudent, no explicit status
     }
   }
 
@@ -258,22 +263,22 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
   const updates: Record<string, unknown> = {};
 
   // Archive today's trip to history
-  updates[`rakeb/tripHistory/default/${activeDateKey}`] = historyEntry;
+  updates[`rakeb/tripHistory/${courseId}/${activeDateKey}`] = historyEntry;
 
   // Remove today's active trip
-  updates[`rakeb/trips/default/${activeDateKey}`] = null;
+  updates[`rakeb/trips/${courseId}/${activeDateKey}`] = null;
 
   // Initialize next day's trip
-  updates[`rakeb/trips/default/${nextDateKey}/status`] = "pending";
-  updates[`rakeb/trips/default/${nextDateKey}/createdAt`] = now;
-  updates[`rakeb/trips/default/${nextDateKey}/createdBy`] = adminUid;
-  updates[`rakeb/trips/default/${nextDateKey}/updatedAt`] = now;
-  updates[`rakeb/trips/default/${nextDateKey}/updatedBy`] = adminUid;
+  updates[`rakeb/trips/${courseId}/${nextDateKey}/status`] = "pending";
+  updates[`rakeb/trips/${courseId}/${nextDateKey}/createdAt`] = now;
+  updates[`rakeb/trips/${courseId}/${nextDateKey}/createdBy`] = adminUid;
+  updates[`rakeb/trips/${courseId}/${nextDateKey}/updatedAt`] = now;
+  updates[`rakeb/trips/${courseId}/${nextDateKey}/updatedBy`] = adminUid;
 
   // Sync new cutoff timestamp for nextDateKey
   try {
     const { ref, get } = await import("firebase/database");
-    const settingsSnap = await get(ref(db, "rakeb/settings/default"));
+    const settingsSnap = await get(ref(db, `rakeb/settings/${courseId}`));
     if (settingsSnap.exists()) {
       const settings = settingsSnap.val();
       const cutoffTimeStr = settings.cutoffTime || "13:15";
@@ -282,7 +287,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
       const cutoff = new Date(year, month - 1, day);
       cutoff.setDate(cutoff.getDate() - 1);
       cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
-      updates[`rakeb/settings/default/cutoffTimestamp`] = cutoff.getTime();
+      updates[`rakeb/settings/${courseId}/cutoffTimestamp`] = cutoff.getTime();
     }
   } catch (e) {
     console.warn("[TripService] Failed to calculate next cutoff timestamp:", e);
@@ -293,7 +298,7 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
       db,
       updates,
       "completeTrip",
-      `rakeb/trips/default/${activeDateKey}`,
+      `rakeb/trips/${courseId}/${activeDateKey}`,
     );
 
     // Log audit entry for trip completion & next day registration opened
@@ -361,7 +366,7 @@ export async function departStation(params: DepartStationParams): Promise<void> 
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
   const targetNextStation = isFinalPickup ? "creativa" : nextStationId;
-  const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${vehicleId}`;
+  const vehiclePath = `rakeb/vehicles/${activeDateKey}/${vehicleId}`;
   
   const updates: Record<string, unknown> = {
     status: "running",
@@ -428,7 +433,7 @@ export async function arriveAtStation(params: ArriveAtStationParams): Promise<vo
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
   const targetNextStation = isLastPickup ? "creativa" : nextStationId;
-  const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${vehicleId}`;
+  const vehiclePath = `rakeb/vehicles/${activeDateKey}/${vehicleId}`;
   
   const updates: Record<string, unknown> = {
     status: "running",

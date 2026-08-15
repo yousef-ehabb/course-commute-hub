@@ -17,6 +17,7 @@ interface Passenger {
   name: string;
   phone: string;
   boarded: boolean;
+  isStaff?: boolean;
   vehicleName?: string;
   locationLink?: string;
   customLocationName?: string;
@@ -67,8 +68,8 @@ export function BoardingList({
     <div className="bg-card rounded-2xl p-5 shadow-card space-y-4 border border-border/50">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-base font-bold text-foreground">المتدربون في نقطة التجمع: {stationName}</h3>
-          <p className="text-[12px] text-muted-foreground mt-0.5">تأكيد صعود الطلاب للباص</p>
+          <h3 className="text-base font-bold text-foreground">الركاب في نقطة التجمع: {stationName}</h3>
+          <p className="text-[12px] text-muted-foreground mt-0.5">تأكيد صعود الركاب للباص</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className="bg-primary/10 text-primary px-3 py-1 rounded-xl text-xs font-bold">
@@ -95,6 +96,11 @@ export function BoardingList({
               <div className="text-[14px] font-semibold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <span className="truncate">{passenger.name}</span>
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {passenger.isStaff && (
+                    <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/25">
+                      موظف / مدرب
+                    </span>
+                  )}
                   {passenger.boarded && (
                     <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
                       ✓ تم الصعود {passenger.vehicleName ? `• ${passenger.vehicleName}` : ""}
@@ -145,7 +151,7 @@ export function BoardingList({
 
         {passengers.length === 0 && (
           <div className="text-center py-8 text-xs text-muted-foreground bg-muted/30 rounded-xl">
-            لا يوجد متدربين مسجلين في هذه النقطة اليوم
+            لا يوجد ركاب مسجلين في هذه النقطة اليوم
           </div>
         )}
       </div>
@@ -166,7 +172,7 @@ export function BoardingList({
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-right">تأكيد مغادرة نقطة التجمع</AlertDialogTitle>
                 <AlertDialogDescription className="text-right text-base text-foreground mt-2">
-                  هناك <strong className="text-amber-600 font-bold">{remainingCount}</strong> طلاب
+                  هناك <strong className="text-amber-600 font-bold">{remainingCount}</strong> ركاب
                   لم يتم تأكيد صعودهم، هل تريد مغادرة نقطة التجمع؟
                 </AlertDialogDescription>
               </AlertDialogHeader>

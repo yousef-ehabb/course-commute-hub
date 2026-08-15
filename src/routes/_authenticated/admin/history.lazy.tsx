@@ -17,13 +17,15 @@ import {
   Filter,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useCourse } from "@/contexts/CourseContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useStations } from "@/contexts/StationsContext";
-import { getStationName, isStationSelected } from "@/utils/stationResolver";
+import { getStationName } from "@/utils/stationResolver";
 import type { UserProfile } from "@/types";
 
 export const Route = createLazyFileRoute("/_authenticated/admin/history")({
@@ -69,6 +71,7 @@ function formatTimestamp(ts: number | undefined): string {
 
 function HistoryPage() {
   const { stations, loading: stationsLoading } = useStations();
+  const { courseId } = useCourse();
   const [historyMap, setHistoryMap] = useState<Record<string, TripHistoryRecord> | null>(null);
   const [usersMap, setUsersMap] = useState<Record<string, UserProfile>>({});
   const [dailyStatusMap, setDailyStatusMap] = useState<Record<string, Record<string, any>>>({});
@@ -102,7 +105,7 @@ function HistoryPage() {
 
       // Fetch daily statuses map once
       try {
-        const dailySnap = await get(ref(db, "rakeb/dailyStatus/default"));
+        const dailySnap = await get(ref(db, `rakeb/dailyStatus/${courseId}`));
         if (dailySnap.exists()) {
           setDailyStatusMap(dailySnap.val());
         }
@@ -111,7 +114,7 @@ function HistoryPage() {
       }
 
       // Subscribe to history
-      const historyRef = ref(db, "rakeb/tripHistory/default");
+      const historyRef = ref(db, `rakeb/tripHistory/${courseId}`);
       unsubscribe = onValue(
         historyRef,
         async (snap) => {
@@ -189,48 +192,71 @@ function HistoryPage() {
     setEndDateFilter("");
   };
 
-  // Helper to categorize students for a specific date
+  // Helper to categorize passengers (students + staff) for a specific date
   const getStudentsForDay = (dateKey: string) => {
     const dayData = dailyStatusMap[dateKey] || {};
     const dayBoarding = boardingMap[dateKey] || {};
-    const boarded: { name: string; stationName: string }[] = [];
-    const absent: { name: string; stationName: string }[] = [];
-    const cancelled: { name: string; stationName: string }[] = [];
+    const boarded: { name: string; stationName: string; isStaff?: boolean }[] = [];
+    const absent: { name: string; stationName: string; isStaff?: boolean }[] = [];
+    const cancelled: { name: string; stationName: string; isStaff?: boolean }[] = [];
 
-    // First process explicit records
-    const explicitIds = new Set<string>();
+    // Track all processed passenger IDs to avoid double-counting
+    const processedIds = new Set<string>();
+
+    // 1. Process explicit daily status records (students and staff)
     Object.entries(dayData).forEach(([uid, record]: [string, any]) => {
       const u = usersMap[uid];
-      if (!u || u.role !== "student") return;
-      explicitIds.add(uid);
+      const isStaff = Boolean(record.isStaff || u?.role === "admin");
       
-      const stName = getStationName(u.defaultStation, stations);
-      const studentName = u.fullName || (u as any).name || "غير معروف";
-      
+      // If not staff and not student (or no record status), skip
+      if (!isStaff && u?.role !== "student" && !record.status) return;
+      processedIds.add(uid);
+
+      const stName = getStationName(record.station || u?.defaultStation, stations);
+      const passengerName = record.fullName || u?.fullName || (u as any)?.name || (isStaff ? "موظف" : "طالب");
+
       if (record.status === "cancelled") {
-        cancelled.push({ name: studentName, stationName: stName });
+        cancelled.push({ name: passengerName, stationName: stName, isStaff });
       } else if (record.status === "riding") {
+        // Explicit riding status — check boarding
         const isBoarded = dayBoarding[uid]?.status === "boarded" || record.boarded === true;
         if (isBoarded) {
-          boarded.push({ name: studentName, stationName: stName });
+          boarded.push({ name: passengerName, stationName: stName, isStaff });
         } else {
-          absent.push({ name: studentName, stationName: stName });
+          absent.push({ name: passengerName, stationName: stName, isStaff });
         }
+      } else if (record.boarded === true) {
+        // No explicit status but boarded flag is set
+        boarded.push({ name: passengerName, stationName: stName, isStaff });
       }
     });
 
-    // Process implicit riders (no explicit record, but registered and has station)
-    Object.entries(usersMap).forEach(([uid, u]) => {
-      if (u.role === "student" && isStationSelected(u.defaultStation) && !explicitIds.has(uid)) {
-        const stName = getStationName(u.defaultStation, stations);
-        const studentName = u.fullName || (u as any).name || "غير معروف";
-        const isBoarded = dayBoarding[uid]?.status === "boarded" || dayData[uid]?.boarded === true;
-        if (isBoarded) {
-          boarded.push({ name: studentName, stationName: stName });
-        } else {
-          absent.push({ name: studentName, stationName: stName });
-        }
+    // 2. Process boarding records for passengers not already in dailyStatus
+    Object.entries(dayBoarding).forEach(([uid, record]: [string, any]) => {
+      if (processedIds.has(uid)) return;
+      const u = usersMap[uid];
+      const isStaff = Boolean(record.isStaff || u?.role === "admin");
+      processedIds.add(uid);
+
+      const stName = getStationName(u?.defaultStation, stations);
+      const passengerName = u?.fullName || (u as any)?.name || (isStaff ? "موظف" : "طالب");
+
+      if (record.status === "boarded") {
+        boarded.push({ name: passengerName, stationName: stName, isStaff });
       }
+    });
+
+    // 3. Add remaining registered students as absent (enrolled in course with station selected)
+    Object.entries(usersMap).forEach(([uid, u]) => {
+      if (processedIds.has(uid)) return;
+      if (u.role !== "student") return;
+      // Only include students who have a valid station assigned (i.e. registered for the course)
+      if (!u.defaultStation || u.defaultStation === "creativa" || u.defaultStation === "unassigned" || u.defaultStation === "none" || u.defaultStation === "unknown" || u.defaultStation.trim() === "") return;
+      processedIds.add(uid);
+
+      const stName = getStationName(u.defaultStation, stations);
+      const studentName = u.fullName || (u as any).name || "غير معروف";
+      absent.push({ name: studentName, stationName: stName, isStaff: false });
     });
 
     return { boarded, absent, cancelled };
@@ -366,9 +392,7 @@ function HistoryPage() {
             
             const { boarded, absent, cancelled } = getStudentsForDay(trip.dateKey);
             const boardedCount = boarded.length;
-            const expectedCount = (trip.totalExpectedPassengers && trip.totalExpectedPassengers > 0)
-              ? trip.totalExpectedPassengers
-              : (boarded.length + absent.length);
+            const expectedCount = boarded.length + absent.length;
             
             const dayBoarding = boardingMap[trip.dateKey] || {};
             const boardedRecords = Object.values(dayBoarding).filter((r: any) => r.status === "boarded");
@@ -511,11 +535,11 @@ function HistoryPage() {
                       </div>
                       
                       <div className="space-y-4">
-                        {/* Boarded Students */}
+                        {/* Boarded Passengers */}
                         <div>
                           <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1.5">
                             <UserCheck className="w-4 h-4" />
-                            الطلاب الحاضرين ({boarded.length})
+                            الركاب الحاضرين ({boarded.length})
                           </h4>
                           {boarded.length === 0 ? (
                             <p className="text-xs text-muted-foreground">لا يوجد</p>
@@ -523,7 +547,14 @@ function HistoryPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {boarded.map((s, i) => (
                                 <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-medium text-foreground">{s.name}</span>
+                                    {s.isStaff && (
+                                      <span className="text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded">
+                                        موظف / مدرب
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
                                 </div>
                               ))}
@@ -531,11 +562,11 @@ function HistoryPage() {
                           )}
                         </div>
 
-                        {/* Absent Students */}
+                        {/* Absent Passengers */}
                         <div>
                           <h4 className="text-xs font-bold text-destructive mb-2 flex items-center gap-1.5">
                             <UserX className="w-4 h-4" />
-                            الطلاب الغائبين ({absent.length})
+                            الركاب الغائبين ({absent.length})
                           </h4>
                           {absent.length === 0 ? (
                             <p className="text-xs text-muted-foreground">لا يوجد</p>
@@ -543,7 +574,14 @@ function HistoryPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {absent.map((s, i) => (
                                 <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-destructive/5 border border-destructive/10">
-                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-medium text-foreground">{s.name}</span>
+                                    {s.isStaff && (
+                                      <span className="text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded">
+                                        موظف / مدرب
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
                                 </div>
                               ))}
@@ -551,7 +589,7 @@ function HistoryPage() {
                           )}
                         </div>
                         
-                        {/* Cancelled Students */}
+                        {/* Cancelled Passengers */}
                         <div>
                           <h4 className="text-xs font-bold text-amber-600 mb-2 flex items-center gap-1.5">
                             <ShieldAlert className="w-4 h-4" />
@@ -563,7 +601,14 @@ function HistoryPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {cancelled.map((s, i) => (
                                 <div key={i} className="flex justify-between items-center text-xs p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                                  <span className="font-medium text-foreground">{s.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-medium text-foreground">{s.name}</span>
+                                    {s.isStaff && (
+                                      <span className="text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded">
+                                        موظف / مدرب
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-muted-foreground text-[10px]">{s.stationName}</span>
                                 </div>
                               ))}

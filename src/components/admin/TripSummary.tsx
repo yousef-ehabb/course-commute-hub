@@ -16,8 +16,8 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
     (p) => p.status === "riding" && isStationSelected(p.station),
   );
 
-  // Calculate total riding students
-  const totalStudents = ridingPassengers.length;
+  // Calculate total riding passengers
+  const totalPassengers = ridingPassengers.length;
 
   // Group by station
   const stationCounts: Record<string, number> = {};
@@ -25,7 +25,7 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
     stationCounts[p.station] = (stationCounts[p.station] || 0) + 1;
   });
 
-  // Calculate participating stations (only stations that have >= 1 student)
+  // Calculate participating stations (only stations that have >= 1 passenger)
   const participatingStationsCount = Object.keys(stationCounts).filter(
     (k) => k !== "custom",
   ).length;
@@ -40,7 +40,7 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
           <h3 className="text-lg font-bold text-foreground">ملخص رحلة اليوم</h3>
           <p className="text-[13px] text-muted-foreground mt-0.5 flex gap-3">
             <span className="flex items-center gap-1">
-              <Users className="w-4 h-4" /> {totalStudents} ركاب
+              <Users className="w-4 h-4" /> {totalPassengers} ركاب
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="w-4 h-4" /> {participatingStationsCount} نقاط
@@ -75,12 +75,12 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
                   <div className="text-xs font-bold bg-background shadow-sm px-2.5 py-1 rounded-lg">
                     {count}{" "}
                     {count === 1
-                      ? "طالب"
+                      ? "راكب"
                       : count === 2
-                        ? "طالبين"
+                        ? "راكبين"
                         : count <= 10
-                          ? "طلاب"
-                          : "طالباً"}
+                          ? "ركاب"
+                          : "راكباً"}
                   </div>
                 </div>
               );
@@ -96,7 +96,7 @@ export function TripSummary({ passengers, stations }: TripSummaryProps) {
                   <span className="text-sm font-semibold text-foreground">مواقع مخصصة</span>
                 </div>
                 <div className="text-xs font-bold bg-background shadow-sm px-2.5 py-1 rounded-lg">
-                  {stationCounts["custom"]} طلاب
+                  {stationCounts["custom"]} ركاب
                 </div>
               </div>
             )}

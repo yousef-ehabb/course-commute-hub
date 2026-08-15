@@ -8,11 +8,12 @@ export interface LogAuditParams {
   tripDate: string;
   serverTimeOffset?: number;
   metadata?: Record<string, unknown>;
+  courseId?: string;
 }
 
 export class AuditService {
   static async log(params: LogAuditParams): Promise<void> {
-    const { db, adminUid, action, tripDate, serverTimeOffset = 0, metadata } = params;
+    const { db, adminUid, action, tripDate, serverTimeOffset = 0, metadata, courseId = "default" } = params;
     const timestamp = Date.now() + serverTimeOffset;
 
     await TripRepository.writeAuditEntry(db, {
@@ -21,6 +22,6 @@ export class AuditService {
       action,
       tripDate,
       ...(metadata ? { metadata } : {}),
-    });
+    }, courseId);
   }
 }

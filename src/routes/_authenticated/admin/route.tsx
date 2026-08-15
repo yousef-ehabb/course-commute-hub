@@ -7,6 +7,7 @@ import { BoardingRecordsProvider } from "@/hooks/useBoardingRecords";
 import { TripStatusProvider } from "@/hooks/useTripStatus";
 import { VehiclesProvider } from "@/hooks/useVehicles";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { reconcileOnStartup } from "@/lib/tripService";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminStartupInitializer({ children }: { children: React.ReactNode }) {
   const { activeDateKey, loaded } = useActiveDate();
+  const { courseId } = useCourse();
   const hasReconciledRef = useRef(false);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ function AdminStartupInitializer({ children }: { children: React.ReactNode }) {
       try {
         const { getFirebaseDb } = await import("@/lib/firebase");
         const db = getFirebaseDb();
-        await reconcileOnStartup(db, activeDateKey);
+        await reconcileOnStartup(db, activeDateKey, courseId);
       } catch (err) {
         console.warn("[AdminStartup] Reconciliation pass error:", err);
       }

@@ -2,6 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { useStations } from "@/contexts/StationsContext";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useTripStatus } from "@/hooks/useTripStatus";
@@ -23,6 +24,7 @@ export const Route = createLazyFileRoute("/_authenticated/student/home")({
 
 function StudentHome() {
   const { user, profile } = useAuth();
+  const { courseId } = useCourse();
   const {
     stations,
     loading: stationsLoading,
@@ -162,7 +164,7 @@ function StudentHome() {
     try {
       const { getFirebaseDb } = await import("@/lib/firebase");
       const { ref, set } = await import("firebase/database");
-      const path = `rakeb/dailyStatus/default/${activeDateKey}/${user.uid}`;
+      const path = `rakeb/dailyStatus/${courseId}/${activeDateKey}/${user.uid}`;
 
       const updateData: Record<string, any> = {
         status: newRiding ? "riding" : "cancelled",

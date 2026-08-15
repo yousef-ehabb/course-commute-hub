@@ -18,6 +18,7 @@ import {
 import { MapPin, TrendingUp, Users, CheckCircle2, UserCheck, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStations } from "@/contexts/StationsContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { getStationName, isStationSelected } from "@/utils/stationResolver";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +34,7 @@ function StatsPage() {
   const { user, loading: authLoading } = useAuth();
   const { activeDateKey } = useActiveDate();
   const { stations, loading: stationsLoading } = useStations();
+  const { courseId } = useCourse();
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
   const [topStation, setTopStation] = useState<{ name: string; avg: number }>({
@@ -86,7 +88,7 @@ function StatsPage() {
 
       // Listen to all daily statuses across dates
       unsubDaily = onValue(
-        ref(db, "rakeb/dailyStatus/default"),
+        ref(db, `rakeb/dailyStatus/${courseId}`),
         (snap) => {
           setRawDailyStatus(snap.val());
         },
@@ -148,10 +150,9 @@ function StatsPage() {
       let cancelled = 0;
       let boarded = 0;
 
-      // Process explicit records first
+      // Process explicit records first (students and staff)
       const explicitIds = new Set<string>();
       Object.entries(dayData).forEach(([uid, u]: [string, any]) => {
-        if (u.role === "admin") return;
         explicitIds.add(uid);
         const hasSelectedStation = isStationSelected(u.station);
         if (u.status === "riding" && hasSelectedStation) {

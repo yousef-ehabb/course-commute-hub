@@ -8,11 +8,15 @@ import { useStations } from "@/contexts/StationsContext";
 import { getStationName, isStationSelected } from "@/utils/stationResolver";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useTripStatus } from "@/hooks/useTripStatus";
-import { Car, BusFront, Bus, MapPin, Navigation } from "lucide-react";
+import { useCourse } from "@/contexts/CourseContext";
+import { filterStudentsByCourse } from "@/utils/courseFilter";
+import { Car, Bus, MapPin, Navigation } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+
+import { StaffRideWidget } from "@/components/admin/StaffRideWidget";
 
 export const Route = createLazyFileRoute("/_authenticated/admin/dashboard")({
   component: DashboardPage,
@@ -22,6 +26,7 @@ function DashboardPage() {
   const { stations } = useStations();
   const { getAllStudentsStatus } = useTodayStatus();
   const { status: tripStatus } = useTripStatus();
+  const { courseId } = useCourse();
   const [users, setUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
@@ -33,21 +38,20 @@ function DashboardPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(
-            Object.entries(val)
-              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role !== "admin"),
-          );
+          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
+          setUsers(filterStudentsByCourse(allUsers, courseId));
         } else {
           setUsers([]);
         }
       });
     })();
     return () => unsub?.();
-  }, []);
+  }, [courseId]);
 
-  const { totalRiders, totalCancelled, totalBoarded, stationCounts } = useMemo(() => {
+  const { totalRiders, totalStudents, totalStaff, totalCancelled, totalBoarded, stationCounts } = useMemo(() => {
     let riders = 0;
+    let students = 0;
+    let staff = 0;
     let cancelled = 0;
     let boarded = 0;
     const counts: Record<string, number> = {};
@@ -60,6 +64,11 @@ function DashboardPage() {
 
       if (user.status === "riding" && hasSelectedStation) {
         riders++;
+        if (user.isStaff) {
+          staff++;
+        } else {
+          students++;
+        }
         const stName = getStationName(user.station, stations);
         counts[stName] = (counts[stName] || 0) + 1;
         if (user.boarded) {
@@ -72,6 +81,8 @@ function DashboardPage() {
 
     return {
       totalRiders: riders,
+      totalStudents: students,
+      totalStaff: staff,
       totalCancelled: cancelled,
       totalBoarded: boarded,
       stationCounts: Object.entries(counts).map(([name, count]) => ({
@@ -90,16 +101,8 @@ function DashboardPage() {
         color: "text-blue-500",
         bg: "bg-blue-100 dark:bg-blue-900/30",
       };
-    if (count <= 33)
-      return {
-        text: "ميني باص",
-        icon: BusFront,
-        capacity: 33,
-        color: "text-purple-500",
-        bg: "bg-purple-100 dark:bg-purple-900/30",
-      };
     return {
-      text: "أتوبيس كبير",
+      text: "أتوبيس",
       icon: Bus,
       capacity: 50,
       color: "text-green-500",
@@ -117,6 +120,9 @@ function DashboardPage() {
         <p className="text-muted-foreground mt-1">نظرة عامة على رحلات اليوم</p>
       </div>
 
+      {/* Staff / Trainer Ride Participation Card */}
+      <StaffRideWidget />
+
       {/* Active Trip Status */}
       <Card className="bg-primary text-primary-foreground border-none shadow-elevated">
         <CardContent className="p-6">
@@ -129,7 +135,6 @@ function DashboardPage() {
               <div className="text-sm font-medium text-primary-foreground/80 mt-0.5">
                 {format(new Date(), "EEEE، d MMMM yyyy", { locale: ar })}
               </div>
-
             </div>
           </div>
         </CardContent>
@@ -161,13 +166,15 @@ function DashboardPage() {
         totalCancelled={totalCancelled}
         totalBoarded={totalBoarded}
         occupancyRate={occupancyRate}
+        studentsCount={totalStudents}
+        staffCount={totalStaff}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>توزيع الطلاب على نقاط التجمع</CardTitle>
+            <CardTitle>توزيع الركاب على نقاط التجمع</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-56 md:h-72 w-full" dir="ltr">
@@ -219,7 +226,10 @@ function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{suggestion.text}</h3>
-                <p className="text-gray-500 mt-1">العدد المطلوب: {totalRiders} طالب</p>
+                <p className="text-gray-500 mt-1">
+                  العدد المطلوب: {totalRiders} راكب
+                  {totalStaff > 0 && ` (${totalStudents} طالب + ${totalStaff} موظف)`}
+                </p>
                 <p className="text-sm text-gray-400 mt-1">سعة المركبة: {suggestion.capacity}</p>
               </div>
             </div>
@@ -229,3 +239,4 @@ function DashboardPage() {
     </div>
   );
 }
+

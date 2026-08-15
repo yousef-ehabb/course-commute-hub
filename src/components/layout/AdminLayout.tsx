@@ -14,6 +14,7 @@ import { RakebLogo } from "@/components/ui/RakebLogo";
 import { Button } from "@/components/ui/button";
 import { useAdminLocationTracking } from "@/hooks/useAdminLocationTracking";
 import { LocationBadge } from "@/components/admin/LocationBadge";
+import { CourseSwitcher } from "@/components/admin/CourseSwitcher";
 
 export function AdminLayout() {
   const routerState = useRouterState();
@@ -43,13 +44,11 @@ export function AdminLayout() {
       {/* Top App Bar */}
       <header className="sticky top-0 z-40 w-full bg-card/80 backdrop-blur-xl shadow-card">
         <div className="container mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Link to="/admin/dashboard">
               <RakebLogo size="md" />
             </Link>
-            <span className="text-[11px] bg-primary/8 text-primary px-2 py-0.5 rounded-lg font-semibold">
-              Admin
-            </span>
+            <CourseSwitcher />
           </div>
           {(profile || user) && (
             <div className="flex items-center gap-2 sm:gap-4">

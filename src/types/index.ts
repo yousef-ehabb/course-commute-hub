@@ -1,5 +1,17 @@
 export type UserRole = "student" | "admin";
 
+export type CourseStatus = "active" | "archived";
+
+export interface CourseInfo {
+  id: string;
+  name: string;
+  adminUid: string;
+  status: CourseStatus;
+  startDate: number;
+  endDate?: number;
+  createdAt: number;
+}
+
 export interface UserProfile {
   uid: string;
   fullName: string;
@@ -13,8 +25,9 @@ export interface UserProfile {
 }
 
 export interface DailyStatus {
-  status: "riding" | "cancelled";
+  status: "riding" | "cancelled" | "undecided";
   station: string;
+  isStaff?: boolean;
   updatedAt: number;
 }
 

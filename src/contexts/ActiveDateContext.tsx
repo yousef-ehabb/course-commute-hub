@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { DEFAULT_CUTOFF_TIME } from "@/lib/constants";
 
 interface ActiveDateContextValue {
@@ -27,6 +28,7 @@ function getTodayKey(): string {
 
 export function ActiveDateProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
+  const { courseId } = useCourse();
   const [activeDateKey, setActiveDateKey] = useState<string>(getTodayKey());
   const [cutoffTime, setCutoffTime] = useState<string>(DEFAULT_CUTOFF_TIME);
   const [cutoffEnabled, setCutoffEnabled] = useState<boolean>(true);
@@ -69,8 +71,8 @@ export function ActiveDateProvider({ children }: { children: ReactNode }) {
           },
         );
 
-        // Subscribe to settings
-        const path = `rakeb/settings/default`;
+        // Subscribe to settings — now course-scoped
+        const path = `rakeb/settings/${courseId}`;
         unsub = onValue(
           ref(db, path),
           (snap) => {
@@ -100,7 +102,7 @@ export function ActiveDateProvider({ children }: { children: ReactNode }) {
       unsub?.();
       offsetUnsub?.();
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, courseId]);
 
   return (
     <ActiveDateContext.Provider
