@@ -16,6 +16,8 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { DEFAULT_CUTOFF_TIME } from "@/lib/constants";
 import { toast } from "sonner";
@@ -68,6 +70,7 @@ function SettingsPage() {
   const [actionTargetCourse, setActionTargetCourse] = useState<CourseInfo | null>(null);
   const [actionType, setActionType] = useState<"archive" | "delete" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const copyRegisterLink = (cId: string) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://rakeb.vercel.app";
@@ -204,8 +207,9 @@ function SettingsPage() {
   };
 
   // Combine default with custom courses for full overview
+  const defaultFromDb = coursesList.find((c) => c.id === "default");
   const allDisplayCourses: CourseInfo[] = [
-    {
+    defaultFromDb || {
       id: "default",
       name: "الكورس الأساسي",
       adminUid: "system",
@@ -215,6 +219,9 @@ function SettingsPage() {
     },
     ...coursesList.filter((c) => c.id !== "default"),
   ];
+
+  const activeCourses = allDisplayCourses.filter((c) => c.status !== "archived");
+  const archivedCourses = allDisplayCourses.filter((c) => c.status === "archived");
 
   return (
     <div className="space-y-6 pt-4 pb-20">
@@ -400,123 +407,230 @@ function SettingsPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                قائمة الكورسات المتاحة
-              </h4>
-              <span className="text-xs text-muted-foreground bg-muted px-2.5 py-0.5 rounded-md font-medium">
-                {allDisplayCourses.length} كورسات
-              </span>
-            </div>
-
+          <CardContent className="space-y-6">
+            {/* Active Courses Section */}
             <div className="space-y-3">
-              {allDisplayCourses.map((c) => {
-                const isCurrent = c.id === courseId;
-                const isActive = c.status === "active";
-                const isDefault = c.id === "default";
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary" />
+                  الكورسات النشطة
+                </h4>
+                <span className="text-xs text-muted-foreground bg-muted px-2.5 py-0.5 rounded-md font-medium">
+                  {activeCourses.length} {activeCourses.length === 1 ? "كورس" : "كورسات"}
+                </span>
+              </div>
 
-                return (
-                  <div
-                    key={c.id}
-                    className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border transition-all ${
-                      isCurrent
-                        ? "border-primary/50 bg-primary/5 shadow-xs"
-                        : "border-border/60 bg-card hover:border-border"
-                    }`}
-                  >
-                    {/* Course Info */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-base text-foreground">{c.name}</span>
-                        <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md font-mono dir-ltr">
-                          {c.id}
-                        </span>
+              {activeCourses.length === 0 ? (
+                <div className="p-6 text-center rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                  <p className="text-sm text-muted-foreground">لا توجد كورسات نشطة حالياً. يمكنك إنشاء كورس جديد من الزر أعلاه.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activeCourses.map((c) => {
+                    const isCurrent = c.id === courseId;
+                    const isDefault = c.id === "default";
 
-                        {isCurrent ? (
-                          <span className="text-[11px] bg-primary text-primary-foreground px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
-                            <Check className="w-3 h-3" />
-                            الكورس المعروض حالياً
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setCourseId(c.id);
-                              toast.success(`تم التبديل إلى كورس "${c.name}"`);
-                            }}
-                            className="text-[11px] bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold transition-colors active:scale-95"
-                          >
-                            تبديل إليها
-                          </button>
-                        )}
-
-                        <span
-                          className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
-                            isActive
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              : "bg-muted text-muted-foreground border border-border"
-                          }`}
-                        >
-                          {isActive ? "نشطة" : "مؤرشفة"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono dir-ltr">
-                        <span>/register?course={c.id}</span>
-                      </div>
-                    </div>
-
-                    {/* Course Action Buttons */}
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                      {/* Copy registration link */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs font-semibold shrink-0"
-                        onClick={() => copyRegisterLink(c.id)}
-                        title="نسخ رابط تسجيل الطلاب لهذا الكورس"
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border transition-all ${
+                          isCurrent
+                            ? "border-primary/50 bg-primary/5 shadow-xs"
+                            : "border-border/60 bg-card hover:border-border"
+                        }`}
                       >
-                        <Copy className="w-3.5 h-3.5 text-primary" />
-                        <span>نسخ الرابط</span>
-                      </Button>
+                        {/* Course Info */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-base text-foreground">{c.name}</span>
+                            <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md font-mono dir-ltr">
+                              {c.id}
+                            </span>
 
-                      {/* Archive Course Button */}
-                      {isActive && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-200 dark:border-amber-800"
-                          onClick={() => {
-                            setActionTargetCourse(c);
-                            setActionType("archive");
-                          }}
-                        >
-                          <Archive className="w-3.5 h-3.5" />
-                          <span>أرشفة</span>
-                        </Button>
-                      )}
+                            {isCurrent ? (
+                              <span className="text-[11px] bg-primary text-primary-foreground px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
+                                <Check className="w-3 h-3" />
+                                الكورس المعروض حالياً
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setCourseId(c.id);
+                                  toast.success(`تم التبديل إلى كورس "${c.name}"`);
+                                }}
+                                className="text-[11px] bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold transition-colors active:scale-95"
+                              >
+                                تبديل إليها
+                              </button>
+                            )}
 
-                      {/* Delete Course Button (for custom courses) */}
-                      {!isDefault && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            setActionTargetCourse(c);
-                            setActionType("delete");
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>حذف</span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                            <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              نشطة
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono dir-ltr">
+                            <span>/register?course={c.id}</span>
+                          </div>
+                        </div>
+
+                        {/* Course Action Buttons */}
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          {/* Copy registration link */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs font-semibold shrink-0"
+                            onClick={() => copyRegisterLink(c.id)}
+                            title="نسخ رابط تسجيل الطلاب لهذا الكورس"
+                          >
+                            <Copy className="w-3.5 h-3.5 text-primary" />
+                            <span>نسخ الرابط</span>
+                          </Button>
+
+                          {/* Archive Course Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                            onClick={() => {
+                              setActionTargetCourse(c);
+                              setActionType("archive");
+                            }}
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                            <span>أرشفة</span>
+                          </Button>
+
+                          {/* Delete Course Button (for custom courses) */}
+                          {!isDefault && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                setActionTargetCourse(c);
+                                setActionType("delete");
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>حذف</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Archived Courses Section (Collapsible) */}
+            {archivedCourses.length > 0 && (
+              <div className="pt-4 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => setShowArchived(!showArchived)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors text-right cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Archive className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-bold text-muted-foreground">الكورسات المؤرشفة</span>
+                    <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-semibold border border-border">
+                      {archivedCourses.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>{showArchived ? "إخفاء" : "عرض"}</span>
+                    {showArchived ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
+                </button>
+
+                {showArchived && (
+                  <div className="space-y-3 mt-3">
+                    {archivedCourses.map((c) => {
+                      const isCurrent = c.id === courseId;
+                      const isDefault = c.id === "default";
+
+                      return (
+                        <div
+                          key={c.id}
+                          className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-dashed border-border/80 bg-muted/20 opacity-85 hover:opacity-100 transition-all"
+                        >
+                          {/* Course Info */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-base text-muted-foreground">{c.name}</span>
+                              <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md font-mono dir-ltr">
+                                {c.id}
+                              </span>
+
+                              {isCurrent ? (
+                                <span className="text-[11px] bg-muted text-foreground px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 border border-border">
+                                  <Check className="w-3 h-3" />
+                                  معروض حالياً
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setCourseId(c.id);
+                                    toast.info(`تم التبديل لعرض بيانات كورس "${c.name}" المؤرشف`);
+                                  }}
+                                  className="text-[11px] bg-muted hover:bg-muted/80 text-muted-foreground px-2.5 py-0.5 rounded-full font-medium transition-colors"
+                                >
+                                  معاينة السجلات
+                                </button>
+                              )}
+
+                              <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-muted text-muted-foreground border border-border">
+                                مؤرشفة
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono dir-ltr">
+                              <span>/register?course={c.id}</span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-xs text-muted-foreground font-semibold shrink-0"
+                              onClick={() => copyRegisterLink(c.id)}
+                              title="نسخ الرابط"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>نسخ الرابط</span>
+                            </Button>
+
+                            {!isDefault && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  setActionTargetCourse(c);
+                                  setActionType("delete");
+                                }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>حذف نهائي</span>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
