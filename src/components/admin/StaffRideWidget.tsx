@@ -26,6 +26,7 @@ export function StaffRideWidget() {
   const [busy, setBusy] = useState(false);
   const [station, setStation] = useState<string>("");
   const [isClosed, setIsClosed] = useState(false);
+  const [showPickerForNewRide, setShowPickerForNewRide] = useState(false);
 
   // Find my current daily record
   const myRecord = records.find((r) => r.id === user?.uid);
@@ -43,14 +44,16 @@ export function StaffRideWidget() {
         : "undecided"
     : "undecided";
 
-  // Sync initial station from record or profile
+  // Sync initial station from record or profile, but ensure it's valid
   useEffect(() => {
-    if (myRecord?.station) {
+    const isValidStation = (id: string) => id === "custom" || stations.some((s) => s.id === id);
+
+    if (myRecord?.station && isValidStation(myRecord.station)) {
       setStation(myRecord.station);
-    } else if (profile?.defaultStation) {
+    } else if (profile?.defaultStation && isValidStation(profile.defaultStation)) {
       setStation(profile.defaultStation);
-    } else if (stations.length > 0 && !station) {
-      setStation(stations[0].id);
+    } else {
+      setStation(""); // Invalid/deleted station, force them to pick!
     }
   }, [myRecord, profile, stations]);
 
@@ -89,9 +92,10 @@ export function StaffRideWidget() {
       return;
     }
 
-    const effectiveStation = targetStation || station || profile?.defaultStation || stations[0]?.id || "";
+    const effectiveStation = targetStation || station;
     if (newStatus === "riding" && !effectiveStation) {
-      toast.error("يرجى اختيار نقطة تجمع لتأكيد الركوب.");
+      // Don't auto-confirm if no valid station is selected yet
+      setShowPickerForNewRide(true);
       return;
     }
 
@@ -105,6 +109,7 @@ export function StaffRideWidget() {
         // Remove or set undecided
         await remove(ref(getFirebaseDb(), path));
         toast.info("تم إعادة حالتك إلى «لم أحدد بعد»");
+        setShowPickerForNewRide(false);
       } else {
         const updatePayload: Record<string, any> = {
           status: newStatus,
@@ -139,7 +144,8 @@ export function StaffRideWidget() {
     customLoc?: { lat: number; lng: number; name: string },
   ) => {
     setStation(newStation);
-    if (currentStatus === "riding") {
+    if (currentStatus === "riding" || showPickerForNewRide) {
+      setShowPickerForNewRide(false);
       await handleStatusChange("riding", newStation, customLoc);
     }
   };
@@ -258,8 +264,8 @@ export function StaffRideWidget() {
           </Button>
         </div>
 
-        {/* Station Picker (Visible when Riding is selected) */}
-        {currentStatus === "riding" && (
+        {/* Station Picker (Visible when Riding is selected, or when they need to pick before riding) */}
+        {(currentStatus === "riding" || showPickerForNewRide) && (
           <div className="pt-2 space-y-2.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
               <span>نقطة صعودك للباص:</span>
@@ -283,12 +289,14 @@ export function StaffRideWidget() {
             />
 
             {/* Confirmation Note */}
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2.5 rounded-xl text-xs flex items-center gap-2">
-              <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>
-                تم تأكيد حضورك كراكب في محطة <strong>«{currentStationName}»</strong>. سيظهر اسمك لمنسق الباص لتسجيل صعودك.
-              </span>
-            </div>
+            {currentStatus === "riding" && !showPickerForNewRide && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-2.5 rounded-xl text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>
+                  تم تأكيد حضورك كراكب في محطة <strong>«{currentStationName}»</strong>. سيظهر اسمك لمنسق الباص لتسجيل صعودك.
+                </span>
+              </div>
+            )}
           </div>
         )}
 
