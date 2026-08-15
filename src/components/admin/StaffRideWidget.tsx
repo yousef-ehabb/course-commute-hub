@@ -27,6 +27,7 @@ export function StaffRideWidget() {
   const [station, setStation] = useState<string>("");
   const [isClosed, setIsClosed] = useState(false);
   const [showPickerForNewRide, setShowPickerForNewRide] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Find my current daily record
   const myRecord = records.find((r) => r.id === user?.uid);
@@ -131,6 +132,7 @@ export function StaffRideWidget() {
           toast.info("تم تسجيل عدم ركوبك في باص اليوم.");
         }
       }
+      setIsEditing(false);
     } catch (e: any) {
       console.error("[StaffRideWidget] Update status failed:", e);
       toast.error(e?.message || "حدث خطأ أثناء تحديث حالة الركوب");
@@ -159,7 +161,7 @@ export function StaffRideWidget() {
   return (
     <div className="bg-card rounded-2xl p-4 sm:p-5 shadow-card border border-border/80 relative overflow-hidden">
       {/* Top Banner Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${currentStatus !== "undecided" && !isEditing && currentStatus !== "riding" ? "" : "pb-3 border-b border-border/40"}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Bus className="w-5 h-5" />
@@ -200,12 +202,24 @@ export function StaffRideWidget() {
               لم تحدد بعد
             </span>
           )}
+          
+          {currentStatus !== "undecided" && !isBoarded && !isClosed && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsEditing(!isEditing)} 
+              className="h-7 text-xs px-2 ml-1 text-muted-foreground hover:text-foreground"
+            >
+              {isEditing ? "إلغاء" : "تعديل"}
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Decision Buttons (3-state) */}
-      <div className="mt-4 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+      {(currentStatus === "undecided" || isEditing || showPickerForNewRide) && (
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
           {/* 1. Riding */}
           <Button
             type="button"
@@ -262,11 +276,13 @@ export function StaffRideWidget() {
             <HelpCircle className="w-4 h-4" />
             <span>لم أحدد بعد</span>
           </Button>
+          </div>
         </div>
+      )}
 
-        {/* Station Picker (Visible when Riding is selected, or when they need to pick before riding) */}
-        {(currentStatus === "riding" || showPickerForNewRide) && (
-          <div className="pt-2 space-y-2.5">
+      {/* Station Picker (Visible when Riding is selected, or when they need to pick before riding) */}
+      {(currentStatus === "riding" || showPickerForNewRide) && (
+        <div className={`space-y-2.5 ${currentStatus !== "undecided" && !isEditing ? "pt-3" : "pt-2"}`}>
             <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
               <span>نقطة صعودك للباص:</span>
               <span className="text-foreground font-bold">{currentStationName}</span>
@@ -302,12 +318,11 @@ export function StaffRideWidget() {
 
         {/* Lock note if cutoff passed */}
         {isClosed && (
-          <div className="bg-muted/60 text-muted-foreground p-2 rounded-xl text-xs flex items-center justify-center gap-1.5">
+          <div className={`bg-muted/60 text-muted-foreground p-2 rounded-xl text-xs flex items-center justify-center gap-1.5 ${currentStatus !== "undecided" && !isEditing ? "mt-3" : "mt-2"}`}>
             <Lock className="w-3.5 h-3.5" />
             <span>انتهى موعد تعديل الركوب لرحلة اليوم</span>
           </div>
         )}
-      </div>
     </div>
   );
 }
