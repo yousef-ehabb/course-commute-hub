@@ -10,6 +10,13 @@ import {
 import type { User } from "firebase/auth";
 import type { UserProfile, UserRole } from "@/types";
 
+export type AccountStatus = "active" | "archived" | "deleted" | null;
+
+export interface ArchivedProfile {
+  profile: UserProfile;
+  courseId: string;
+}
+
 interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
@@ -21,6 +28,8 @@ interface AuthContextValue {
   configured: boolean;
   error: string | null;
   isEmailVerified: boolean;
+  accountStatus: AccountStatus;
+  archivedProfile: ArchivedProfile | null;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signUp: (
@@ -41,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountStatus, setAccountStatus] = useState<AccountStatus>(null);
+  const [archivedProfile, setArchivedProfile] = useState<ArchivedProfile | null>(null);
 
   // Incrementing retryKey forces the effect to re-run
   const [retryKey, setRetryKey] = useState(0);
@@ -86,8 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           return;
         }
-        const { onAuthStateChanged } = await import("firebase/auth");
-        const { ref, onValue } = await import("firebase/database");
+        const { onAuthStateChanged, signOut: firebaseSignOut } = await import("firebase/auth");
+        const { ref, onValue, get, remove, set } = await import("firebase/database");
 
         if (!isMounted) return;
 
@@ -107,28 +118,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               profileUnsub?.();
               profileUnsub = onValue(
                 r,
-                (snap) => {
+                async (snap) => {
                   if (!isMounted) return;
                   const val = snap.val() as UserProfile | null;
-                  setProfile(val ? { ...val, uid: u.uid } : null);
-                  resolved = true;
-                  setLoading(false);
-                  setError(null);
+
+                  if (val) {
+                    // Normal active user
+                    setProfile({ ...val, uid: u.uid });
+                    setAccountStatus("active");
+                    setArchivedProfile(null);
+                    resolved = true;
+                    setLoading(false);
+                    setError(null);
+                    return;
+                  }
+
+                  // No profile found — check if deleted or archived
+                  try {
+                    // 1. Check if permanently deleted
+                    try {
+                      const deletedSnap = await get(ref(db, `rakeb/deletedUsers/${u.uid}`));
+                      if (deletedSnap?.exists()) {
+                        console.warn("[AuthContext] User was permanently deleted:", u.uid);
+                        setProfile(null);
+                        setAccountStatus("deleted");
+                        setArchivedProfile(null);
+                        resolved = true;
+                        setLoading(false);
+                        setError("تم حذف حسابك بواسطة المسؤول. تواصل مع الإدارة للمزيد.");
+                        await firebaseSignOut(auth);
+                        return;
+                      }
+                    } catch {
+                      // Ignore permission error
+                    }
+
+                    // 2. Check if archived (course ended) via lightweight index
+                    try {
+                      const indexSnap = await get(ref(db, `rakeb/archivedUsersIndex/${u.uid}`));
+                      if (indexSnap?.exists()) {
+                        const { courseId: archivedCourseId } = indexSnap.val() as { courseId: string };
+                        const archivedDataSnap = await get(
+                          ref(db, `rakeb/archivedUsers/${archivedCourseId}/${u.uid}`)
+                        );
+                        if (archivedDataSnap?.exists()) {
+                          const archivedData = archivedDataSnap.val() as UserProfile;
+                          console.log("[AuthContext] Found archived user in course:", archivedCourseId);
+                          setProfile(null);
+                          setAccountStatus("archived");
+                          setArchivedProfile({ profile: { ...archivedData, uid: u.uid }, courseId: archivedCourseId });
+                          resolved = true;
+                          setLoading(false);
+                          setError(null);
+                          return;
+                        }
+                      }
+                    } catch {
+                      // Ignore permission error
+                    }
+
+                    // Not found anywhere — truly new or incomplete profile
+                    setProfile(null);
+                    setAccountStatus(null);
+                    setArchivedProfile(null);
+                    resolved = true;
+                    setLoading(false);
+                    setError(null);
+                  } catch (checkErr) {
+                    console.error("[AuthContext] Error checking archived/deleted status:", checkErr);
+                    setProfile(null);
+                    setAccountStatus(null);
+                    setArchivedProfile(null);
+                    resolved = true;
+                    setLoading(false);
+                    setError(null);
+                  }
                 },
                 (profileError) => {
                   if (!isMounted) return;
-                  console.error("[AuthContext] Failed to read user profile:", profileError);
+                  console.warn("[AuthContext] Profile read issue:", profileError);
                   if (attempts < maxAttempts) {
                     attempts++;
-                    console.log(
-                      `[AuthContext] Retrying profile read (attempt ${attempts}/${maxAttempts})...`,
-                    );
                     setTimeout(subscribeToProfile, 1000);
                   } else {
                     setProfile(null);
                     resolved = true;
                     setLoading(false);
-                    setError("فشل تحميل بيانات الحساب");
+                    setError(null);
                   }
                 },
               );
@@ -137,6 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             subscribeToProfile();
           } else {
             setProfile(null);
+            setAccountStatus(null);
+            setArchivedProfile(null);
             resolved = true;
             setLoading(false);
             setError(null);
@@ -234,6 +312,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured,
       error,
       isEmailVerified,
+      accountStatus,
+      archivedProfile,
       signIn,
       signInWithGoogle,
       signUp,
@@ -252,6 +332,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured,
       error,
       isEmailVerified,
+      accountStatus,
+      archivedProfile,
       signIn,
       signInWithGoogle,
       signUp,

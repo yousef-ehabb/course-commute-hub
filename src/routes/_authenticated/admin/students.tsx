@@ -171,6 +171,8 @@ function StudentsPage() {
         archivedAt: Date.now(),
         archivedFromCourse: courseId,
       };
+      // Write reverse-lookup index for efficient archived-user checks
+      updates[`rakeb/archivedUsersIndex/${selectedStudent.id}`] = { courseId };
       // Remove from active users
       updates[`rakeb/users/${selectedStudent.id}`] = null;
 

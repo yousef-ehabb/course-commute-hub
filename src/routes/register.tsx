@@ -118,9 +118,13 @@ function RegisterPage() {
       };
       await set(ref(getFirebaseDb(), `rakeb/users/${googleUid}`), userProfile);
 
-      // Clean up archived data if re-enrolling
+      // Clean up archived data and index if re-enrolling
       if (isReEnrolling && archivedProfile) {
-        await remove(ref(getFirebaseDb(), `rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`));
+        const { update } = await import("firebase/database");
+        await update(ref(getFirebaseDb()), {
+          [`rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`]: null,
+          [`rakeb/archivedUsersIndex/${googleUid}`]: null,
+        });
       }
 
       toast.success("تم إكمال حسابك بنجاح! أهلاً بك في راكب 🎉");
@@ -155,8 +159,12 @@ function RegisterPage() {
       };
       await set(ref(getFirebaseDb(), `rakeb/users/${user.uid}`), newProfile);
 
-      // Clean up archived data
-      await remove(ref(getFirebaseDb(), `rakeb/archivedUsers/${archivedProfile.courseId}/${user.uid}`));
+      // Clean up archived data and index
+      const { update } = await import("firebase/database");
+      await update(ref(getFirebaseDb()), {
+        [`rakeb/archivedUsers/${archivedProfile.courseId}/${user.uid}`]: null,
+        [`rakeb/archivedUsersIndex/${user.uid}`]: null,
+      });
 
       toast.success("تم تسجيلك في الدورة الجديدة بنجاح! أهلاً بك مجدداً 🎉");
       navigate({ to: "/student/home", replace: true });
