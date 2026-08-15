@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getDatabase, ref, push, type Database } from "firebase/database";
+import { getDatabase, type Database } from "firebase/database";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -33,15 +33,6 @@ export function getFirebaseAuth(): Auth {
 export function getFirebaseDb() {
   if (!_db) {
     _db = getDatabase(getFirebaseApp());
-    // @ts-ignore
-    if (typeof window !== "undefined") {
-      // @ts-ignore
-      window.db = _db;
-      // @ts-ignore
-      window.push = push;
-      // @ts-ignore
-      window.ref = ref;
-    }
   }
   return _db;
 }

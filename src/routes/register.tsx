@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,9 @@ import { StationPicker } from "@/components/student/StationPicker";
 export const Route = createFileRoute("/register")({
   ssr: false,
   component: RegisterPage,
+  validateSearch: (search: Record<string, unknown>): { course?: string } => ({
+    ...(search.course ? { course: search.course as string } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "تسجيل حساب — راكب" },
@@ -37,9 +40,10 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
-  const { signUp, signInWithGoogle, sendVerificationEmail, configured } = useAuth();
+  const { signUp, signInWithGoogle, sendVerificationEmail, configured, user, accountStatus, archivedProfile } = useAuth();
   const { stations, loading: stationsLoading, error: stationsError } = useStations();
   const navigate = useNavigate();
+  const { course: courseIdFromUrl } = useSearch({ from: "/register" });
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
@@ -54,6 +58,22 @@ function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [isGoogleUser, setIsGoogleUser] = useState(false);
   const [googleUid, setGoogleUid] = useState("");
+  const [isReEnrolling, setIsReEnrolling] = useState(false);
+
+  // Pre-fill form fields from archived profile when re-enrolling
+  useEffect(() => {
+    if (accountStatus === "archived" && archivedProfile && courseIdFromUrl) {
+      const p = archivedProfile.profile;
+      setFullName(p.fullName || "");
+      setPhone(p.phone || "");
+      setNationalId(p.nationalId || "");
+      if (p.defaultStation) setStation(p.defaultStation);
+      if (p.customLocation) setCustomLocation(p.customLocation as { lat: number; lng: number; name: string });
+      setIsReEnrolling(true);
+      // Skip to step 2 (personal info review) since they already have an account
+      setStep(2);
+    }
+  }, [accountStatus, archivedProfile, courseIdFromUrl]);
 
   async function handleGoogleSignUp() {
     if (!configured) return toast.error("Firebase غير مهيأ بعد. أضف مفاتيح الاتصال أولاً.");
@@ -70,7 +90,7 @@ function RegisterPage() {
         toast.success("تم الدخول بـ Google! يرجى إكمال بياناتك وموقع التجمع.");
         changeStep(2);
       } else {
-        navigate({ to: "/student/home", replace: true });
+        toast.error("حدث خطأ أثناء تسجيل الدخول بـ Google. يرجى المحاولة مرة أخرى.");
       }
     } catch (err) {
       toast.error(getAuthErrorMessage(err));
@@ -84,7 +104,7 @@ function RegisterPage() {
     setLoading(true);
     try {
       const { getFirebaseDb } = await import("@/lib/firebase");
-      const { ref, set } = await import("firebase/database");
+      const { ref, set, remove } = await import("firebase/database");
       const userProfile = {
         uid: googleUid,
         fullName: fullName.trim(),
@@ -93,9 +113,52 @@ function RegisterPage() {
         defaultStation: station,
         role: "student",
         createdAt: Date.now(),
+        ...(station === "custom" && customLocation ? { customLocation } : {}),
+        ...(courseIdFromUrl ? { courseId: courseIdFromUrl } : {}),
       };
       await set(ref(getFirebaseDb(), `rakeb/users/${googleUid}`), userProfile);
+
+      // Clean up archived data if re-enrolling
+      if (isReEnrolling && archivedProfile) {
+        await remove(ref(getFirebaseDb(), `rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`));
+      }
+
       toast.success("تم إكمال حسابك بنجاح! أهلاً بك في راكب 🎉");
+      navigate({ to: "/student/home", replace: true });
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Handle re-enrollment for archived users (already have Firebase Auth account)
+  async function handleReEnroll() {
+    if (!validateStep2() || !validateStep3()) return;
+    if (!user || !archivedProfile || !courseIdFromUrl) return;
+    setLoading(true);
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, set, remove } = await import("firebase/database");
+
+      // Create new active profile for the new course
+      const newProfile = {
+        uid: user.uid,
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        nationalId: nationalId.trim(),
+        defaultStation: station,
+        ...(station === "custom" && customLocation ? { customLocation } : {}),
+        role: "student",
+        courseId: courseIdFromUrl,
+        createdAt: Date.now(),
+      };
+      await set(ref(getFirebaseDb(), `rakeb/users/${user.uid}`), newProfile);
+
+      // Clean up archived data
+      await remove(ref(getFirebaseDb(), `rakeb/archivedUsers/${archivedProfile.courseId}/${user.uid}`));
+
+      toast.success("تم تسجيلك في الدورة الجديدة بنجاح! أهلاً بك مجدداً 🎉");
       navigate({ to: "/student/home", replace: true });
     } catch (err) {
       toast.error(getAuthErrorMessage(err));
@@ -158,15 +221,7 @@ function RegisterPage() {
     return true;
   };
 
-  const handleNext = () => {
-    if (step === 2 && !validateStep2()) return;
-    if (step === 3 && !validateStep3()) return;
-    setStep((s) => s + 1);
-  };
 
-  const handleBack = () => {
-    setStep((s) => Math.max(1, s - 1));
-  };
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -187,6 +242,7 @@ function RegisterPage() {
         nationalId: nationalId.trim(),
         defaultStation: station,
         ...(station === "custom" && customLocation ? { customLocation } : {}),
+        ...(courseIdFromUrl ? { courseId: courseIdFromUrl } : {}),
       });
       // Registration successful! Move to success step
       setStep(5);
@@ -240,6 +296,19 @@ function RegisterPage() {
           <Link to="/">
             <RakebLogo size="lg" />
           </Link>
+        </div>
+      )}
+
+      {/* Re-enrollment banner for archived students */}
+      {isReEnrolling && archivedProfile && (
+        <div className="w-full max-w-sm mb-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👋</span>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-200">أهلاً بعودتك!</h3>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">بياناتك محفوظة من الدورة السابقة. راجعها وأكمل التسجيل في الدورة الجديدة.</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -325,9 +394,9 @@ function RegisterPage() {
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold">المعلومات الشخصية</h2>
+                  <h2 className="text-lg font-bold">{isReEnrolling ? "مراجعة البيانات" : "المعلومات الشخصية"}</h2>
                   <span className="text-[13px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                    {isGoogleUser ? "1 من 2" : "1 من 3"}
+                    {isReEnrolling ? "1 من 2" : isGoogleUser ? "1 من 2" : "1 من 3"}
                   </span>
                 </div>
               </div>
@@ -389,7 +458,7 @@ function RegisterPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold">نقطة التجمع</h2>
                   <span className="text-[13px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                    {isGoogleUser ? "2 من 2" : "2 من 3"}
+                    {isReEnrolling ? "2 من 2" : isGoogleUser ? "2 من 2" : "2 من 3"}
                   </span>
                 </div>
               </div>
@@ -433,7 +502,7 @@ function RegisterPage() {
                   <ChevronRight className="h-5 w-5" />
                 </Button>
                 <Button
-                  onClick={isGoogleUser ? handleCompleteGoogleRegistration : nextStep}
+                  onClick={isReEnrolling ? handleReEnroll : isGoogleUser ? handleCompleteGoogleRegistration : nextStep}
                   className="w-full"
                   disabled={loading}
                 >
@@ -442,6 +511,8 @@ function RegisterPage() {
                       <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                       جارٍ الحفظ...
                     </>
+                  ) : isReEnrolling ? (
+                    "تسجيل في الدورة الجديدة ✨"
                   ) : isGoogleUser ? (
                     "إتمام التسجيل"
                   ) : (

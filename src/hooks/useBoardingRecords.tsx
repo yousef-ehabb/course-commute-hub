@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useMemo,
+  useCallback,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,11 +70,11 @@ export function BoardingRecordsProvider({ children }: { children: ReactNode }) {
     return () => unsub?.();
   }, [user, activeDateKey, activeDateLoaded, retryCount]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
     setLoaded(false);
     setRetryCount((c) => c + 1);
-  };
+  }, []);
 
   const { records, recordsByStudent } = useMemo(() => {
     if (!raw) return { records: [], recordsByStudent: {} };
@@ -100,7 +101,7 @@ export function BoardingRecordsProvider({ children }: { children: ReactNode }) {
       error,
       retry,
     }),
-    [records, recordsByStudent, loaded, error],
+    [records, recordsByStudent, loaded, error, retry],
   );
 
   return (
