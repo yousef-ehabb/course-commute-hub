@@ -14,6 +14,7 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
 import { useCourse } from "@/contexts/CourseContext";
+import { filterStudentsByCourse } from "@/utils/courseFilter";
 import { getVehicleLabelById } from "@/utils/vehicleLabels";
 import { isStationSelected } from "@/utils/stationResolver";
 import { toast } from "sonner";
@@ -130,9 +131,8 @@ function TripsPage() {
       unsubUsers = onValue(ref(db, "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(
-            Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u })),
-          );
+          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
+          setUsers(filterStudentsByCourse(allUsers, courseId));
         } else {
           setUsers([]);
         }
@@ -145,7 +145,7 @@ function TripsPage() {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (unsubUsers) unsubUsers();
     };
-  }, [activeDateKey]);
+  }, [activeDateKey, courseId]);
 
   const passengers = useMemo<DailyRecord[]>(() => {
     return getAllStudentsStatus(users);
