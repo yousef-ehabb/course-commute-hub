@@ -353,6 +353,7 @@ function TripsPage() {
         activeDateKey,
         serverTimeOffset,
         adminUid: user.uid,
+        courseId,
       });
       toast.success("تم بدء اليوم وتفعيل النظام للطلاب!");
     } catch (e) {
@@ -448,6 +449,7 @@ function TripsPage() {
           userId,
           displayedVehicle.id,
           user?.uid ?? "unknown",
+          courseId,
         );
       } else {
         // They are NOT boarded, so we board them
@@ -456,7 +458,8 @@ function TripsPage() {
           activeDateKey,
           userId,
           displayedVehicle.id,
-          user?.uid ?? "unknown"
+          user?.uid ?? "unknown",
+          courseId,
         );
       }
     } catch (e) {
