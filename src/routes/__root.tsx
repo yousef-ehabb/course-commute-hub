@@ -14,7 +14,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { StationsProvider } from "@/contexts/StationsContext";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -159,21 +158,19 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <StationsProvider>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-col min-h-screen"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-          <Toaster richColors position="top-center" />
-        </StationsProvider>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="flex flex-col min-h-screen"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+        <Toaster richColors position="top-center" />
       </AuthProvider>
     </QueryClientProvider>
   );
