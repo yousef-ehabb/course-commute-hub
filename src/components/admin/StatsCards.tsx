@@ -6,6 +6,8 @@ interface StatsCardsProps {
   totalCancelled: number;
   totalBoarded: number;
   occupancyRate: number; // percentage
+  studentsCount?: number;
+  staffCount?: number;
 }
 
 export function StatsCards({
@@ -13,6 +15,8 @@ export function StatsCards({
   totalCancelled,
   totalBoarded,
   occupancyRate,
+  studentsCount,
+  staffCount,
 }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -22,6 +26,11 @@ export function StatsCards({
             <div className="space-y-1">
               <p className="text-[13px] font-medium text-muted-foreground">إجمالي الركاب</p>
               <p className="text-2xl font-bold text-foreground">{totalRiders}</p>
+              {staffCount !== undefined && staffCount > 0 && (
+                <p className="text-[11px] text-muted-foreground font-semibold">
+                  {studentsCount ?? (totalRiders - staffCount)} طالب • {staffCount} موظف
+                </p>
+              )}
             </div>
             <div className="w-11 h-11 bg-primary/8 rounded-2xl flex items-center justify-center text-primary">
               <Users className="w-5 h-5" strokeWidth={1.8} />

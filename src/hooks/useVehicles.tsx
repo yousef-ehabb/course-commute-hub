@@ -11,6 +11,7 @@ import {
   useEffect,
   useState,
   useMemo,
+  useCallback,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -82,7 +83,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
       const { ref, onValue } = await import("firebase/database");
 
       const db = getFirebaseDb();
-      const path = `rakeb/vehicles/default/${activeDateKey}`;
+      const path = `rakeb/vehicles/${activeDateKey}`;
 
       unsub = onValue(
         ref(db, path),
@@ -118,11 +119,11 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
     [vehicles],
   );
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
     setLoaded(false);
     setRetryCount((c) => c + 1);
-  };
+  }, []);
 
   const value = useMemo<VehiclesContextValue>(
     () => ({
@@ -134,7 +135,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
       error,
       retry,
     }),
-    [vehicles, totalCapacity, totalOccupied, loaded, error, retryCount],
+    [vehicles, totalCapacity, totalOccupied, loaded, error, retry],
   );
 
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;

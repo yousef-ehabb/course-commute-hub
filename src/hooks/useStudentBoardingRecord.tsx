@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useMemo,
+  useCallback,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,11 +65,11 @@ export function StudentBoardingRecordProvider({ children }: { children: ReactNod
     return () => unsub?.();
   }, [user, activeDateKey, activeDateLoaded, retryCount]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
     setLoaded(false);
     setRetryCount((c) => c + 1);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -77,7 +78,7 @@ export function StudentBoardingRecordProvider({ children }: { children: ReactNod
       error,
       retry,
     }),
-    [record, loaded, error, retryCount],
+    [record, loaded, error, retry],
   );
 
   return (

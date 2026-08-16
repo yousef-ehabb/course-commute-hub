@@ -8,8 +8,6 @@ import {
   useMemo,
   ReactNode,
 } from "react";
-import { getFirebaseDb } from "@/lib/firebase";
-import { ref, onValue, set } from "firebase/database";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
 
@@ -166,8 +164,10 @@ export function StationsProvider({ children }: { children: ReactNode }) {
     };
   }, [retryKey, user]);
 
-  const saveStations = async (newStations: Station[]) => {
+  const saveStations = useCallback(async (newStations: Station[]) => {
     try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, set } = await import("firebase/database");
       const db = getFirebaseDb();
       const now = Date.now();
       const adminUid = user?.uid || "unknown";
@@ -187,7 +187,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
       toast.error("فشل حفظ النقاط");
       throw saveError;
     }
-  };
+  }, [user]);
 
   const value = useMemo<StationsContextType>(
     () => ({
@@ -197,7 +197,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
       retry,
       saveStations,
     }),
-    [stations, loading, error, retry],
+    [stations, loading, error, retry, saveStations],
   );
 
   return <StationsContext.Provider value={value}>{children}</StationsContext.Provider>;

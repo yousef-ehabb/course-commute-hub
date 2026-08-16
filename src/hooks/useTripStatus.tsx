@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
+import { useCourse } from "@/contexts/CourseContext";
 
 export type TripStatusType = "pending" | "waiting_at_station" | "moving" | "completed";
 
@@ -34,6 +35,7 @@ const TripStatusContext = createContext<TripStatusContextValue | null>(null);
 export function TripStatusProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { activeDateKey, loaded: activeDateLoaded } = useActiveDate();
+  const { courseId } = useCourse();
   const [status, setStatus] = useState<TripStatusType>("pending");
   const [currentStationId, setCurrentStationId] = useState<string | null>(null);
   const [nextStationId, setNextStationId] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
       const { ref, onValue } = await import("firebase/database");
 
       const db = getFirebaseDb();
-      const path = `rakeb/trips/default/${activeDateKey}`;
+      const path = `rakeb/trips/${courseId}/${activeDateKey}`;
 
       unsub = onValue(
         ref(db, path),
@@ -103,13 +105,13 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsub?.();
-  }, [user, activeDateKey, activeDateLoaded, retryCount]);
+  }, [user, activeDateKey, activeDateLoaded, retryCount, courseId]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
     setLoaded(false);
     setRetryCount((c) => c + 1);
-  };
+  }, []);
 
   const value = useMemo<TripStatusContextValue>(
     () => ({
@@ -131,11 +133,12 @@ export function TripStatusProvider({ children }: { children: ReactNode }) {
       nextStationId,
       lastStationId,
       location,
+      licensePlate,
       activeDateKey,
       loaded,
       error,
       raw,
-      retryCount,
+      retry,
     ],
   );
 

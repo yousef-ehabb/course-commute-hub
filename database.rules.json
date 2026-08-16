@@ -12,6 +12,29 @@
         ".read": true,
         ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
       },
+      "courses": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+      },
+      "archivedUsers": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+        "$courseId": {
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')"
+          }
+        }
+      },
+      "archivedUsersIndex": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
+          ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+        }
+      },
+      "deletedUsers": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
+      },
       "settings": {
         "$courseId": {
           ".read": "auth != null",
@@ -48,23 +71,21 @@
         }
       },
       "vehicles": {
-        "$courseId": {
-          ".read": "auth != null",
-          "$dateKey": {
-            "$vehicleId": {
-              ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' && (newData.exists() || data.child('status').val() === 'planned')",
-              "capacity": {
-                ".validate": "!data.parent().exists() || data.parent().child('status').val() === 'planned' || newData.val() === data.val()"
-              },
-              "currentLocation": {
-                ".validate": "newData.parent().child('assignedCoordinatorId').val() === auth.uid"
-              },
-              "occupiedSeats": {
-                ".validate": "newData.val() <= newData.parent().child('capacity').val() && newData.val() >= 0"
-              },
-              "assignedCoordinatorId": {
-                ".validate": "newData.val() === null || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
-              }
+        ".read": "auth != null",
+        "$dateKey": {
+          "$vehicleId": {
+            ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' && (newData.exists() || data.child('status').val() === 'planned')",
+            "capacity": {
+              ".validate": "!data.parent().exists() || data.parent().child('status').val() === 'planned' || newData.val() === data.val()"
+            },
+            "currentLocation": {
+              ".validate": "newData.parent().child('assignedCoordinatorId').val() === auth.uid"
+            },
+            "occupiedSeats": {
+              ".validate": "newData.val() <= newData.parent().child('capacity').val() && newData.val() >= 0"
+            },
+            "assignedCoordinatorId": {
+              ".validate": "newData.val() === null || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
             }
           }
         }

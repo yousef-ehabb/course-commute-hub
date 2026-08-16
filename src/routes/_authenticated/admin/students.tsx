@@ -1,14 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useStations } from "@/contexts/StationsContext";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useVehicles } from "@/hooks/useVehicles";
+import { useCourse } from "@/contexts/CourseContext";
+import { filterStudentsByCourse } from "@/utils/courseFilter";
 import { getStationName } from "@/utils/stationResolver";
-import { getVehicleLabel } from "@/utils/vehicleResolver";
-import { Download, Search, SearchX, MapPin, Phone, PhoneCall } from "lucide-react";
+import { getVehicleLabelById } from "@/utils/vehicleLabels";
+import { Download, Search, SearchX, MapPin, Phone, PhoneCall, Trash2, Archive, AlertTriangle, Loader2 } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+
 export const Route = createFileRoute("/_authenticated/admin/students")({
   component: StudentsPage,
 });
@@ -32,10 +45,16 @@ function StudentsPage() {
   const { getAllStudentsStatus } = useTodayStatus();
   const { recordsByStudent } = useBoardingRecords();
   const { vehicles } = useVehicles();
+  const { courseId } = useCourse();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [users, setUsers] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
+
+  // Delete/Archive dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
+  const [actionLoading, setActionLoading] = useState<"archive" | "delete" | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -46,41 +65,40 @@ function StudentsPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(
-            Object.entries(val)
-              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role !== "admin"),
-          );
+          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
+          setUsers(filterStudentsByCourse(allUsers, courseId));
         } else {
           setUsers([]);
         }
       });
     })();
     return () => unsub?.();
-  }, []);
+  }, [courseId]);
 
   const students = useMemo<StudentRecord[]>(() => {
     const allStatus = getAllStudentsStatus(users);
-    return allStatus.map((u) => {
-      const stationName = getStationName(u.station, stations, u.customLocation?.name);
-      const record = recordsByStudent[u.id];
-      const isBoarded = record?.status === "boarded";
-      const vehicleName = isBoarded && record?.vehicleId
-        ? getVehicleLabel(record.vehicleId, vehicles)
-        : undefined;
+    return allStatus
+      .filter((u) => !u.isStaff)
+      .map((u) => {
+        const stationName = getStationName(u.station, stations, u.customLocation?.name);
+        const record = recordsByStudent[u.id];
+        const isBoarded = record?.status === "boarded";
+        const vehicleName = isBoarded && record?.vehicleId
+          ? getVehicleLabelById(record.vehicleId, vehicles)
+          : undefined;
 
-      return {
-        id: u.id,
-        name: u.fullName || "غير معروف",
-        phone: u.phone || "---",
-        nationalId: u.nationalId || "---",
-        station: stationName,
-        isRidingToday: u.status === "riding",
-        isBoarded,
-        vehicleName,
-        customLocation: u.customLocation,
-      };
-    });
+        return {
+          id: u.id,
+          name: u.fullName || "غير معروف",
+          phone: u.phone || "---",
+          nationalId: u.nationalId || "---",
+          station: stationName,
+          isRidingToday: u.status === "riding",
+          isBoarded,
+          vehicleName,
+          customLocation: u.customLocation,
+        };
+      });
   }, [getAllStudentsStatus, users, stations, recordsByStudent, vehicles]);
 
   const filteredStudents = students.filter((s) => {
@@ -123,6 +141,80 @@ function StudentsPage() {
 
     exportToExcel(exportData, `Passenger_Manifest_${now.toISOString().split("T")[0]}`, metadata);
   };
+
+  const openDeleteDialog = (student: StudentRecord) => {
+    setSelectedStudent(student);
+    setDialogOpen(true);
+  };
+
+  const handleArchive = useCallback(async () => {
+    if (!selectedStudent) return;
+    setActionLoading("archive");
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, get, update } = await import("firebase/database");
+      const db = getFirebaseDb();
+
+      // Get the full user profile first
+      const userSnap = await get(ref(db, `rakeb/users/${selectedStudent.id}`));
+      if (!userSnap.exists()) {
+        toast.error("لم يتم العثور على بيانات الطالب");
+        return;
+      }
+
+      const userData = userSnap.val();
+      const updates: Record<string, any> = {};
+
+      // Move to archivedUsers under the current course
+      updates[`rakeb/archivedUsers/${courseId}/${selectedStudent.id}`] = {
+        ...userData,
+        archivedAt: Date.now(),
+        archivedFromCourse: courseId,
+      };
+      // Write reverse-lookup index for efficient archived-user checks
+      updates[`rakeb/archivedUsersIndex/${selectedStudent.id}`] = { courseId };
+      // Remove from active users
+      updates[`rakeb/users/${selectedStudent.id}`] = null;
+
+      await update(ref(db), updates);
+      toast.success(`تم أرشفة "${selectedStudent.name}" بنجاح. يمكنه التسجيل في كورس جديد.`);
+      setDialogOpen(false);
+    } catch (err) {
+      console.error("[Students] Archive failed:", err);
+      toast.error("حدث خطأ أثناء أرشفة الطالب");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [selectedStudent, courseId]);
+
+  const handleDelete = useCallback(async () => {
+    if (!selectedStudent) return;
+    setActionLoading("delete");
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, update } = await import("firebase/database");
+      const db = getFirebaseDb();
+
+      const updates: Record<string, any> = {};
+      // Remove from active users
+      updates[`rakeb/users/${selectedStudent.id}`] = null;
+      // Flag as permanently deleted
+      updates[`rakeb/deletedUsers/${selectedStudent.id}`] = {
+        deletedAt: Date.now(),
+        deletedFromCourse: courseId,
+        studentName: selectedStudent.name,
+      };
+
+      await update(ref(db), updates);
+      toast.success(`تم حذف "${selectedStudent.name}" نهائياً.`);
+      setDialogOpen(false);
+    } catch (err) {
+      console.error("[Students] Delete failed:", err);
+      toast.error("حدث خطأ أثناء حذف الطالب");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [selectedStudent, courseId]);
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 pb-24">
@@ -229,6 +321,14 @@ function StudentsPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Delete/Archive button */}
+                  <button
+                    onClick={() => openDeleteDialog(student)}
+                    className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all active:scale-90 duration-150"
+                    title="إدارة حساب الطالب"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   {student.isBoarded && (
                     <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
                       ✓ تم الصعود {student.vehicleName ? `• ${student.vehicleName}` : ""}
@@ -269,6 +369,70 @@ function StudentsPage() {
           );
         })}
       </motion.div>
+
+      {/* Delete / Archive Dialog */}
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent className="max-w-[340px] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-base">
+              إدارة حساب الطالب
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm leading-relaxed">
+              ماذا تريد أن تفعل بحساب <strong className="text-foreground">{selectedStudent?.name}</strong>؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="flex flex-col gap-3 py-2">
+            {/* Archive Button */}
+            <button
+              onClick={handleArchive}
+              disabled={!!actionLoading}
+              className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-all active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+            >
+              <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                {actionLoading === "archive" ? (
+                  <Loader2 className="h-4 w-4 text-amber-600 animate-spin" />
+                ) : (
+                  <Archive className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">أرشفة</p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                  انتهى الكورس — الطالب يقدر يسجل في كورس جديد
+                </p>
+              </div>
+            </button>
+
+            {/* Delete Button */}
+            <button
+              onClick={handleDelete}
+              disabled={!!actionLoading}
+              className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 transition-all active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+            >
+              <div className="h-9 w-9 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center shrink-0">
+                {actionLoading === "delete" ? (
+                  <Loader2 className="h-4 w-4 text-red-600 animate-spin" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">حذف نهائي</p>
+                <p className="text-[11px] text-red-700 dark:text-red-400 leading-snug">
+                  حذف الحساب بالكامل ومنعه من الدخول
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogCancel disabled={!!actionLoading} className="w-full rounded-xl">
+              إلغاء
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -30,7 +30,9 @@ import { VEHICLE_DEFAULTS } from "@/types";
 
 interface VehiclePlanningProps {
   vehicles: Vehicle[];
-  confirmedStudents: number;
+  confirmedStudents?: number;
+  confirmedStaff?: number;
+  confirmedPassengers?: number;
   onAddVehicle: (type: VehicleType, capacity: number) => Promise<void>;
   onRemoveVehicle: (vehicleId: string) => Promise<void>;
   onUpdateCapacity: (vehicleId: string, capacity: number) => Promise<void>;
@@ -40,7 +42,9 @@ interface VehiclePlanningProps {
 
 export function VehiclePlanning({
   vehicles,
-  confirmedStudents,
+  confirmedStudents = 0,
+  confirmedStaff = 0,
+  confirmedPassengers,
   onAddVehicle,
   onRemoveVehicle,
   onUpdateCapacity,
@@ -52,8 +56,9 @@ export function VehiclePlanning({
   const [editingCapacity, setEditingCapacity] = useState<Record<string, string>>({});
   const [isStartingDay, setIsStartingDay] = useState(false);
 
+  const totalPassengers = confirmedPassengers ?? (confirmedStudents + confirmedStaff);
   const totalCapacity = vehicles.reduce((sum, v) => sum + v.capacity, 0);
-  const remainingSeats = totalCapacity - confirmedStudents;
+  const remainingSeats = totalCapacity - totalPassengers;
   const hasEnoughCapacity = remainingSeats >= 0;
 
   const handleAdd = async (type: VehicleType) => {
@@ -116,18 +121,23 @@ export function VehiclePlanning({
 
       {/* Summary Metrics Bar (Responsive Grid) */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 bg-muted/30 rounded-xl p-3 border border-border/30">
-        {/* Confirmed Students */}
+        {/* Confirmed Passengers */}
         <div className="flex items-center gap-2.5 bg-card/80 p-2.5 rounded-lg border border-border/40">
           <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0">
             <Users className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
             <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-              الطلاب المؤكدين
+              الركاب المتوقعين
             </p>
             <p className="text-sm sm:text-base font-bold text-foreground leading-tight">
-              {confirmedStudents} <span className="text-[11px] font-normal text-muted-foreground">طالب</span>
+              {totalPassengers} <span className="text-[11px] font-normal text-muted-foreground">راكب</span>
             </p>
+            {confirmedStaff > 0 && (
+              <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground truncate">
+                {confirmedStudents} طالب • {confirmedStaff} موظف
+              </p>
+            )}
           </div>
         </div>
 

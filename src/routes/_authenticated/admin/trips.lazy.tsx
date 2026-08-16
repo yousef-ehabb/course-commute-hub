@@ -13,7 +13,9 @@ import { useTodayStatus, type DailyRecord } from "@/hooks/useTodayStatus";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
-import { getVehicleLabel } from "@/utils/vehicleResolver";
+import { useCourse } from "@/contexts/CourseContext";
+import { filterStudentsByCourse } from "@/utils/courseFilter";
+import { getVehicleLabelById } from "@/utils/vehicleLabels";
 import { isStationSelected } from "@/utils/stationResolver";
 import { toast } from "sonner";
 import { Flag, CheckCircle2 } from "lucide-react";
@@ -90,7 +92,8 @@ function TripsPage() {
   const { getAllStudentsStatus } = useTodayStatus();
   const { vehicles, totalCapacity, loaded: vehiclesLoaded } = useVehicles();
   const { recordsByStudent } = useBoardingRecords();
-  const { activeDateKey, serverTimeOffset } = useActiveDate();
+  const { activeDateKey, serverTimeOffset, loaded: activeDateLoaded } = useActiveDate();
+  const { courseId } = useCourse();
   const { user, profile } = useAuth();
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -121,18 +124,15 @@ function TripsPage() {
       const db = getFirebaseDb();
       setDbRefs({
         db,
-        tripPath: `rakeb/trips/default/${activeDateKey}`,
-        dailyPath: `rakeb/dailyStatus/default/${activeDateKey}`,
+        tripPath: `rakeb/trips/${courseId}/${activeDateKey}`,
+        dailyPath: `rakeb/dailyStatus/${courseId}/${activeDateKey}`,
       });
 
       unsubUsers = onValue(ref(db, "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          setUsers(
-            Object.entries(val)
-              .map(([uid, u]: [string, any]) => ({ uid, ...u }))
-              .filter((u: any) => u.role !== "admin"),
-          );
+          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
+          setUsers(filterStudentsByCourse(allUsers, courseId));
         } else {
           setUsers([]);
         }
@@ -145,15 +145,25 @@ function TripsPage() {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (unsubUsers) unsubUsers();
     };
-  }, [activeDateKey]);
+  }, [activeDateKey, courseId]);
 
   const passengers = useMemo<DailyRecord[]>(() => {
     return getAllStudentsStatus(users);
   }, [getAllStudentsStatus, users]);
 
-  const confirmedStudents = useMemo(
-    () => passengers.filter((p) => p.status === "riding" && isStationSelected(p.station)).length,
+  const confirmedPassengers = useMemo(
+    () => passengers.filter((p) => p.status === "riding" && isStationSelected(p.station)),
     [passengers],
+  );
+
+  const confirmedStudentsCount = useMemo(
+    () => confirmedPassengers.filter((p) => !p.isStaff).length,
+    [confirmedPassengers],
+  );
+
+  const confirmedStaffCount = useMemo(
+    () => confirmedPassengers.filter((p) => p.isStaff).length,
+    [confirmedPassengers],
   );
 
   // ── Vehicle Planning Handlers ───────────────────────────────────────────
@@ -232,8 +242,13 @@ function TripsPage() {
     // Phase 2c: start vehicle trip
     if (!dbRefs || !displayedVehicle || !isControllingDisplayed) return;
     try {
+      // Always ask for location when starting the trip
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(() => {}, () => {}, { enableHighAccuracy: true });
+      }
+      
       const { ref, update } = await import("firebase/database");
-      const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${displayedVehicle.id}`;
+      const vehiclePath = `rakeb/vehicles/${activeDateKey}/${displayedVehicle.id}`;
       await update(ref(dbRefs.db, vehiclePath), {
         status: "running",
         licensePlate,
@@ -250,7 +265,7 @@ function TripsPage() {
     setIsCompleting(true);
     try {
       const { ref, update } = await import("firebase/database");
-      const vehiclePath = `rakeb/vehicles/default/${activeDateKey}/${displayedVehicle.id}`;
+      const vehiclePath = `rakeb/vehicles/${activeDateKey}/${displayedVehicle.id}`;
       await update(ref(dbRefs.db, vehiclePath), {
         status: "ended",
         currentStationId: null,
@@ -272,7 +287,7 @@ function TripsPage() {
       const nextDate = getNextDateKey(activeDateKey);
       const [year, month, day] = nextDate.split("-").map(Number);
       const { ref, get } = await import("firebase/database");
-      const settingsSnap = await get(ref(dbRefs.db, "rakeb/settings/default"));
+      const settingsSnap = await get(ref(dbRefs.db, `rakeb/settings/${courseId}`));
 
       let cutoffTimeStr = "13:15";
       let isCutoffEnabled = false;
@@ -304,6 +319,7 @@ function TripsPage() {
       const dailyStatusSnapshot = await TripRepository.readDailyStatusSnapshot(
         dbRefs.db,
         activeDateKey,
+        courseId,
       );
 
       const result = await completeTrip({
@@ -314,6 +330,7 @@ function TripsPage() {
         adminUid: user?.uid ?? "unknown",
         dailyStatusSnapshot,
         totalStations: stations.length,
+        courseId,
       });
 
       if (result.alreadyCompleted) {
@@ -336,6 +353,7 @@ function TripsPage() {
         activeDateKey,
         serverTimeOffset,
         adminUid: user.uid,
+        courseId,
       });
       toast.success("تم بدء اليوم وتفعيل النظام للطلاب!");
     } catch (e) {
@@ -431,6 +449,7 @@ function TripsPage() {
           userId,
           displayedVehicle.id,
           user?.uid ?? "unknown",
+          courseId,
         );
       } else {
         // They are NOT boarded, so we board them
@@ -439,7 +458,8 @@ function TripsPage() {
           activeDateKey,
           userId,
           displayedVehicle.id,
-          user?.uid ?? "unknown"
+          user?.uid ?? "unknown",
+          courseId,
         );
       }
     } catch (e) {
@@ -458,13 +478,14 @@ function TripsPage() {
         const record = recordsByStudent[p.id];
         const isBoarded = record?.status === "boarded";
         const vehicleName = isBoarded && record?.vehicleId
-          ? getVehicleLabel(record.vehicleId, vehicles)
+          ? getVehicleLabelById(record.vehicleId, vehicles)
           : undefined;
         return {
           id: p.id,
-          name: p.fullName || "غير معروف",
+          name: p.fullName || (p.isStaff ? "موظف" : "طالب"),
           phone: p.phone || "---",
           boarded: isBoarded,
+          isStaff: p.isStaff,
           vehicleName,
           locationLink: p.customLocation
             ? `https://maps.google.com/?q=${p.customLocation.lat},${p.customLocation.lng}`
@@ -479,13 +500,14 @@ function TripsPage() {
       const record = recordsByStudent[p.id];
       const isBoarded = record?.status === "boarded";
       const vehicleName = isBoarded && record?.vehicleId
-        ? getVehicleLabel(record.vehicleId, vehicles)
+        ? getVehicleLabelById(record.vehicleId, vehicles)
         : undefined;
       return {
         id: p.id,
-        name: p.fullName || "غير معروف",
+        name: p.fullName || (p.isStaff ? "موظف" : "طالب"),
         phone: p.phone || "---",
         boarded: isBoarded,
+        isStaff: p.isStaff,
         vehicleName,
         customLocationName: p.customLocation?.name,
         locationLink: p.customLocation
@@ -499,7 +521,7 @@ function TripsPage() {
       .filter((p: any) => p.status === "riding" && p.station === "custom" && p.customLocation?.lat && p.customLocation?.lng)
       .map((p: any) => ({
         id: p.id,
-        studentName: p.fullName || "طالب",
+        studentName: p.fullName || (p.isStaff ? "موظف" : "طالب"),
         locationName: p.customLocation.name || "موقع مخصص",
         lat: Number(p.customLocation.lat),
         lng: Number(p.customLocation.lng),
@@ -570,7 +592,9 @@ function TripsPage() {
           {showPlanningPanel && (
             <VehiclePlanning
               vehicles={vehicles}
-              confirmedStudents={confirmedStudents}
+              confirmedPassengers={confirmedPassengers.length}
+              confirmedStudents={confirmedStudentsCount}
+              confirmedStaff={confirmedStaffCount}
               onAddVehicle={handleAddVehicle}
               onRemoveVehicle={handleRemoveVehicle}
               onUpdateCapacity={handleUpdateCapacity}
@@ -726,7 +750,7 @@ function TripsPage() {
               {customLocationPassengers.length > 0 && (
                 <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="pt-2 opacity-80 hover:opacity-100 transition-opacity">
                   <BoardingList
-                    stationName="طلاب في مواقع مخصصة"
+                    stationName="ركاب في مواقع مخصصة"
                     passengers={customLocationPassengers}
                     onConfirmBoarding={(id) => {
                       const p = customLocationPassengers.find((x: any) => x.id === id);

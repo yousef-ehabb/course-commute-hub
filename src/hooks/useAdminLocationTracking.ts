@@ -43,6 +43,8 @@ export function useAdminLocationTracking() {
     }
 
     let isMounted = true;
+    let cleanupListeners: (() => void) | undefined;
+
     navigator.permissions.query({ name: "geolocation" }).then((status) => {
       if (!isMounted) return;
       setPermissionState(status.state as PermissionState);
@@ -60,7 +62,7 @@ export function useAdminLocationTracking() {
       };
       window.addEventListener("focus", handleFocus);
       
-      return () => {
+      cleanupListeners = () => {
         status.removeEventListener("change", handleChange);
         window.removeEventListener("focus", handleFocus);
       };
@@ -68,7 +70,10 @@ export function useAdminLocationTracking() {
       if (isMounted) setPermissionState("unknown");
     });
     
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      cleanupListeners?.();
+    };
   }, []);
 
   // 2. Active Tracking Logic

@@ -193,8 +193,8 @@ function StationsManagementPage() {
   }
 
   return (
-    <div className="space-y-6 pt-4 h-[calc(100vh-8rem)] flex flex-col">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 pt-4 h-[calc(100dvh-8rem)] md:h-[calc(100vh-8rem)] flex flex-col">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">إدارة نقاط التجمع</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -231,13 +231,13 @@ function StationsManagementPage() {
       <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
         {/* Sidebar */}
         <Card
-          className={`w-full md:w-1/3 flex-col overflow-hidden shrink-0 ${mobileView === "list" ? "flex" : "hidden md:flex"}`}
+          className={`w-full md:w-1/3 flex-col overflow-hidden md:shrink-0 ${mobileView === "list" ? "flex flex-1 min-h-0" : "hidden md:flex"}`}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0">
             <h3 className="font-bold text-lg">ترتيب النقاط ({localStations.length})</h3>
           </div>
-          <CardContent className="p-0 flex-1 overflow-y-auto">
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+          <CardContent className="p-0 flex-1 overflow-y-auto relative">
+            <ul className="divide-y divide-gray-100 dark:divide-gray-800 pb-28 md:pb-0">
               {localStations.map((station, idx) => (
                 <li
                   key={station.id}

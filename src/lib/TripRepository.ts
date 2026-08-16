@@ -95,16 +95,16 @@ export class TripRepository {
    * Read the current activeDateKey from Firebase settings.
    * Used for idempotency checks before completing a trip.
    */
-  static async readActiveDateKey(db: Database): Promise<string | null> {
+  static async readActiveDateKey(db: Database, courseId: string = "default"): Promise<string | null> {
     const { ref, get } = await import("firebase/database");
 
     try {
-      const snap = await get(ref(db, "rakeb/settings/default/activeDateKey"));
+      const snap = await get(ref(db, `rakeb/settings/${courseId}/activeDateKey`));
       return snap.exists() ? (snap.val() as string) : null;
     } catch (err) {
       throw new FirebaseTripError({
         code: extractFirebaseCode(err),
-        path: "rakeb/settings/default/activeDateKey",
+        path: `rakeb/settings/${courseId}/activeDateKey`,
         operation: "readActiveDateKey",
         cause: err,
       });
@@ -120,12 +120,13 @@ export class TripRepository {
     db: Database,
     expectedKey: string,
     nextKey: string,
+    courseId: string = "default",
   ): Promise<{ committed: boolean }> {
     const { ref, runTransaction } = await import("firebase/database");
 
     try {
       const result = await runTransaction(
-        ref(db, "rakeb/settings/default/activeDateKey"),
+        ref(db, `rakeb/settings/${courseId}/activeDateKey`),
         (currentValue) => {
           if (currentValue === expectedKey) {
             return nextKey;
@@ -138,7 +139,7 @@ export class TripRepository {
     } catch (err) {
       throw new FirebaseTripError({
         code: extractFirebaseCode(err),
-        path: "rakeb/settings/default/activeDateKey",
+        path: `rakeb/settings/${courseId}/activeDateKey`,
         operation: "transactionalAdvanceDate",
         cause: err,
       });
@@ -156,7 +157,7 @@ export class TripRepository {
     adminUid: string,
     location: { lat: number; lng: number; updatedAt: number },
   ): Promise<void> {
-    const vehiclePath = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
+    const vehiclePath = `rakeb/vehicles/${dateKey}/${vehicleId}`;
     try {
       const { serverTimestamp } = await import("firebase/database");
       await TripRepository.atomicUpdate(
@@ -186,16 +187,17 @@ export class TripRepository {
   static async readDailyStatusSnapshot(
     db: Database,
     dateKey: string,
+    courseId: string = "default",
   ): Promise<Record<string, unknown> | null> {
     const { ref, get } = await import("firebase/database");
 
     try {
-      const snap = await get(ref(db, `rakeb/dailyStatus/default/${dateKey}`));
+      const snap = await get(ref(db, `rakeb/dailyStatus/${courseId}/${dateKey}`));
       return snap.exists() ? (snap.val() as Record<string, unknown>) : null;
     } catch (err) {
       throw new FirebaseTripError({
         code: extractFirebaseCode(err),
-        path: `rakeb/dailyStatus/default/${dateKey}`,
+        path: `rakeb/dailyStatus/${courseId}/${dateKey}`,
         operation: "readDailyStatusSnapshot",
         cause: err,
       });
@@ -203,7 +205,7 @@ export class TripRepository {
   }
 
   /**
-   * Write an audit log entry under rakeb/auditLog/default using push().
+   * Write an audit log entry under rakeb/auditLog/{courseId} using push().
    */
   static async writeAuditEntry(
     db: Database,
@@ -214,9 +216,10 @@ export class TripRepository {
       tripDate: string;
       metadata?: Record<string, unknown>;
     },
+    courseId: string = "default",
   ): Promise<void> {
     const { ref, push, set } = await import("firebase/database");
-    const path = "rakeb/auditLog/default";
+    const path = `rakeb/auditLog/${courseId}`;
 
     try {
       const logRef = push(ref(db, path));
@@ -228,17 +231,17 @@ export class TripRepository {
   }
 
   /**
-   * Automatically detect and clean up stale or orphaned completed trips in rakeb/trips/default.
+   * Automatically detect and clean up stale or orphaned completed trips in rakeb/trips/{courseId}.
    * If a trip is completed or older than activeDateKey, archives it if missing from history and deletes it from active trips node.
    */
-  static async cleanStaleTrips(db: Database, currentActiveDateKey: string): Promise<void> {
+  static async cleanStaleTrips(db: Database, currentActiveDateKey: string, courseId: string = "default"): Promise<void> {
     const { ref, get } = await import("firebase/database");
     const updates: Record<string, unknown> = {};
 
     try {
       const [tripsSnap, historySnap] = await Promise.all([
-        get(ref(db, "rakeb/trips/default")),
-        get(ref(db, "rakeb/tripHistory/default")),
+        get(ref(db, `rakeb/trips/${courseId}`)),
+        get(ref(db, `rakeb/tripHistory/${courseId}`)),
       ]);
 
       if (!tripsSnap.exists()) return;
@@ -254,19 +257,19 @@ export class TripRepository {
         if (isCompleted || isOlder) {
           // If not archived in history yet, archive it
           if (!history[dateKey]) {
-            updates[`rakeb/tripHistory/default/${dateKey}`] = {
+            updates[`rakeb/tripHistory/${courseId}/${dateKey}`] = {
               ...tripData,
               status: "completed",
               endedAt: tripData.endedAt ?? Date.now(),
             };
           }
           // Remove from active trips node
-          updates[`rakeb/trips/default/${dateKey}`] = null;
+          updates[`rakeb/trips/${courseId}/${dateKey}`] = null;
         }
       }
 
       if (Object.keys(updates).length > 0) {
-        await TripRepository.atomicUpdate(db, updates, "cleanStaleTrips", "rakeb/trips/default");
+        await TripRepository.atomicUpdate(db, updates, "cleanStaleTrips", `rakeb/trips/${courseId}`);
       }
     } catch (err) {
       console.warn("[TripRepository] cleanStaleTrips failed silently:", err);
@@ -276,7 +279,8 @@ export class TripRepository {
   // ── Phase 2: Vehicle CRUD ───────────────────────────────────────────────
 
   /**
-   * Create a new vehicle under rakeb/vehicles/default/{dateKey}/{vehicleId}.
+   * Create a new vehicle under rakeb/vehicles/{dateKey}/{vehicleId}.
+   * Vehicles are global (shared across courses).
    * Uses push() to generate a unique vehicleId and returns it.
    */
   static async createVehicle(
@@ -289,7 +293,7 @@ export class TripRepository {
     },
   ): Promise<string> {
     const { ref, push } = await import("firebase/database");
-    const collectionPath = `rakeb/vehicles/default/${dateKey}`;
+    const collectionPath = `rakeb/vehicles/${dateKey}`;
     const newRef = push(ref(db, collectionPath));
     const vehicleId = newRef.key!;
 
@@ -341,7 +345,7 @@ export class TripRepository {
     vehicleId: string,
   ): Promise<void> {
     const { ref, get } = await import("firebase/database");
-    const vehiclePath = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
+    const vehiclePath = `rakeb/vehicles/${dateKey}/${vehicleId}`;
 
     try {
       // Safety check: only remove planned vehicles
@@ -383,7 +387,7 @@ export class TripRepository {
     dateKey: string,
   ): Promise<Record<string, unknown> | null> {
     const { ref, get } = await import("firebase/database");
-    const path = `rakeb/vehicles/default/${dateKey}`;
+    const path = `rakeb/vehicles/${dateKey}`;
 
     try {
       const snap = await get(ref(db, path));
@@ -408,7 +412,7 @@ export class TripRepository {
     newCapacity: number,
   ): Promise<void> {
     const { ref, get } = await import("firebase/database");
-    const vehiclePath = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
+    const vehiclePath = `rakeb/vehicles/${dateKey}/${vehicleId}`;
 
     // Safety check: only allow capacity edits on planned vehicles
     const snap = await get(ref(db, vehiclePath));
@@ -457,29 +461,18 @@ export class TripRepository {
     adminName?: string,
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction, get, serverTimestamp } = await import("firebase/database");
-    console.log("[TripRepository.takeControl] Inputs:", {
-      dateKey,
-      vehicleId,
-      adminUid,
-      adminName,
-    });
-    const path = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
-    console.log(`[TripRepository.takeControl] Raw path string:`, JSON.stringify(path));
-    console.log(`[TripRepository.takeControl] Path: ${path}, adminUid: ${adminUid}`);
+    const path = `rakeb/vehicles/${dateKey}/${vehicleId}`;
     
     try {
       // Fetch server time offset to correct for local clock drift.
       // We use the safe wrapper because ref(db, ".info/serverTimeOffset") throws "Invalid token in path" in some SDKs.
       const offset = await TripRepository.readServerTimeOffset(db);
-      console.log(`[TripRepository.takeControl] serverTimeOffset: ${offset}`);
       
       const result = await runTransaction(ref(db, path), (vehicle) => {
-        console.log(`[TripRepository.takeControl] Transaction step. Current vehicle state:`, vehicle);
         if (vehicle === null) {
           // If SDK cache is unprimed, return a dummy object to force a server roundtrip.
           // The server will respond with a hash mismatch and provide the real data,
           // or reject it via security rules if the vehicle truly doesn't exist.
-          console.log(`[TripRepository.takeControl] Vehicle is null. Returning dummy object.`);
           return { assignedCoordinatorId: adminUid, assignedCoordinatorName: adminName || null };
         }
         
@@ -490,19 +483,12 @@ export class TripRepository {
           if (vehicle.assignedCoordinatorId !== adminUid) {
             // Already assigned to someone else. Check for staleness.
             const lastActive = vehicle.lastHeartbeatAt || vehicle.assignedAt || 0;
-            console.log(`[TripRepository.takeControl] Vehicle assigned to another coordinator (${vehicle.assignedCoordinatorId}). Last active: ${lastActive}, estimatedServerTime: ${estimatedServerTime}, diff: ${estimatedServerTime - lastActive}`);
             if (estimatedServerTime - lastActive < STALE_TIMEOUT_MS) {
-              console.log(`[TripRepository.takeControl] Vehicle is still active. Aborting transaction.`);
               return undefined; // Still active, abort
             }
-            console.log(`[TripRepository.takeControl] Vehicle is stale. Claiming it.`);
             // Stale! We can claim it.
-          } else {
-            console.log(`[TripRepository.takeControl] Vehicle already assigned to us. Refreshing.`);
           }
           // Already assigned to us, just refresh
-        } else {
-          console.log(`[TripRepository.takeControl] Vehicle is not assigned. Claiming it.`);
         }
         
         vehicle.assignedCoordinatorId = adminUid;
@@ -511,11 +497,9 @@ export class TripRepository {
         }
         vehicle.assignedAt = serverTimestamp();
         vehicle.lastHeartbeatAt = serverTimestamp();
-        console.log(`[TripRepository.takeControl] Transaction step returning updated vehicle:`, vehicle);
         return vehicle;
       });
       
-      console.log(`[TripRepository.takeControl] Transaction completed. Committed: ${result.committed}`);
       if (!result.committed) {
         return { success: false, error: "Vehicle already assigned to another coordinator" };
       }
@@ -541,7 +525,7 @@ export class TripRepository {
     adminUid: string,
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction } = await import("firebase/database");
-    const path = `rakeb/vehicles/default/${dateKey}/${vehicleId}`;
+    const path = `rakeb/vehicles/${dateKey}/${vehicleId}`;
     
     try {
       const result = await runTransaction(ref(db, path), (vehicle) => {
@@ -580,6 +564,7 @@ export class TripRepository {
     studentId: string,
     vehicleId: string,
     adminUid: string,
+    courseId: string = "default",
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction, serverTimestamp, increment, update } = await import("firebase/database");
     const recordRef = ref(db, `rakeb/boardingRecords/${activeDateKey}/${studentId}`);
@@ -609,11 +594,11 @@ export class TripRepository {
     // 2. Increment vehicle capacity
     try {
       await update(ref(db), {
-        [`rakeb/vehicles/default/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(1)
+        [`rakeb/vehicles/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(1)
       });
 
       // Synchronize back to dailyStatus so dashboard stats (stats.lazy.tsx) count boarded students correctly
-      const dailyPath = `rakeb/dailyStatus/default/${activeDateKey}/${studentId}`;
+      const dailyPath = `rakeb/dailyStatus/${courseId}/${activeDateKey}/${studentId}`;
       try {
         await update(ref(db), { [`${dailyPath}/boarded`]: true });
       } catch (err) {
@@ -636,6 +621,7 @@ export class TripRepository {
     studentId: string,
     vehicleId: string,
     adminUid: string,
+    courseId: string = "default",
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction, serverTimestamp, increment, update } = await import("firebase/database");
     const recordRef = ref(db, `rakeb/boardingRecords/${activeDateKey}/${studentId}`);
@@ -661,11 +647,11 @@ export class TripRepository {
     // 2. Decrement vehicle capacity
     try {
       await update(ref(db), {
-        [`rakeb/vehicles/default/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(-1)
+        [`rakeb/vehicles/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(-1)
       });
 
       // Synchronize back to dailyStatus so dashboard stats remain correct
-      const dailyPath = `rakeb/dailyStatus/default/${activeDateKey}/${studentId}`;
+      const dailyPath = `rakeb/dailyStatus/${courseId}/${activeDateKey}/${studentId}`;
       try {
         await update(ref(db), { [`${dailyPath}/boarded`]: null });
       } catch (err) {

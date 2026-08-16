@@ -1,49 +1,40 @@
-# MVP Coordinator Accounts & Audit Fields Walkthrough
+# Multi-Course Architecture Implemented
 
-This document summarizes the changes applied to establish the initial admin accounts and integrate audit fields into crucial business operations, fulfilling the MVP requirements.
+I have successfully completed the migration to the Multi-Course architecture (Option 2), allowing multiple admins to independently manage separate active courses while sharing the same underlying vehicle and station infrastructure.
 
-## 1. Initial Coordinator Accounts (MVP)
+## Key Changes Made
 
-A Node script (`scripts/init_admins.ts`) was created and executed successfully to provision the initial three coordinator (admin) accounts directly into Firebase Auth and the Realtime Database. 
+### 1. Registration Flow (`register.tsx` & `AuthContext`)
+- **Query Parameter Support:** Students can now register via specialized links like `https://rakeb.app/register?course=intake-42`.
+- **Profile Tagging:** The `courseId` is seamlessly passed into the user's `UserProfile` in the Firebase Realtime Database upon successful signup. 
 
-The accounts created:
-- `admin1@rakeb.com`
-- `admin2@rakeb.com`
-- `admin3@rakeb.com`
+### 2. Course Management UI (`settings.tsx`)
+Added a new dedicated section for **Course Management** inside the Settings page:
+- **Create New Course:** Admins can create a new course by specifying a unique ID and Name. This automatically sets up the initial `rakeb/settings/{courseId}` configurations.
+- **Archive Course:** When a course ends, admins can click "Archive". This executes a local migration that:
+  - Fetches all users scoped to the current `courseId`.
+  - Safely copies their records to a read-only `rakeb/archivedUsers/{courseId}/{uid}` node.
+  - Removes them from the active `rakeb/users` node.
+  - Marks the course as `archived` in `rakeb/courses`.
 
-**Note:** All accounts use the default password `rakeb123`.
+> [!NOTE]
+> Since this is a purely client-side application without Firebase Cloud Functions, students' Firebase Auth accounts remain intact, but because their `rakeb/users` profile is removed, they are completely disabled from accessing the active Rakeb system.
 
-To ensure the web app displays their correct names across the dashboard, `src/components/layout/AdminLayout.tsx` was updated to present the user's `fullName` exactly as requested (e.g., "Admin 1") instead of truncating it to the first name.
+### 3. Deep Context Propagation (`CourseContext.tsx`)
+- Built and injected `CourseProvider` into the routing layer. 
+- All hooks, services, and queries (`useTodayStatus`, `useTripStatus`, `tripService`, `TripRepository`, etc.) now dynamically construct database paths based on the `courseId` provided by the context (e.g., `rakeb/trips/{courseId}`).
 
-## 2. Audit Logging & Metadata
+### 4. Shared Fleet Architecture
+- **Vehicles & Stations:** Modified the hooks and `database.rules.json` to keep vehicles and stations fully global. This guarantees that multiple courses running simultaneously can still coordinate boarding on the same shared physical buses.
 
-The system now reliably captures audit fields across the Realtime Database to help trace operations back to the admin who initiated them.
+### 5. Admin Dashboard & Student Listings
+- `students.tsx` and `dashboard.lazy.tsx` now filter the master user list to exclusively show and calculate stats for students belonging to the currently active admin's `courseId` (or the `default` fallback for legacy compatibility).
 
-The following operations and entities were updated:
+### Testing Your Changes
 
-### Trip Operations
-In `src/lib/tripService.ts`, the following actions now capture `updatedBy`, `updatedAt`, `createdBy`, and `createdAt` alongside the state changes:
-- `startTrip`
-- `completeTrip`
-- `departStation`
-- `arriveAtStation`
-
-### Station Management
-In `src/contexts/StationsContext.tsx` and `src/routes/_authenticated/admin/stations.tsx`, adding and updating stations now injects:
-- `createdBy` and `createdAt` (for new stations)
-- `updatedBy` and `updatedAt` (for every save)
-
-Additionally, when a station is deleted and students are reassigned to an alternative default station, their profiles (`rakeb/users/<uid>`) are correctly updated with `updatedBy` and `updatedAt`.
-
-### System Settings
-In `src/routes/_authenticated/admin/settings.tsx`, every time the cutoff times or vehicle limits are adjusted, the update accurately captures `updatedBy` and `updatedAt`.
-
-## 3. Verification 
-
-To verify these changes manually:
-1. Log in to the application as `admin1@rakeb.com` using `rakeb123`.
-2. Observe your name displaying as "Admin 1" in the header/layout.
-3. Start a new trip, adjust a station, and modify settings on the platform.
-4. Verify the underlying database via the Firebase Console to check for `createdBy`, `updatedBy`, `createdAt`, and `updatedAt` under `rakeb/trips`, `rakeb/stations`, and `rakeb/settings`.
-
-All Phase 1 implementations are complete and the database rules have been fully restored to their secure state.
+You can run your dev server (`npm run dev`) and try the following:
+1. Navigate to `/admin/settings` to see the new Course Management cards.
+2. Create a test course (e.g., `test-42`).
+3. Open an Incognito window and navigate to `/register?course=test-42` and create a dummy account.
+4. Verify in the database that the dummy user was tagged with `courseId: "test-42"`.
+5. Login with an admin account configured to manage `test-42` (you can manually set your admin profile's `courseId` to `test-42` in the Firebase Console) and observe the isolation in action!
