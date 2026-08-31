@@ -9,30 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStudentRouteRouteImport } from './routes/_authenticated/student/route'
-import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
-import { Route as AuthenticatedAdminHistoryRouteImport } from './routes/_authenticated/admin/history'
-import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
-import { Route as AuthenticatedAdminStationsRouteImport } from './routes/_authenticated/admin/stations'
-import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin/stats'
-import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated/admin/students'
-import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin/trips'
-import { Route as AuthenticatedStudentHomeRouteImport } from './routes/_authenticated/student/home'
-import { Route as AuthenticatedStudentProfileRouteImport } from './routes/_authenticated/student/profile'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedStudentTrackRouteImport } from './routes/_authenticated/student/track'
+import { Route as AuthenticatedStudentProfileRouteImport } from './routes/_authenticated/student/profile'
+import { Route as AuthenticatedStudentHomeRouteImport } from './routes/_authenticated/student/home'
+import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin/trips'
+import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated/admin/students'
+import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin/stats'
+import { Route as AuthenticatedAdminStationsRouteImport } from './routes/_authenticated/admin/stations'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
+import { Route as AuthenticatedAdminHistoryRouteImport } from './routes/_authenticated/admin/history'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -40,15 +36,14 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStudentRouteRoute =
   AuthenticatedStudentRouteRouteImport.update({
@@ -56,32 +51,44 @@ const AuthenticatedStudentRouteRoute =
     path: '/student',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminDashboardRoute =
-  AuthenticatedAdminDashboardRouteImport.update({
-    id: '/dashboard',
-    path: '/dashboard',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStudentTrackRoute =
+  AuthenticatedStudentTrackRouteImport.update({
+    id: '/track',
+    path: '/track',
+    getParentRoute: () => AuthenticatedStudentRouteRoute,
   } as any).lazy(() =>
-    import('./routes/_authenticated/admin/dashboard.lazy').then((d) => d.Route),
+    import('./routes/_authenticated/student/track.lazy').then((d) => d.Route),
   )
-const AuthenticatedAdminHistoryRoute =
-  AuthenticatedAdminHistoryRouteImport.update({
-    id: '/history',
-    path: '/history',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/admin/history.lazy').then((d) => d.Route),
-  )
-const AuthenticatedAdminSettingsRoute =
-  AuthenticatedAdminSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
+const AuthenticatedStudentProfileRoute =
+  AuthenticatedStudentProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedStudentRouteRoute,
   } as any)
-const AuthenticatedAdminStationsRoute =
-  AuthenticatedAdminStationsRouteImport.update({
-    id: '/stations',
-    path: '/stations',
+const AuthenticatedStudentHomeRoute =
+  AuthenticatedStudentHomeRouteImport.update({
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => AuthenticatedStudentRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/student/home.lazy').then((d) => d.Route),
+  )
+const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
+  id: '/trips',
+  path: '/trips',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any).lazy(() =>
+  import('./routes/_authenticated/admin/trips.lazy').then((d) => d.Route),
+)
+const AuthenticatedAdminStudentsRoute =
+  AuthenticatedAdminStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminStatsRoute = AuthenticatedAdminStatsRouteImport.update({
@@ -91,40 +98,33 @@ const AuthenticatedAdminStatsRoute = AuthenticatedAdminStatsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/_authenticated/admin/stats.lazy').then((d) => d.Route),
 )
-const AuthenticatedAdminStudentsRoute =
-  AuthenticatedAdminStudentsRouteImport.update({
-    id: '/students',
-    path: '/students',
+const AuthenticatedAdminStationsRoute =
+  AuthenticatedAdminStationsRouteImport.update({
+    id: '/stations',
+    path: '/stations',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
-  id: '/trips',
-  path: '/trips',
-  getParentRoute: () => AuthenticatedAdminRouteRoute,
-} as any).lazy(() =>
-  import('./routes/_authenticated/admin/trips.lazy').then((d) => d.Route),
-)
-const AuthenticatedStudentHomeRoute =
-  AuthenticatedStudentHomeRouteImport.update({
-    id: '/home',
-    path: '/home',
-    getParentRoute: () => AuthenticatedStudentRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/student/home.lazy').then((d) => d.Route),
-  )
-const AuthenticatedStudentProfileRoute =
-  AuthenticatedStudentProfileRouteImport.update({
-    id: '/profile',
-    path: '/profile',
-    getParentRoute: () => AuthenticatedStudentRouteRoute,
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedStudentTrackRoute =
-  AuthenticatedStudentTrackRouteImport.update({
-    id: '/track',
-    path: '/track',
-    getParentRoute: () => AuthenticatedStudentRouteRoute,
+const AuthenticatedAdminHistoryRoute =
+  AuthenticatedAdminHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any).lazy(() =>
-    import('./routes/_authenticated/student/track.lazy').then((d) => d.Route),
+    import('./routes/_authenticated/admin/history.lazy').then((d) => d.Route),
+  )
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/admin/dashboard.lazy').then((d) => d.Route),
   )
 
 export interface FileRoutesByFullPath {
@@ -244,18 +244,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -265,19 +258,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/student': {
       id: '/_authenticated/student'
@@ -286,60 +279,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/dashboard': {
-      id: '/_authenticated/admin/dashboard'
-      path: '/dashboard'
-      fullPath: '/admin/dashboard'
-      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/history': {
-      id: '/_authenticated/admin/history'
-      path: '/history'
-      fullPath: '/admin/history'
-      preLoaderRoute: typeof AuthenticatedAdminHistoryRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/settings': {
-      id: '/_authenticated/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/stations': {
-      id: '/_authenticated/admin/stations'
-      path: '/stations'
-      fullPath: '/admin/stations'
-      preLoaderRoute: typeof AuthenticatedAdminStationsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/stats': {
-      id: '/_authenticated/admin/stats'
-      path: '/stats'
-      fullPath: '/admin/stats'
-      preLoaderRoute: typeof AuthenticatedAdminStatsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/students': {
-      id: '/_authenticated/admin/students'
-      path: '/students'
-      fullPath: '/admin/students'
-      preLoaderRoute: typeof AuthenticatedAdminStudentsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/trips': {
-      id: '/_authenticated/admin/trips'
-      path: '/trips'
-      fullPath: '/admin/trips'
-      preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/student/home': {
-      id: '/_authenticated/student/home'
-      path: '/home'
-      fullPath: '/student/home'
-      preLoaderRoute: typeof AuthenticatedStudentHomeRouteImport
+    '/_authenticated/student/track': {
+      id: '/_authenticated/student/track'
+      path: '/track'
+      fullPath: '/student/track'
+      preLoaderRoute: typeof AuthenticatedStudentTrackRouteImport
       parentRoute: typeof AuthenticatedStudentRouteRoute
     }
     '/_authenticated/student/profile': {
@@ -349,12 +300,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentProfileRouteImport
       parentRoute: typeof AuthenticatedStudentRouteRoute
     }
-    '/_authenticated/student/track': {
-      id: '/_authenticated/student/track'
-      path: '/track'
-      fullPath: '/student/track'
-      preLoaderRoute: typeof AuthenticatedStudentTrackRouteImport
+    '/_authenticated/student/home': {
+      id: '/_authenticated/student/home'
+      path: '/home'
+      fullPath: '/student/home'
+      preLoaderRoute: typeof AuthenticatedStudentHomeRouteImport
       parentRoute: typeof AuthenticatedStudentRouteRoute
+    }
+    '/_authenticated/admin/trips': {
+      id: '/_authenticated/admin/trips'
+      path: '/trips'
+      fullPath: '/admin/trips'
+      preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/students': {
+      id: '/_authenticated/admin/students'
+      path: '/students'
+      fullPath: '/admin/students'
+      preLoaderRoute: typeof AuthenticatedAdminStudentsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/stats': {
+      id: '/_authenticated/admin/stats'
+      path: '/stats'
+      fullPath: '/admin/stats'
+      preLoaderRoute: typeof AuthenticatedAdminStatsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/stations': {
+      id: '/_authenticated/admin/stations'
+      path: '/stations'
+      fullPath: '/admin/stations'
+      preLoaderRoute: typeof AuthenticatedAdminStationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/settings': {
+      id: '/_authenticated/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/history': {
+      id: '/_authenticated/admin/history'
+      path: '/history'
+      fullPath: '/admin/history'
+      preLoaderRoute: typeof AuthenticatedAdminHistoryRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/dashboard': {
+      id: '/_authenticated/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
   }
 }
