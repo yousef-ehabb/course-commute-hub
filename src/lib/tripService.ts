@@ -130,6 +130,7 @@ export async function startDay(params: StartDayParams): Promise<void> {
       tripDate: activeDateKey,
       serverTimeOffset,
       metadata: {},
+      courseId,
     });
   } catch (err) {
     if (err instanceof FirebaseTripError) {

@@ -17,11 +17,12 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function AdminStartupInitializer({ children }: { children: React.ReactNode }) {
   const { activeDateKey, loaded } = useActiveDate();
   const { courseId } = useCourse();
-  const hasReconciledRef = useRef(false);
+  const reconciledKeysRef = useRef<Record<string, boolean>>({});
+  const key = `${courseId}-${activeDateKey}`;
 
   useEffect(() => {
-    if (!loaded || hasReconciledRef.current) return;
-    hasReconciledRef.current = true;
+    if (!loaded || reconciledKeysRef.current[key]) return;
+    reconciledKeysRef.current[key] = true;
 
     (async () => {
       try {
@@ -32,7 +33,7 @@ function AdminStartupInitializer({ children }: { children: React.ReactNode }) {
         console.warn("[AdminStartup] Reconciliation pass error:", err);
       }
     })();
-  }, [activeDateKey, loaded]);
+  }, [activeDateKey, loaded, courseId, key]);
 
   return <>{children}</>;
 }

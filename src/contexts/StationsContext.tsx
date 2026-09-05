@@ -32,9 +32,15 @@ interface StationsContextType {
   saveStations: (newStations: Station[]) => Promise<void>;
 }
 
+export interface StationsProviderProps {
+  children: ReactNode;
+  /** When provided, stations are scoped to rakeb/stations/{courseId} */
+  courseId?: string;
+}
+
 const StationsContext = createContext<StationsContextType | undefined>(undefined);
 
-export function StationsProvider({ children }: { children: ReactNode }) {
+export function StationsProvider({ children, courseId }: StationsProviderProps) {
   const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +70,8 @@ export function StationsProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return;
 
         const db = getFirebaseDb();
-        const stationsRef = ref(db, "rakeb/stations");
+        const stationsPath = courseId ? `rakeb/stations/${courseId}` : "rakeb/stations";
+        const stationsRef = ref(db, stationsPath);
 
         console.log("[StationsContext] Stations listener attached");
         unsub = onValue(
@@ -162,7 +169,7 @@ export function StationsProvider({ children }: { children: ReactNode }) {
         unsub();
       }
     };
-  }, [retryKey, user]);
+  }, [retryKey, user, courseId]);
 
   const saveStations = useCallback(async (newStations: Station[]) => {
     try {
@@ -180,7 +187,8 @@ export function StationsProvider({ children }: { children: ReactNode }) {
         createdBy: station.createdBy || adminUid,
       }));
 
-      await set(ref(db, "rakeb/stations"), stationsToSave);
+      const stationsPath = courseId ? `rakeb/stations/${courseId}` : "rakeb/stations";
+      await set(ref(db, stationsPath), stationsToSave);
       toast.success("تم حفظ النقاط بنجاح");
     } catch (saveError) {
       console.error("Failed to save stations:", saveError);

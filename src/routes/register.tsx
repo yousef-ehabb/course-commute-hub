@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { useStations } from "@/contexts/StationsContext";
+import { StationsProvider } from "@/contexts/StationsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,7 @@ import { StationPicker } from "@/components/student/StationPicker";
 
 export const Route = createFileRoute("/register")({
   ssr: false,
-  component: RegisterPage,
+  component: RegisterPageWrapper,
   validateSearch: (search: Record<string, unknown>): { course?: string } => ({
     ...(search.course ? { course: search.course as string } : {}),
   }),
@@ -38,6 +39,20 @@ export const Route = createFileRoute("/register")({
     links: [{ rel: "canonical", href: "/register" }],
   }),
 });
+
+/**
+ * Wrapper that provides course-scoped stations for the registration page.
+ * Uses the courseId from the URL search param so the station picker
+ * shows the correct stations for the course being registered for.
+ */
+function RegisterPageWrapper() {
+  const { course: courseIdFromUrl } = useSearch({ from: "/register" });
+  return (
+    <StationsProvider courseId={courseIdFromUrl}>
+      <RegisterPage />
+    </StationsProvider>
+  );
+}
 
 function RegisterPage() {
   const { signUp, signInWithGoogle, sendVerificationEmail, configured, user, accountStatus, archivedProfile } = useAuth();
