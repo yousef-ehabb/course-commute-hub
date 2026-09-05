@@ -77,6 +77,16 @@ const NEW_ADMINS = [
     password: "Password123!",
     displayName: "زياد ممدوح",
   },
+  {
+    email: "admin9@rakeb.com",
+    password: "Password123!",
+    displayName: "منة وليد",
+  },
+  {
+    email: "admin10@rakeb.com",
+    password: "Password123!",
+    displayName: "ايتن احمد",
+  },
 ];
 
 // Sign in and get idToken + uid

@@ -9,7 +9,7 @@ import { useCourse } from "@/contexts/CourseContext";
 import { filterStudentsByCourse } from "@/utils/courseFilter";
 import { getStationName } from "@/utils/stationResolver";
 import { getVehicleLabelById } from "@/utils/vehicleLabels";
-import { Download, Search, SearchX, MapPin, Phone, PhoneCall, Trash2, Archive, AlertTriangle, Loader2 } from "lucide-react";
+import { Download, Search, SearchX, MapPin, Phone, CreditCard, Trash2, Archive, AlertTriangle, Loader2 } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,29 @@ import {
 export const Route = createFileRoute("/_authenticated/admin/students")({
   component: StudentsPage,
 });
+
+function WhatsAppIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.03-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z" />
+    </svg>
+  );
+}
+
+function getWhatsAppUrl(phone: string): string {
+  let cleanPhone = phone.replace(/\D/g, "");
+  if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+    cleanPhone = `20${cleanPhone.slice(1)}`;
+  } else if (cleanPhone.startsWith("00")) {
+    cleanPhone = cleanPhone.slice(2);
+  }
+  return `https://wa.me/${cleanPhone}`;
+}
 
 interface StudentRecord {
   id: string;
@@ -87,11 +110,14 @@ function StudentsPage() {
           ? getVehicleLabelById(record.vehicleId, vehicles)
           : undefined;
 
+        const originalUser = users.find((usr) => (usr.uid || usr.id) === u.id);
+        const nationalId = u.nationalId || originalUser?.nationalId || "---";
+
         return {
           id: u.id,
           name: u.fullName || "غير معروف",
           phone: u.phone || "---",
-          nationalId: u.nationalId || "---",
+          nationalId: nationalId !== "" ? nationalId : "---",
           station: stationName,
           isRidingToday: u.status === "riding",
           isBoarded,
@@ -102,7 +128,12 @@ function StudentsPage() {
   }, [getAllStudentsStatus, users, stations, recordsByStudent, vehicles]);
 
   const filteredStudents = students.filter((s) => {
-    const matchesSearch = s.name.includes(searchTerm) || s.phone.includes(searchTerm);
+    const q = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      s.name.toLowerCase().includes(q) ||
+      s.phone.includes(q) ||
+      (s.nationalId && s.nationalId !== "---" && s.nationalId.includes(q));
     if (!matchesSearch) return false;
 
     if (filterType === "all") return true;
@@ -115,6 +146,7 @@ function StudentsPage() {
   const handleExport = () => {
     const exportData = filteredStudents.map((student) => ({
       الاسم: student.name,
+      "الرقم القومي": student.nationalId && student.nationalId !== "---" ? String(student.nationalId) : "---",
       "رقم الهاتف": student.phone,
       "نقطة التجمع": student.station,
       "تأكيد الحضور": student.isRidingToday ? "نعم" : "لا",
@@ -238,7 +270,7 @@ function StudentsPage() {
       <div className="relative w-full mb-4">
         <input
           className="w-full h-12 pr-11 pl-4 rounded-xl border border-border bg-card focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground shadow-xs placeholder:text-muted-foreground"
-          placeholder="ابحث بالاسم أو الموبايل..."
+          placeholder="ابحث بالاسم، الموبايل، أو الرقم القومي..."
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -351,19 +383,32 @@ function StudentsPage() {
 
               <div className="h-px w-full bg-border/40 mb-3"></div>
 
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-muted-foreground" dir="ltr">
-                  <Phone className="w-4 h-4" />
-                  <span className="text-xs font-medium tracking-wider">{student.phone}</span>
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-1.5" dir="ltr">
+                    <Phone className="w-4 h-4 text-muted-foreground/70" />
+                    <span className="text-xs font-medium tracking-wider">{student.phone}</span>
+                  </div>
+                  {student.nationalId && student.nationalId !== "---" && (
+                    <div className="flex items-center gap-1.5" dir="ltr" title="الرقم القومي">
+                      <CreditCard className="w-4 h-4 text-muted-foreground/70" />
+                      <span className="text-xs font-medium tracking-wider font-mono">{student.nationalId}</span>
+                    </div>
+                  )}
                 </div>
-                <a
-                  href={`tel:${student.phone}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors active:scale-95 duration-150"
-                >
-                  <PhoneCall className="w-3.5 h-3.5" />
-                  اتصال
-                </a>
+                {student.phone && student.phone !== "---" && (
+                  <a
+                    href={getWhatsAppUrl(student.phone)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors active:scale-95 duration-150 border border-emerald-500/20"
+                    title="مراسلة عبر واتساب"
+                  >
+                    <WhatsAppIcon className="w-3.5 h-3.5" />
+                    واتساب
+                  </a>
+                )}
               </div>
             </motion.div>
           );

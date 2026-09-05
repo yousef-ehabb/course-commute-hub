@@ -18,6 +18,7 @@ export interface DailyRecord {
   station: string;
   fullName: string;
   phone: string;
+  nationalId?: string;
   boarded?: boolean;
   isStaff?: boolean;
   customLocation?: { lat: number; lng: number; name?: string };
@@ -119,6 +120,7 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
             station: explicitRecord?.station ?? defaultStation,
             fullName: explicitRecord?.fullName || u.fullName || "طالب",
             phone: explicitRecord?.phone || u.phone || "",
+            nationalId: u.nationalId || (explicitRecord as any)?.nationalId || "",
             boarded: Boolean(explicitRecord?.boarded),
             isStaff: false,
             customLocation: explicitRecord?.customLocation || u.customLocation,
@@ -143,6 +145,7 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
             station: r.station || adminUser?.defaultStation || "",
             fullName: r.fullName || adminUser?.fullName || "موظف",
             phone: r.phone || adminUser?.phone || "",
+            nationalId: adminUser?.nationalId || (r as any)?.nationalId || "",
             boarded: Boolean(r.boarded),
             isStaff: true,
             customLocation: r.customLocation || adminUser?.customLocation,
