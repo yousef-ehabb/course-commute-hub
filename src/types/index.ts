@@ -57,6 +57,10 @@ export interface Vehicle {
   createdAt: number;
   updatedAt: number;
   createdBy: string;
+  isFull?: boolean;
+  markedFullAt?: number | null;
+  markedFullBy?: string | null;
+  markedFullStationId?: string | null;
 }
 
 export interface BoardingRecord {

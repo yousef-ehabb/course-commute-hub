@@ -57,8 +57,9 @@ export function VehicleControls({
     }
   } else if (status === "full") {
     statusChip = (
-      <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center gap-1.5">
-        ممتلئ
+      <span className="bg-destructive/15 text-destructive px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center gap-1.5 border border-destructive/25">
+        <span className="w-2 h-2 rounded-full bg-destructive animate-pulse"></span>
+        🔴 ممتلئ فعليًا
       </span>
     );
   } else if (status === "ended") {

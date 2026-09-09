@@ -58,6 +58,10 @@ function parseVehicles(raw: Record<string, any> | null): Vehicle[] {
     createdAt: v.createdAt ?? 0,
     updatedAt: v.updatedAt ?? 0,
     createdBy: v.createdBy ?? "unknown",
+    isFull: v.isFull ?? (v.status === "full"),
+    markedFullAt: v.markedFullAt ?? null,
+    markedFullBy: v.markedFullBy ?? null,
+    markedFullStationId: v.markedFullStationId ?? null,
   }));
 }
 

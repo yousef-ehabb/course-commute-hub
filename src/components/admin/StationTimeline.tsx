@@ -1,4 +1,4 @@
-import { Check, Clock, MapPin, Flag, Loader2 } from "lucide-react";
+import { Check, Clock, MapPin, Flag, Loader2, FastForward } from "lucide-react";
 import { useStations } from "@/contexts/StationsContext";
 
 interface StationTimelineProps {
@@ -6,6 +6,8 @@ interface StationTimelineProps {
   lastStationId?: string | null;
   nextStationId?: string | null;
   status: "pending" | "waiting_at_station" | "moving" | "completed";
+  isFull?: boolean;
+  markedFullStationId?: string | null;
 }
 
 export function StationTimeline({
@@ -13,6 +15,8 @@ export function StationTimeline({
   lastStationId,
   nextStationId,
   status,
+  isFull = false,
+  markedFullStationId,
 }: StationTimelineProps) {
   const { stations, loading } = useStations();
 
@@ -49,8 +53,16 @@ export function StationTimeline({
         ? stations.findIndex((s) => s.id === nextStationId)
         : -1;
 
+  const fullStationIndex = markedFullStationId
+    ? stations.findIndex((s) => s.id === markedFullStationId)
+    : (currentStationId
+        ? stations.findIndex((s) => s.id === currentStationId)
+        : (lastStationId ? stations.findIndex((s) => s.id === lastStationId) : -1));
+
   let progressHeight = "0%";
   if (status === "completed") {
+    progressHeight = "100%";
+  } else if (isFull && status === "moving") {
     progressHeight = "100%";
   } else if (status === "moving" && lastIndex >= 0) {
     progressHeight = `${((lastIndex + 0.5) / totalSteps) * 100}%`;
@@ -80,21 +92,37 @@ export function StationTimeline({
           {allNodes.map((node, index) => {
             const isFinalDestination = index === allNodes.length - 1;
 
-            const isCompleted =
-              status === "completed" ||
-              (!isFinalDestination &&
-                ((status === "waiting_at_station" && index < currentIndex) ||
-                  (status === "moving" && index <= lastIndex)));
+            const isSkipped = Boolean(
+              isFull &&
+              fullStationIndex >= 0 &&
+              !isFinalDestination &&
+              index > fullStationIndex
+            );
 
-            const isCurrent = status === "waiting_at_station" && index === currentIndex;
+            const isCompleted =
+              !isSkipped &&
+              (status === "completed" ||
+                (!isFinalDestination &&
+                  (isFull && fullStationIndex >= 0
+                    ? (index < fullStationIndex || (index === fullStationIndex && currentStationId !== node.id))
+                    : ((status === "waiting_at_station" && index < currentIndex) ||
+                       (status === "moving" && index <= lastIndex)))));
+
+            const isCurrent =
+              !isSkipped &&
+              status === "waiting_at_station" &&
+              (isFull && fullStationIndex >= 0 ? index === fullStationIndex : index === currentIndex);
 
             const isMovingTowardsThis =
+              !isSkipped &&
               status === "moving" &&
-              (index === nextIndex ||
-                (isFinalDestination &&
-                  (nextStationId === "creativa" || lastIndex === stations.length - 1)));
+              (isFull || nextStationId === "creativa"
+                ? isFinalDestination
+                : (index === nextIndex ||
+                  (isFinalDestination &&
+                    (nextStationId === "creativa" || lastIndex === stations.length - 1))));
 
-            const isPending = !isCompleted && !isCurrent && !isMovingTowardsThis;
+            const isPending = !isCompleted && !isCurrent && !isMovingTowardsThis && !isSkipped;
 
             return (
               <div key={node.id} className="flex items-start gap-3 pr-1 relative">
@@ -102,18 +130,22 @@ export function StationTimeline({
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all relative z-10
                   ${
-                    isCompleted
-                      ? "bg-primary text-white"
-                      : isCurrent
-                        ? "bg-white ring-4 ring-primary/15 text-primary shadow-sm"
-                        : isFinalDestination && isMovingTowardsThis
-                          ? "bg-success text-white shadow-sm animate-pulse"
-                          : isFinalDestination
-                            ? "bg-primary/10 border-2 border-primary/30 text-primary"
-                            : "bg-muted text-muted-foreground"
+                    isSkipped
+                      ? "bg-muted/80 text-muted-foreground border-2 border-dashed border-border/80"
+                      : isCompleted
+                        ? "bg-primary text-white"
+                        : isCurrent
+                          ? "bg-white ring-4 ring-primary/15 text-primary shadow-sm"
+                          : isFinalDestination && isMovingTowardsThis
+                            ? "bg-success text-white shadow-sm animate-pulse"
+                            : isFinalDestination
+                              ? "bg-primary/10 border-2 border-primary/30 text-primary"
+                              : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {isCompleted ? (
+                  {isSkipped ? (
+                    <FastForward className="w-4 h-4 text-muted-foreground" />
+                  ) : isCompleted ? (
                     <Check className="w-4 h-4" strokeWidth={2.5} />
                   ) : isCurrent ? (
                     <MapPin className="w-4 h-4" strokeWidth={2} />
@@ -125,18 +157,25 @@ export function StationTimeline({
                 </div>
 
                 {/* Content */}
-                <div className={`pt-1 flex-1 ${isPending ? "opacity-50" : ""}`}>
+                <div className={`pt-1 flex-1 ${isSkipped ? "opacity-60" : isPending ? "opacity-50" : ""}`}>
                   <div className="flex justify-between items-center mb-0.5">
                     <h4
                       className={`text-[14px] font-semibold ${
-                        isCurrent || isMovingTowardsThis
-                          ? "text-primary"
-                          : isFinalDestination
-                            ? "text-foreground font-bold"
-                            : "text-foreground"
+                        isSkipped
+                          ? "text-muted-foreground line-through decoration-muted-foreground/40"
+                          : isCurrent || isMovingTowardsThis
+                            ? "text-primary"
+                            : isFinalDestination
+                              ? "text-foreground font-bold"
+                              : "text-foreground"
                       }`}
                     >
                       {node.name}
+                      {isSkipped && (
+                        <span className="mr-2 text-[10px] bg-muted text-muted-foreground border border-border/60 px-2 py-0.5 rounded-md font-semibold inline-block">
+                          تم التخطي — الباص ممتلئ
+                        </span>
+                      )}
                       {isFinalDestination && (
                         <span className="mr-2 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                           الوجهة النهائية

@@ -343,6 +343,72 @@ export async function completeTrip(params: CompleteTripParams): Promise<Complete
   return { nextDateKey };
 }
 
+export interface MarkVehicleFullParams {
+  db: Database;
+  vehicleId: string;
+  currentStationId: string;
+  adminUid: string;
+  serverTimeOffset: number;
+  activeDateKey: string;
+  courseId?: string;
+}
+
+export async function markVehicleFull(params: MarkVehicleFullParams): Promise<void> {
+  const {
+    db,
+    vehicleId,
+    currentStationId,
+    adminUid,
+    serverTimeOffset,
+    activeDateKey,
+    courseId = "default",
+  } = params;
+  const now = getServerTimestamp(serverTimeOffset);
+  const vehiclePath = `rakeb/vehicles/${activeDateKey}/${vehicleId}`;
+
+  const updates: Record<string, unknown> = {
+    status: "full",
+    isFull: true,
+    markedFullAt: now,
+    markedFullBy: adminUid,
+    markedFullStationId: currentStationId,
+    nextStationId: "creativa",
+    updatedAt: now,
+    updatedBy: adminUid,
+  };
+
+  try {
+    const updatePayload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      updatePayload[`${vehiclePath}/${k}`] = v;
+    }
+    await TripRepository.atomicUpdate(db, updatePayload, "markVehicleFull", vehiclePath);
+
+    // Log audit entry
+    AuditService.log({
+      db,
+      adminUid,
+      action: "vehicle_marked_full",
+      tripDate: activeDateKey,
+      serverTimeOffset,
+      metadata: { vehicleId, stationId: currentStationId },
+      courseId,
+    });
+  } catch (err) {
+    if (err instanceof FirebaseTripError) {
+      logError({
+        operation: err.operation,
+        path: err.path,
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+        timestamp: Date.now(),
+      });
+    }
+    throw err;
+  }
+}
+
 export interface DepartStationParams {
   db: Database;
   vehicleId: string;
@@ -352,6 +418,7 @@ export interface DepartStationParams {
   serverTimeOffset: number;
   adminUid: string;
   activeDateKey: string;
+  isFull?: boolean;
 }
 
 export async function departStation(params: DepartStationParams): Promise<void> {
@@ -364,13 +431,14 @@ export async function departStation(params: DepartStationParams): Promise<void> 
     serverTimeOffset,
     adminUid,
     activeDateKey,
+    isFull = false,
   } = params;
   const now = getServerTimestamp(serverTimeOffset);
-  const targetNextStation = isFinalPickup ? "creativa" : nextStationId;
+  const targetNextStation = isFinalPickup || isFull ? "creativa" : nextStationId;
   const vehiclePath = `rakeb/vehicles/${activeDateKey}/${vehicleId}`;
   
   const updates: Record<string, unknown> = {
-    status: "running",
+    status: isFull ? "full" : "running",
     lastStationId: currentStationId,
     currentStationId: null,
     nextStationId: targetNextStation,

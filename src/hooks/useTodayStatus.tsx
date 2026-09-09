@@ -21,6 +21,7 @@ export interface DailyRecord {
   nationalId?: string;
   boarded?: boolean;
   isStaff?: boolean;
+  courseId?: string;
   customLocation?: { lat: number; lng: number; name?: string };
   updatedAt?: number;
   [key: string]: any;
@@ -46,49 +47,95 @@ interface TodayStatusContextValue {
 const TodayStatusContext = createContext<TodayStatusContextValue | null>(null);
 
 export function TodayStatusProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { activeDateKey, loaded: activeDateLoaded } = useActiveDate();
-  const { courseId } = useCourse();
+  const { courseId, courses } = useCourse();
   const [raw, setRaw] = useState<Record<string, any> | null>(null);
+  const [rawByCourse, setRawByCourse] = useState<Record<string, Record<string, any>>>({});
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Compute all courses to monitor for today's dailyStatus.
+  // Admins see all courses for shared-bus boarding; students only see their own course.
+  const courseIdsToListen = useMemo(() => {
+    if (!isAdmin) {
+      return [courseId || "default"];
+    }
+    const ids = new Set<string>(["default"]);
+    if (courseId) ids.add(courseId);
+    courses.forEach((c) => {
+      if (c.id) ids.add(c.id);
+    });
+    return Array.from(ids);
+  }, [isAdmin, courseId, courses]);
+
   useEffect(() => {
     if (!user || !activeDateLoaded) {
       setRaw(null);
+      setRawByCourse({});
       setLoaded(true);
       return;
     }
 
-    let unsub: (() => void) | undefined;
+    const unsubs: (() => void)[] = [];
+    let isCancelled = false;
 
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
       const { ref, onValue } = await import("firebase/database");
+      const db = getFirebaseDb();
 
-      const path = `rakeb/dailyStatus/${courseId}/${activeDateKey}`;
-      unsub = onValue(
-        ref(getFirebaseDb(), path),
-        (snap) => {
-          setRaw(snap.val());
-          setLoaded(true);
-          setError(null);
-        },
-        (err) => {
-          console.error("[TodayStatus] Listener error:", err);
-          setError(err);
-          setLoaded(true);
-        },
-      );
+      const courseDataMap: Record<string, Record<string, any>> = {};
+
+      if (courseIdsToListen.length === 0) {
+        setLoaded(true);
+        return;
+      }
+
+      courseIdsToListen.forEach((cId) => {
+        const path = `rakeb/dailyStatus/${cId}/${activeDateKey}`;
+        const unsub = onValue(
+          ref(db, path),
+          (snap) => {
+            if (isCancelled) return;
+            const val = snap.val() || {};
+            courseDataMap[cId] = val;
+
+            // Merge all courses into one raw dictionary keyed by UID
+            const merged: Record<string, any> = {};
+            for (const [cKey, recordsObj] of Object.entries(courseDataMap)) {
+              for (const [uid, rec] of Object.entries(recordsObj)) {
+                merged[uid] = { ...rec, courseId: rec.courseId || cKey };
+              }
+            }
+
+            setRawByCourse({ ...courseDataMap });
+            setRaw(merged);
+            setLoaded(true);
+            setError(null);
+          },
+          (err) => {
+            if (isCancelled) return;
+            console.error(`[TodayStatus] Listener error for ${cId}:`, err);
+            setError(err);
+            setLoaded(true);
+          },
+        );
+        unsubs.push(unsub);
+      });
     })().catch((err) => {
+      if (isCancelled) return;
       console.error("[TodayStatus] Init failed:", err);
       setError(err);
       setLoaded(true);
     });
 
-    return () => unsub?.();
-  }, [user, activeDateKey, activeDateLoaded, retryCount, courseId]);
+    return () => {
+      isCancelled = true;
+      unsubs.forEach((u) => u());
+    };
+  }, [user, isAdmin, activeDateKey, activeDateLoaded, retryCount, courseIdsToListen]);
 
   const retry = useCallback(() => {
     setError(null);
@@ -110,7 +157,9 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
       const studentRecords = users
         .filter((u) => u.role === "student")
         .map((u) => {
-          const explicitRecord = records.find((r) => r.id === u.uid);
+          const studentCourse = u.courseId || "default";
+          // Lookup explicit daily record from the student's OWN course first
+          const explicitRecord = rawByCourse[studentCourse]?.[u.uid] || raw?.[u.uid];
           const defaultStation = u.defaultStation || "unknown";
           const defaultStatus = "riding";
 
@@ -123,6 +172,7 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
             nationalId: u.nationalId || (explicitRecord as any)?.nationalId || "",
             boarded: Boolean(explicitRecord?.boarded),
             isStaff: false,
+            courseId: studentCourse,
             customLocation: explicitRecord?.customLocation || u.customLocation,
             updatedAt: explicitRecord?.updatedAt,
           };
@@ -148,6 +198,7 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
             nationalId: adminUser?.nationalId || (r as any)?.nationalId || "",
             boarded: Boolean(r.boarded),
             isStaff: true,
+            courseId: r.courseId,
             customLocation: r.customLocation || adminUser?.customLocation,
             updatedAt: r.updatedAt,
           };
@@ -155,7 +206,7 @@ export function TodayStatusProvider({ children }: { children: ReactNode }) {
 
       return [...studentRecords, ...staffRecords];
     },
-    [records],
+    [records, rawByCourse, raw],
   );
 
   const value = useMemo<TodayStatusContextValue>(

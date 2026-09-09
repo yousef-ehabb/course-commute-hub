@@ -16,3 +16,11 @@ export function filterStudentsByCourse<T extends { role?: string; courseId?: str
       (u.courseId === courseId || (!u.courseId && courseId === "default")),
   );
 }
+
+/**
+ * Filter a list of user profiles to include all students across all courses.
+ * Excludes admins.
+ */
+export function getAllStudents<T extends { role?: string }>(users: T[]): T[] {
+  return users.filter((u) => u.role !== "admin");
+}

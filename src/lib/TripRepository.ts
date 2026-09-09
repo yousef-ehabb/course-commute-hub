@@ -192,12 +192,33 @@ export class TripRepository {
     const { ref, get } = await import("firebase/database");
 
     try {
-      const snap = await get(ref(db, `rakeb/dailyStatus/${courseId}/${dateKey}`));
-      return snap.exists() ? (snap.val() as Record<string, unknown>) : null;
+      // Read across all courses so trip completion includes students from all courses
+      const coursesSnap = await get(ref(db, "rakeb/courses"));
+      const courseIds = new Set<string>(["default"]);
+      if (courseId) courseIds.add(courseId);
+      if (coursesSnap.exists()) {
+        Object.keys(coursesSnap.val()).forEach((id) => courseIds.add(id));
+      }
+
+      const merged: Record<string, unknown> = {};
+      await Promise.all(
+        Array.from(courseIds).map(async (cId) => {
+          try {
+            const snap = await get(ref(db, `rakeb/dailyStatus/${cId}/${dateKey}`));
+            if (snap.exists()) {
+              Object.assign(merged, snap.val());
+            }
+          } catch (e) {
+            console.warn(`[TripRepository] Could not read dailyStatus for ${cId}:`, e);
+          }
+        }),
+      );
+
+      return Object.keys(merged).length > 0 ? merged : null;
     } catch (err) {
       throw new FirebaseTripError({
         code: extractFirebaseCode(err),
-        path: `rakeb/dailyStatus/${courseId}/${dateKey}`,
+        path: `rakeb/dailyStatus/*/${dateKey}`,
         operation: "readDailyStatusSnapshot",
         cause: err,
       });
@@ -564,9 +585,9 @@ export class TripRepository {
     studentId: string,
     vehicleId: string,
     adminUid: string,
-    courseId: string = "default",
+    studentCourseId: string = "default",
   ): Promise<{ success: boolean; error?: string }> {
-    const { ref, runTransaction, serverTimestamp, increment, update } = await import("firebase/database");
+    const { ref, runTransaction, serverTimestamp, increment, update, get } = await import("firebase/database");
     const recordRef = ref(db, `rakeb/boardingRecords/${activeDateKey}/${studentId}`);
 
     // 1. Transaction to claim boarding record (guards against UI double-tap)
@@ -597,8 +618,20 @@ export class TripRepository {
         [`rakeb/vehicles/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(1)
       });
 
-      // Synchronize back to dailyStatus so dashboard stats (stats.lazy.tsx) count boarded students correctly
-      const dailyPath = `rakeb/dailyStatus/${courseId}/${activeDateKey}/${studentId}`;
+      // Synchronize back to the student's actual course dailyStatus
+      let targetCourseId = studentCourseId;
+      if (!targetCourseId || targetCourseId === "default") {
+        try {
+          const userSnap = await get(ref(db, `rakeb/users/${studentId}/courseId`));
+          if (userSnap.exists() && userSnap.val()) {
+            targetCourseId = userSnap.val();
+          }
+        } catch {
+          // ignore fallback error
+        }
+      }
+
+      const dailyPath = `rakeb/dailyStatus/${targetCourseId || "default"}/${activeDateKey}/${studentId}`;
       try {
         await update(ref(db), { [`${dailyPath}/boarded`]: true });
       } catch (err) {
@@ -621,9 +654,9 @@ export class TripRepository {
     studentId: string,
     vehicleId: string,
     adminUid: string,
-    courseId: string = "default",
+    studentCourseId: string = "default",
   ): Promise<{ success: boolean; error?: string }> {
-    const { ref, runTransaction, serverTimestamp, increment, update } = await import("firebase/database");
+    const { ref, runTransaction, serverTimestamp, increment, update, get } = await import("firebase/database");
     const recordRef = ref(db, `rakeb/boardingRecords/${activeDateKey}/${studentId}`);
 
     // 1. Transaction to release boarding record
@@ -650,8 +683,20 @@ export class TripRepository {
         [`rakeb/vehicles/${activeDateKey}/${vehicleId}/occupiedSeats`]: increment(-1)
       });
 
-      // Synchronize back to dailyStatus so dashboard stats remain correct
-      const dailyPath = `rakeb/dailyStatus/${courseId}/${activeDateKey}/${studentId}`;
+      // Synchronize back to the student's actual course dailyStatus
+      let targetCourseId = studentCourseId;
+      if (!targetCourseId || targetCourseId === "default") {
+        try {
+          const userSnap = await get(ref(db, `rakeb/users/${studentId}/courseId`));
+          if (userSnap.exists() && userSnap.val()) {
+            targetCourseId = userSnap.val();
+          }
+        } catch {
+          // ignore fallback error
+        }
+      }
+
+      const dailyPath = `rakeb/dailyStatus/${targetCourseId || "default"}/${activeDateKey}/${studentId}`;
       try {
         await update(ref(db), { [`${dailyPath}/boarded`]: null });
       } catch (err) {

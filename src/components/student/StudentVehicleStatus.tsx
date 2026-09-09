@@ -89,6 +89,23 @@ export function StudentVehicleStatus({
 
   // ── Before Boarding / Vehicle Active ────────────────────────────────
 
+  const isVehicleFull = vehicle.status === "full" || Boolean(vehicle.isFull);
+
+  // Full vehicle (not boarded)
+  if (isVehicleFull) {
+    return (
+      <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5 flex items-center gap-2.5">
+        <Bus className="w-4 h-4 text-destructive animate-pulse shrink-0" strokeWidth={2} />
+        <div className="text-[13px] font-bold text-destructive flex items-center gap-1.5 flex-wrap">
+          <span>{vehicleLabel}:</span>
+          <span className="font-normal text-destructive/90">
+            الباص ممتلئ فعليًا • تم إغلاق الصعود في هذه المحطة
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // Waiting at a station
   if (vehicle.currentStationId) {
     return (

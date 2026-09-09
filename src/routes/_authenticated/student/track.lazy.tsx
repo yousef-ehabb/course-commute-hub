@@ -111,10 +111,14 @@ function TrackBusPage() {
   const timelineStatus = useMemo(() => {
     if (!selectedVehicle) return tripStatus;
     if (selectedVehicle.status === "ended") return "completed" as const;
-    if (selectedVehicle.status === "running" && selectedVehicle.currentStationId) {
+    const isRunningOrFull =
+      selectedVehicle.status === "running" ||
+      selectedVehicle.status === "full" ||
+      Boolean(selectedVehicle.isFull);
+    if (isRunningOrFull && selectedVehicle.currentStationId) {
       return "waiting_at_station" as const;
     }
-    if (selectedVehicle.status === "running") return "moving" as const;
+    if (isRunningOrFull) return "moving" as const;
     return "pending" as const;
   }, [selectedVehicle, tripStatus]);
 
@@ -196,6 +200,8 @@ function TrackBusPage() {
                 currentStationId={selectedVehicle.currentStationId || null}
                 nextStationId={selectedVehicle.nextStationId || null}
                 lastStationId={selectedVehicle.lastStationId || null}
+                isFull={selectedVehicle.status === "full" || Boolean(selectedVehicle.isFull)}
+                markedFullStationId={selectedVehicle.markedFullStationId || null}
               />
             </div>
           )}

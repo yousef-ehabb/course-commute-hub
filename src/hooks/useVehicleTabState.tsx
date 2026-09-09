@@ -49,15 +49,16 @@ interface UseVehicleTabStateResult {
 // ── Badge text ──────────────────────────────────────────────────────────
 
 function getBadgeText(state: VehicleTabState, vehicle: Vehicle): string {
+  const isVehicleFull = vehicle.status === "full" || Boolean(vehicle.isFull);
   switch (state) {
     case "boarded":
       return "أنت فيه";
     case "passed":
-      return "عدّى";
+      return isVehicleFull ? "ممتلئ" : "عدّى";
     case "ended":
       return "وصل";
     case "active": {
-      if (vehicle.status === "full") return "اكتمل";
+      if (isVehicleFull) return "ممتلئ";
       if (vehicle.currentStationId) return "في محطة";
       return "في الطريق";
     }
@@ -83,10 +84,14 @@ function stationIndex(stationId: string | null, stations: Station[]): number {
  * A vehicle is considered to have "passed" a station if its route progress
  * (lastStationId or currentStationId) is beyond the student's station index.
  *
- * - If the vehicle is currently AT the student's station → NOT passed yet
- *   (they might still board).
- * - If the vehicle's lastStationId is >= the student's station index,
- *   meaning it has departed FROM or BEYOND that station → PASSED.
+ * Special Full Bus Logic (Phase 4):
+ * - If a bus becomes FULL at Station X:
+ *   - Students downstream of Station X (> fullStationIdx) will be skipped,
+ *     so the bus is marked as passed/unavailable with the "الباص ممتلئ" message.
+ *   - Students AT Station X (=== fullStationIdx):
+ *     - If the bus is STILL at Station X (currentStationId === fullStationId),
+ *       it has NOT passed yet! Tab remains active so they see the full/closed status.
+ *     - Once the bus departs Station X, it has departed/passed.
  */
 function hasVehiclePassed(
   vehicle: Vehicle,
@@ -98,6 +103,28 @@ function hasVehiclePassed(
 
   const studentIdx = stationIndex(studentStationId, stations);
   if (studentIdx < 0) return false;
+
+  const isVehicleFull = vehicle.status === "full" || Boolean(vehicle.isFull);
+  const fullStationId =
+    vehicle.markedFullStationId ||
+    (isVehicleFull ? vehicle.currentStationId || vehicle.lastStationId : null);
+  const fullStationIdx = fullStationId ? stationIndex(fullStationId, stations) : -1;
+
+  if (isVehicleFull && fullStationIdx >= 0) {
+    // 1. Downstream stations: bus skips them completely -> passed/unavailable
+    if (studentIdx > fullStationIdx) {
+      return true;
+    }
+
+    // 2. Exact station where FULL was declared:
+    // If still waiting at this station, it has NOT passed yet.
+    // If departed, it has passed.
+    if (studentIdx === fullStationIdx) {
+      return vehicle.currentStationId !== fullStationId;
+    }
+
+    // 3. Upstream stations (< fullStationIdx): standard departure check applies below
+  }
 
   // If the vehicle has a lastStationId (it departed from somewhere),
   // check if that departure point is at or past the student's station

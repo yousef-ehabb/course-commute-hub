@@ -1,6 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { VehicleControls } from "@/components/admin/VehicleControls";
 import { StationTimeline } from "@/components/admin/StationTimeline";
 import { BoardingList } from "@/components/admin/BoardingList";
@@ -14,11 +15,13 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useActiveDate } from "@/contexts/ActiveDateContext";
 import { useCourse } from "@/contexts/CourseContext";
-import { filterStudentsByCourse } from "@/utils/courseFilter";
+import { getAllStudents } from "@/utils/courseFilter";
 import { getVehicleLabelById } from "@/utils/vehicleLabels";
 import { isStationSelected } from "@/utils/stationResolver";
-import { toast } from "sonner";
-import { Flag, CheckCircle2 } from "lucide-react";
+import { OperationalHeader } from "@/components/admin/OperationalHeader";
+import { OperationalBottomBar } from "@/components/admin/OperationalBottomBar";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Flag, CheckCircle2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LongPressButton } from "@/components/ui/LongPressButton";
 import {
@@ -38,6 +41,7 @@ import {
   departStation,
   arriveAtStation,
   startDay,
+  markVehicleFull,
   FirebaseTripError,
   getNextDateKey,
 } from "@/lib/tripService";
@@ -93,10 +97,13 @@ function TripsPage() {
   const { vehicles, totalCapacity, loaded: vehiclesLoaded } = useVehicles();
   const { recordsByStudent } = useBoardingRecords();
   const { activeDateKey, serverTimeOffset, loaded: activeDateLoaded } = useActiveDate();
-  const { courseId } = useCourse();
+  const { courseId, courses } = useCourse();
   const { user, profile } = useAuth();
 
+  const activeCourses = useMemo(() => courses.filter(c => c.status === "active"), [courses]);
+
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all");
 
   const myVehicles = vehicles.filter((v) => v.assignedCoordinatorId === user?.uid);
   const myVehicle = myVehicles[0];
@@ -132,7 +139,8 @@ function TripsPage() {
         const val = snap.val();
         if (val) {
           const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
-          setUsers(filterStudentsByCourse(allUsers, courseId));
+          // Cross-course boarding: include all students across all courses
+          setUsers(getAllStudents(allUsers));
         } else {
           setUsers([]);
         }
@@ -147,9 +155,17 @@ function TripsPage() {
     };
   }, [activeDateKey, courseId]);
 
+  const activeUsers = useMemo(() => {
+    const activeCourseIds = new Set(activeCourses.map(c => c.id));
+    return users.filter(u => {
+      const cId = u.courseId || "default";
+      return activeCourseIds.has(cId);
+    });
+  }, [users, activeCourses]);
+
   const passengers = useMemo<DailyRecord[]>(() => {
-    return getAllStudentsStatus(users);
-  }, [getAllStudentsStatus, users]);
+    return getAllStudentsStatus(activeUsers);
+  }, [getAllStudentsStatus, activeUsers]);
 
   const confirmedPassengers = useMemo(
     () => passengers.filter((p) => p.status === "riding" && isStationSelected(p.station)),
@@ -363,6 +379,41 @@ function TripsPage() {
 
 
 
+  const [isMarkingFull, setIsMarkingFull] = useState(false);
+
+  const handleMarkFull = async () => {
+    if (!dbRefs || !displayedVehicle) return;
+
+    if (!isControllingDisplayed) {
+      toast.error("يرجى استلام المركبة أولاً لتتمكن من تغيير حالتها");
+      return;
+    }
+
+    if (!displayedVehicle.currentStationId) {
+      toast.error("يمكن تحديد امتلاء الباص فقط أثناء التواجد في محطة");
+      return;
+    }
+
+    setIsMarkingFull(true);
+    try {
+      await markVehicleFull({
+        db: dbRefs.db,
+        vehicleId: displayedVehicle.id,
+        currentStationId: displayedVehicle.currentStationId,
+        adminUid: user?.uid ?? "unknown",
+        serverTimeOffset,
+        activeDateKey,
+        courseId,
+      });
+
+      toast.warning("تم تأكيد امتلاء الباص — التوجه مباشرة إلى كرياتيفا");
+    } catch (e) {
+      handleTripError(e, "حدث خطأ أثناء تسجيل امتلاء الباص");
+    } finally {
+      setIsMarkingFull(false);
+    }
+  };
+
   const handleDepartStation = async () => {
     if (!dbRefs || !displayedVehicle) return;
 
@@ -376,8 +427,10 @@ function TripsPage() {
       return;
     }
 
+    const isVehicleFull =
+      displayedVehicle.status === "full" || Boolean(displayedVehicle.isFull);
     const currentIndex = stations.findIndex((s) => s.id === displayedVehicle.currentStationId);
-    const isLastPickupStation = currentIndex === stations.length - 1;
+    const isLastPickupStation = isVehicleFull || currentIndex === stations.length - 1;
 
     try {
       await departStation({
@@ -391,12 +444,15 @@ function TripsPage() {
         serverTimeOffset,
         adminUid: user?.uid ?? "unknown",
         activeDateKey,
+        isFull: isVehicleFull,
       });
 
       toast.success(
-        isLastPickupStation
-          ? "الباص يتحرك الآن نحو كرياتيفا (الوجهة النهائية)!"
-          : "الباص يتحرك الآن للنقطة التالية!",
+        isVehicleFull
+          ? "الباص ممتلئ — يتحرك الآن مباشرة نحو كرياتيفا!"
+          : isLastPickupStation
+            ? "الباص يتحرك الآن نحو كرياتيفا (الوجهة النهائية)!"
+            : "الباص يتحرك الآن للنقطة التالية!",
       );
     } catch (e) {
       handleTripError(e, "حدث خطأ أثناء مغادرة النقطة");
@@ -406,8 +462,12 @@ function TripsPage() {
   const handleArriveAtStation = async () => {
     if (!dbRefs || stations.length === 0 || !displayedVehicle || !isControllingDisplayed) return;
 
-    // Arriving at final destination Creativa
+    const isVehicleFull =
+      displayedVehicle.status === "full" || Boolean(displayedVehicle.isFull);
+
+    // Arriving at final destination Creativa (including when marked full)
     if (
+      isVehicleFull ||
       displayedVehicle.nextStationId === "creativa" ||
       (displayedVehicle.lastStationId === stations[stations.length - 1]?.id && !displayedVehicle.currentStationId)
     ) {
@@ -438,9 +498,20 @@ function TripsPage() {
     }
   };
 
+  const coursesMap = useMemo(() => {
+    const map: Record<string, string> = { default: "الكورس الأساسي" };
+    courses.forEach((c) => {
+      map[c.id] = c.name;
+    });
+    return map;
+  }, [courses]);
+
   const handleToggleBoarding = async (userId: string, currentBoardedState: boolean) => {
     if (!dbRefs || !displayedVehicle || !isControllingDisplayed) return;
     try {
+      const studentUser = users.find((u) => u.uid === userId || u.id === userId);
+      const studentCourseId = studentUser?.courseId || "default";
+
       if (currentBoardedState) {
         // They are boarded, so we unboard them
         await TripRepository.unboardStudent(
@@ -449,7 +520,7 @@ function TripsPage() {
           userId,
           displayedVehicle.id,
           user?.uid ?? "unknown",
-          courseId,
+          studentCourseId,
         );
       } else {
         // They are NOT boarded, so we board them
@@ -459,7 +530,7 @@ function TripsPage() {
           userId,
           displayedVehicle.id,
           user?.uid ?? "unknown",
-          courseId,
+          studentCourseId,
         );
       }
     } catch (e) {
@@ -467,25 +538,43 @@ function TripsPage() {
     }
   };
 
-  const isHeadingToCreativa =
-    nextStationId === "creativa" || lastStationId === stations[stations.length - 1]?.id;
+  const isVehicleFull = Boolean(
+    displayedVehicle &&
+      (displayedVehicle.status === "full" || displayedVehicle.isFull),
+  );
 
-  // Filter passengers by station for Live Boarding
+  const isHeadingToCreativa =
+    isVehicleFull ||
+    nextStationId === "creativa" ||
+    lastStationId === stations[stations.length - 1]?.id;
+
+  // Filter passengers by station for Live Boarding with optional course filter
   const getStationPassengers = (stationId: string) => {
     return passengers
-      .filter((p: any) => p.status === "riding" && p.station === stationId)
+      .filter((p: any) => {
+        if (p.status !== "riding" || p.station !== stationId) return false;
+        if (selectedCourseFilter !== "all") {
+          const studentCourse = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+          return studentCourse === selectedCourseFilter;
+        }
+        return true;
+      })
       .map((p: any) => {
         const record = recordsByStudent[p.id];
         const isBoarded = record?.status === "boarded";
         const vehicleName = isBoarded && record?.vehicleId
           ? getVehicleLabelById(record.vehicleId, vehicles)
           : undefined;
+        const studentCourse = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+        const courseName = coursesMap[studentCourse] || studentCourse;
         return {
           id: p.id,
           name: p.fullName || (p.isStaff ? "موظف" : "طالب"),
           phone: p.phone || "---",
           boarded: isBoarded,
           isStaff: p.isStaff,
+          courseId: studentCourse,
+          courseName,
           vehicleName,
           locationLink: p.customLocation
             ? `https://maps.google.com/?q=${p.customLocation.lat},${p.customLocation.lng}`
@@ -495,19 +584,30 @@ function TripsPage() {
   };
 
   const customLocationPassengers = passengers
-    .filter((p: any) => p.status === "riding" && p.station === "custom")
+    .filter((p: any) => {
+      if (p.status !== "riding" || p.station !== "custom") return false;
+      if (selectedCourseFilter !== "all") {
+        const studentCourse = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+        return studentCourse === selectedCourseFilter;
+      }
+      return true;
+    })
     .map((p: any) => {
       const record = recordsByStudent[p.id];
       const isBoarded = record?.status === "boarded";
       const vehicleName = isBoarded && record?.vehicleId
         ? getVehicleLabelById(record.vehicleId, vehicles)
         : undefined;
+      const studentCourse = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+      const courseName = coursesMap[studentCourse] || studentCourse;
       return {
         id: p.id,
         name: p.fullName || (p.isStaff ? "موظف" : "طالب"),
         phone: p.phone || "---",
         boarded: isBoarded,
         isStaff: p.isStaff,
+        courseId: studentCourse,
+        courseName,
         vehicleName,
         customLocationName: p.customLocation?.name,
         locationLink: p.customLocation
@@ -515,6 +615,52 @@ function TripsPage() {
           : undefined,
       };
     });
+
+  // Course distribution statistics for boarded passengers
+  const courseStats = useMemo(() => {
+    const stats: Record<string, { total: number; boarded: number; name: string }> = {};
+
+    activeCourses.forEach((c) => {
+      stats[c.id] = { total: 0, boarded: 0, name: c.name };
+    });
+
+    let totalBoarded = 0;
+    let totalRiding = 0;
+
+    passengers.forEach((p) => {
+      if (p.status === "riding" && isStationSelected(p.station)) {
+        totalRiding++;
+        const cId = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+        
+        const record = recordsByStudent[p.id];
+        const isBoarded = record?.status === "boarded" || p.boarded;
+
+        if (isBoarded) {
+          totalBoarded++;
+        }
+
+        if (stats[cId]) {
+          stats[cId].total++;
+          if (isBoarded) {
+            stats[cId].boarded++;
+          }
+        }
+      }
+    });
+
+    return {
+      totalRiding,
+      totalBoarded,
+      byCourse: Object.entries(stats)
+        .filter(([_, data]) => data.total > 0 || data.boarded > 0)
+        .map(([id, data]) => ({
+          courseId: id,
+          courseName: data.name,
+          total: data.total,
+          boarded: data.boarded,
+        })),
+    };
+  }, [passengers, users, recordsByStudent, activeCourses, coursesMap]);
 
   const customStudentMarkers = useMemo(() => {
     return passengers
@@ -527,6 +673,59 @@ function TripsPage() {
         lng: Number(p.customLocation.lng),
       }));
   }, [passengers]);
+
+  // Show trip is in pre-planning (pending) mode — "planning" is only relevant before trip starts
+  const showPlanningPanel = tripStatus === "pending";
+
+  const isOperationalMode = Boolean(
+    displayedVehicle &&
+      !showPlanningPanel &&
+      (displayedVehicle.status === "running" || displayedVehicle.status === "full"),
+  );
+
+  const currentStation = displayedVehicle?.currentStationId
+    ? stations.find((s) => s.id === displayedVehicle.currentStationId)
+    : null;
+  const currentStationName = currentStation?.name || null;
+
+  const nextStation = displayedVehicle?.nextStationId
+    ? displayedVehicle.nextStationId === "creativa"
+      ? { id: "creativa", name: "كرياتيفا" }
+      : stations.find((s) => s.id === displayedVehicle.nextStationId)
+    : null;
+  const nextStationName = nextStation?.name || null;
+
+  const currentStationIndex = displayedVehicle?.currentStationId
+    ? stations.findIndex((s) => s.id === displayedVehicle.currentStationId)
+    : -1;
+
+  const isLastStation = Boolean(
+    displayedVehicle?.currentStationId &&
+      currentStationIndex === stations.length - 1,
+  );
+
+  const stationProgress = useMemo(() => {
+    if (stations.length === 0) return null;
+    if (currentStationIndex >= 0) {
+      return { current: currentStationIndex + 1, total: stations.length };
+    }
+    if (displayedVehicle?.nextStationId) {
+      const nIdx = stations.findIndex((s) => s.id === displayedVehicle.nextStationId);
+      if (nIdx >= 0) {
+        return { current: nIdx + 1, total: stations.length };
+      }
+    }
+    return null;
+  }, [stations, currentStationIndex, displayedVehicle?.nextStationId]);
+
+  const activeStationPassengers = useMemo(() => {
+    if (!displayedVehicle?.currentStationId) return [];
+    return getStationPassengers(displayedVehicle.currentStationId);
+  }, [displayedVehicle?.currentStationId, passengers, selectedCourseFilter, recordsByStudent, coursesMap, getStationPassengers]);
+
+  const unboardedAtCurrentStation = useMemo(() => {
+    return activeStationPassengers.filter((p: any) => !p.boarded).length;
+  }, [activeStationPassengers]);
 
   if (stationsLoading) {
     return (
@@ -548,11 +747,8 @@ function TripsPage() {
     );
   }
 
-  // Show trip is in pre-planning (pending) mode — "planning" is only relevant before trip starts
-  const showPlanningPanel = tripStatus === "pending";
-
   return (
-    <div className="space-y-4 lg:space-y-5 pt-2 pb-20 relative">
+    <div className={`space-y-4 lg:space-y-5 pt-2 relative ${isOperationalMode ? "pb-36 lg:pb-16" : "pb-20"}`}>
       <div className="px-1">
         <h1 className="text-lg sm:text-xl font-bold text-foreground">إدارة الرحلة والتخطيط</h1>
         <p className="text-[12px] sm:text-[13px] text-muted-foreground mt-0.5">
@@ -560,8 +756,28 @@ function TripsPage() {
         </p>
       </div>
 
-      {/* Segmented Control for Mobile */}
-      {displayedVehicle && !showPlanningPanel && (
+      {/* Persistent Operational Header for Live Trip */}
+      {isOperationalMode && displayedVehicle && (
+        <div className="sticky top-14 z-20">
+          <OperationalHeader
+            vehicle={displayedVehicle}
+            vehicles={vehicles}
+            onSelectVehicle={setSelectedVehicleId}
+            currentStationName={currentStationName}
+            nextStationName={nextStationName}
+            stationProgress={stationProgress}
+            boardedCount={courseStats.totalBoarded}
+            totalPassengers={courseStats.totalRiding}
+            isControlling={isControllingDisplayed}
+            isMoving={!displayedVehicle.currentStationId}
+            isHeadingToCreativa={isHeadingToCreativa}
+            isFull={isVehicleFull}
+          />
+        </div>
+      )}
+
+      {/* Segmented Control for Mobile (Non-operational mode only) */}
+      {displayedVehicle && !showPlanningPanel && !isOperationalMode && (
         <div className="flex mb-5 border-b border-border/50 sticky top-16 z-30 bg-background/95 backdrop-blur-sm lg:hidden mx-[-16px] px-4 w-[calc(100%+32px)]">
           <button
             className={`flex-1 py-3.5 text-center font-bold text-sm relative transition-colors ${activeTab === "trip" ? "text-primary" : "text-muted-foreground hover:bg-muted/30"}`}
@@ -586,7 +802,7 @@ function TripsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div
-          className={`lg:col-span-1 space-y-5 ${activeTab !== "trip" ? "hidden lg:block" : "block"}`}
+          className={`lg:col-span-1 space-y-5 ${isOperationalMode ? "hidden lg:block" : (activeTab !== "trip" ? "hidden lg:block" : "block")}`}
         >
           {/* Vehicle Planning Panel — shown before trip starts */}
           {showPlanningPanel && (
@@ -638,7 +854,7 @@ function TripsPage() {
                 vehicle={displayedVehicle}
                 onTakeControl={handleStartTrip}
                 onReleaseControl={() => handleReleaseControl(displayedVehicle.id)}
-                onDepartStation={(displayedVehicle.currentStationId && isControllingDisplayed) ? handleDepartStation : undefined}
+                onDepartStation={(displayedVehicle.currentStationId && isControllingDisplayed && !isOperationalMode) ? handleDepartStation : undefined}
                 onEndVehicle={handleEndTrip}
                 endVehicleDisabled={isCompleting || !isControllingDisplayed}
                 endVehicleLoading={isCompleting}
@@ -654,20 +870,30 @@ function TripsPage() {
               </div>
 
               <StationTimeline
-                status={displayedVehicle.status === "running" ? (displayedVehicle.currentStationId ? "waiting_at_station" : "moving") : (displayedVehicle.status === "planned" ? "pending" : "completed")}
+                status={
+                  displayedVehicle.status === "running" || displayedVehicle.status === "full"
+                    ? displayedVehicle.currentStationId
+                      ? "waiting_at_station"
+                      : "moving"
+                    : displayedVehicle.status === "planned"
+                      ? "pending"
+                      : "completed"
+                }
                 currentStationId={displayedVehicle.currentStationId || null}
                 lastStationId={displayedVehicle.lastStationId || null}
                 nextStationId={displayedVehicle.nextStationId || null}
+                isFull={isVehicleFull}
+                markedFullStationId={displayedVehicle.markedFullStationId || null}
               />
             </>
           )}
         </div>
 
         <div
-          className={`lg:col-span-2 space-y-5 ${activeTab !== "passengers" ? "hidden lg:block" : "block"}`}
+          className={`lg:col-span-2 space-y-5 ${isOperationalMode ? "block" : (activeTab !== "passengers" ? "hidden lg:block" : "block")}`}
         >
           {!displayedVehicle || showPlanningPanel ? (
-            <TripSummary passengers={passengers} stations={stations} />
+            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} />
           ) : displayedVehicle.status === "running" || displayedVehicle.status === "full" ? (
             <motion.div
               className="space-y-5"
@@ -681,6 +907,130 @@ function TripsPage() {
                 }
               }}
             >
+              {/* Mobile Context: Collapsible Map & Timeline (Operational Mode only) */}
+              {isOperationalMode && displayedVehicle && (
+                <div className="lg:hidden">
+                  <Collapsible defaultOpen={true} className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between p-3 bg-muted/20 border-b border-border/50">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                        <span>🗺️</span> خريطة ومسار الرحلة
+                      </span>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1">
+                          عرض / إخفاء
+                          <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200" />
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent className="p-3 space-y-3">
+                      <div className="h-[170px] rounded-xl overflow-hidden border border-border/50 relative z-0">
+                        <AdminStationsMap
+                          stations={stations}
+                          customLocationMarkers={customStudentMarkers}
+                          activeStationId={displayedVehicle.currentStationId || displayedVehicle.nextStationId}
+                        />
+                      </div>
+                      <StationTimeline
+                        status={
+                          displayedVehicle.status === "running" || displayedVehicle.status === "full"
+                            ? displayedVehicle.currentStationId
+                              ? "waiting_at_station"
+                              : "moving"
+                            : displayedVehicle.status === "planned"
+                              ? "pending"
+                              : "completed"
+                        }
+                        currentStationId={displayedVehicle.currentStationId || null}
+                        lastStationId={displayedVehicle.lastStationId || null}
+                        nextStationId={displayedVehicle.nextStationId || null}
+                        isFull={isVehicleFull}
+                        markedFullStationId={displayedVehicle.markedFullStationId || null}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              )}
+
+              {/* Course Distribution & Filter Bar */}
+              <motion.div
+                initial={mounted ? false : "hidden"}
+                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                className="bg-card rounded-2xl p-4 sm:p-5 shadow-card border border-border/60 space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-sm font-bold text-foreground">
+                      🚍 ركاب الحافلة المشتركة
+                    </span>
+                    <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                      صعد: {courseStats.totalBoarded} / {courseStats.totalRiding}
+                    </span>
+                  </div>
+
+                  {/* Course Filter Dropdown */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <label htmlFor="course-filter-select" className="text-muted-foreground font-semibold shrink-0">
+                      تصفية العرض:
+                    </label>
+                    <select
+                      id="course-filter-select"
+                      value={selectedCourseFilter}
+                      onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                      className="bg-muted border border-border/80 text-foreground rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                    >
+                      <option value="all">جميع الكورسات النشطة (افتراضي)</option>
+                      {activeCourses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Course Distribution Pills */}
+                {courseStats.byCourse.length > 0 && (
+                  <div className="flex gap-1.5 pt-2 border-t border-border/40 items-center overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-nowrap sm:flex-wrap">
+                    <span className="text-[11px] font-semibold text-muted-foreground ml-1 shrink-0">
+                      توزيع الصعود:
+                    </span>
+                    {courseStats.byCourse.map((c) => (
+                      <button
+                        key={c.courseId}
+                        type="button"
+                        onClick={() =>
+                          setSelectedCourseFilter(
+                            selectedCourseFilter === c.courseId ? "all" : c.courseId,
+                          )
+                        }
+                        className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 ${
+                          selectedCourseFilter === c.courseId
+                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "bg-muted/60 hover:bg-muted text-foreground border border-border/40"
+                        }`}
+                      >
+                        <span>📚 {c.courseName}:</span>
+                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                          {c.boarded}
+                        </span>
+                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground/80 text-[11px]" : "text-muted-foreground text-[11px]"}>
+                          / {c.total}
+                        </span>
+                      </button>
+                    ))}
+                    {selectedCourseFilter !== "all" && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCourseFilter("all")}
+                        className="text-[11px] text-primary hover:underline font-semibold mr-1 shrink-0"
+                      >
+                        إعادة ضبط (عرض الكل)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+
               {!displayedVehicle.currentStationId && (
                 <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="bg-card rounded-2xl p-8 shadow-card flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 animate-bounce">
@@ -721,7 +1071,8 @@ function TripsPage() {
                 if (sp.length === 0 && displayedVehicle.currentStationId !== station.id) return null;
 
                 const isActiveStation =
-                  displayedVehicle.currentStationId === station.id && displayedVehicle.status === "running";
+                  displayedVehicle.currentStationId === station.id &&
+                  (displayedVehicle.status === "running" || displayedVehicle.status === "full");
                 return (
                   <motion.div
                     key={station.id}
@@ -729,7 +1080,7 @@ function TripsPage() {
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     className={
                       isActiveStation
-                        ? "sticky top-32 z-20 ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl bg-card shadow-lg"
+                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl bg-card shadow-lg"
                         : "opacity-80 hover:opacity-100 transition-opacity"
                     }
                   >
@@ -738,10 +1089,11 @@ function TripsPage() {
                       passengers={sp}
                       onConfirmBoarding={(id) => {
                         const p = sp.find((x: any) => x.id === id);
-                        if (p) handleToggleBoarding(p.id, p.boarded);
+                        if (p) return handleToggleBoarding(p.id, p.boarded);
                       }}
-                      onDepartStation={(isActiveStation && isControllingDisplayed) ? handleDepartStation : undefined}
+                      onDepartStation={(isActiveStation && isControllingDisplayed && !isOperationalMode) ? handleDepartStation : undefined}
                       isLastStation={station.id === stations[stations.length - 1]?.id}
+                      isFull={isVehicleFull}
                     />
                   </motion.div>
                 );
@@ -754,10 +1106,11 @@ function TripsPage() {
                     passengers={customLocationPassengers}
                     onConfirmBoarding={(id) => {
                       const p = customLocationPassengers.find((x: any) => x.id === id);
-                      if (p) handleToggleBoarding(p.id, p.boarded);
+                      if (p) return handleToggleBoarding(p.id, p.boarded);
                     }}
                     onDepartStation={undefined}
                     isLastStation={false}
+                    isFull={isVehicleFull}
                   />
                 </motion.div>
               )}
@@ -775,10 +1128,31 @@ function TripsPage() {
               </div>
             </div>
           ) : (
-            <TripSummary passengers={passengers} stations={stations} />
+            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} />
           )}
         </div>
       </div>
+
+      {/* Persistent Operational Bottom Action Bar */}
+      {isOperationalMode && displayedVehicle && (
+        <OperationalBottomBar
+          vehicle={displayedVehicle}
+          isControlling={isControllingDisplayed}
+          currentStationId={displayedVehicle.currentStationId || null}
+          currentStationName={currentStationName}
+          nextStationId={displayedVehicle.nextStationId || null}
+          nextStationName={nextStationName}
+          isLastStation={isLastStation}
+          isHeadingToCreativa={isHeadingToCreativa}
+          unboardedCountAtCurrentStation={unboardedAtCurrentStation}
+          onDepartStation={handleDepartStation}
+          onArriveAtStation={handleArriveAtStation}
+          isCompleting={isCompleting}
+          isFull={isVehicleFull}
+          onMarkFull={handleMarkFull}
+          isMarkingFull={isMarkingFull}
+        />
+      )}
 
       <AlertDialog open={showEndTripDialog} onOpenChange={setShowEndTripDialog}>
         <AlertDialogContent>
