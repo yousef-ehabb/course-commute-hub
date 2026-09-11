@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/contexts/CourseContext";
 import { filterStudentsByCourse } from "@/utils/courseFilter";
-import { Check, X, Search, CreditCard, Clock, AlertCircle, ShieldCheck, Banknote, User } from "lucide-react";
+import { Check, X, Search, CreditCard, Clock, ShieldCheck, Banknote, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: AdminPaymentsPage,
@@ -29,6 +29,7 @@ type PaymentRecord = {
   submittedAt?: number;
   rejectionReason?: string;
   verifiedAt?: number;
+  paymentMethod?: string;
 };
 
 function AdminPaymentsPage() {
@@ -228,60 +229,60 @@ function AdminPaymentsPage() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 pb-24">
+    <div className="space-y-5 pt-2 pb-12 w-full max-w-full min-w-0">
       {/* Header */}
-      <header className="w-full sticky top-0 z-10 bg-background/80 backdrop-blur-md shadow-xs flex items-center justify-between py-4 mb-4 -mx-4 px-4 md:mx-0 md:px-0">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
-            <CreditCard className="w-6 h-6 text-primary" />
-            مراجعة المدفوعات
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({courseId})
-          </p>
-        </div>
-      </header>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+          <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+          <span>مراجعة المدفوعات</span>
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({courseId})
+        </p>
+      </div>
 
       {/* Search Bar Section */}
-      <div className="relative w-full mb-4">
+      <div className="relative w-full">
         <input
-          className="w-full h-12 pr-11 pl-4 rounded-xl border border-border bg-card focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-foreground shadow-xs placeholder:text-muted-foreground"
+          className="w-full h-11 sm:h-12 rtl:pr-10 rtl:pl-4 ltr:pl-10 ltr:pr-4 rounded-xl border border-border bg-card focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs sm:text-sm text-foreground shadow-xs placeholder:text-muted-foreground"
           placeholder="ابحث بالاسم، الموبايل، أو الرقم القومي..."
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <div className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-muted-foreground">
+        <div className="absolute inset-y-0 rtl:right-3.5 ltr:left-3.5 flex items-center pointer-events-none text-muted-foreground">
           <Search className="w-4 h-4" />
         </div>
       </div>
 
       {/* Filter Chips Section */}
-      <div className="flex overflow-x-auto gap-2 mb-4 pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-        <FilterChip
-          label="الكل"
-          active={filterType === "all"}
-          onClick={() => setFilterType("all")}
-          count={studentsWithPayments.length}
-        />
-        <FilterChip
-          label="بانتظار المراجعة"
-          active={filterType === "submitted"}
-          onClick={() => setFilterType("submitted")}
-          count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_submitted").length}
-        />
-        <FilterChip
-          label="لم يتم الدفع"
-          active={filterType === "pending"}
-          onClick={() => setFilterType("pending")}
-          count={studentsWithPayments.filter((s) => s.paymentStatus === "pending_payment").length}
-        />
-        <FilterChip
-          label="مرفوض"
-          active={filterType === "rejected"}
-          onClick={() => setFilterType("rejected")}
-          count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_rejected").length}
-        />
+      <div className="w-full min-w-0 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="inline-flex gap-2 pb-1 pt-0.5 min-w-full sm:flex sm:flex-wrap">
+          <FilterChip
+            label="الكل"
+            active={filterType === "all"}
+            onClick={() => setFilterType("all")}
+            count={studentsWithPayments.length}
+          />
+          <FilterChip
+            label="بانتظار المراجعة"
+            active={filterType === "submitted"}
+            onClick={() => setFilterType("submitted")}
+            count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_submitted").length}
+          />
+          <FilterChip
+            label="لم يتم الدفع"
+            active={filterType === "pending"}
+            onClick={() => setFilterType("pending")}
+            count={studentsWithPayments.filter((s) => s.paymentStatus === "pending_payment").length}
+          />
+          <FilterChip
+            label="مرفوض"
+            active={filterType === "rejected"}
+            onClick={() => setFilterType("rejected")}
+            count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_rejected").length}
+          />
+        </div>
       </div>
 
       {/* Students List */}
@@ -290,12 +291,12 @@ function AdminPaymentsPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : filteredStudents.length === 0 ? (
-        <div className="text-center text-muted-foreground py-12 flex flex-col items-center justify-center gap-2 bg-card rounded-2xl border border-dashed border-border">
-          <Check className="w-10 h-10 text-emerald-500/50" />
+        <div className="text-center text-muted-foreground py-12 px-4 flex flex-col items-center justify-center gap-2 bg-card rounded-2xl border border-dashed border-border">
+          <Check className="w-9 h-9 text-emerald-500/60" />
           <p className="text-sm font-medium">لا يوجد طلاب بانتظار تفعيل الدفع</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           {filteredStudents.map((student) => {
             const isSubmitted = student.paymentStatus === "payment_submitted";
             const isPending = student.paymentStatus === "pending_payment";
@@ -306,75 +307,86 @@ function AdminPaymentsPage() {
                 key={student.uid}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-card p-4 sm:p-5 rounded-2xl shadow-xs border border-border/50 transition-all flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center"
+                className="bg-card p-4 sm:p-5 rounded-2xl shadow-card border border-border/60 transition-all flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center w-full min-w-0"
               >
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-foreground">{student.fullName}</h2>
+                <div className="flex flex-col gap-2 w-full min-w-0">
+                  {/* Name and Status Badge */}
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <h2 className="text-sm sm:text-base font-bold text-foreground truncate max-w-full">
+                      {student.fullName}
+                    </h2>
                     {isSubmitted && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
                         قيد المراجعة
                       </span>
                     )}
                     {isPending && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border/40">
+                      <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-muted text-muted-foreground border border-border/40 shrink-0">
                         لم يتم الدفع
                       </span>
                     )}
                     {isRejected && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                      <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
                         مرفوض
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                    <div className="flex items-center gap-1.5" dir="ltr">
+
+                  {/* Student Metadata Row */}
+                  <div className="flex items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground flex-wrap min-w-0">
+                    <div className="flex items-center gap-1 shrink-0" dir="ltr">
+                      <Phone className="w-3.5 h-3.5 text-muted-foreground/70" />
                       <span>{student.phone}</span>
                     </div>
                     {student.nationalId && (
-                      <div className="flex items-center gap-1.5" dir="ltr">
+                      <div className="flex items-center gap-1 shrink-0" dir="ltr">
                         <span className="font-mono">{student.nationalId}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 text-primary font-bold">
-                      <Banknote className="w-4 h-4" />
+                    <div className="flex items-center gap-1 text-primary font-bold shrink-0">
+                      <Banknote className="w-3.5 h-3.5" />
                       <span>المبلغ: {student.paymentAmount} ج.م</span>
                     </div>
                   </div>
+
+                  {/* Submission Timestamp */}
                   {(isSubmitted || isRejected) && student.paymentRecord?.submittedAt && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      وقت التقديم: {formatDate(student.paymentRecord?.submittedAt)}
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      <span>وقت التقديم: {formatDate(student.paymentRecord?.submittedAt)}</span>
                     </div>
                   )}
+
+                  {/* Rejection Reason */}
                   {isRejected && student.paymentRecord?.rejectionReason && (
-                    <div className="text-[11px] text-red-600 dark:text-red-400 mt-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                    <div className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-xl border border-destructive/20 break-words w-full mt-1">
                       <strong>سبب الرفض:</strong> {student.paymentRecord.rejectionReason}
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 justify-end mt-2 lg:mt-0">
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto shrink-0 pt-3 lg:pt-0 border-t border-border/40 lg:border-t-0">
                   {isSubmitted && (
                     <>
                       <Button
                         onClick={() => openRejectDialog(student.uid)}
                         variant="outline"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 gap-1"
+                        className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 gap-1.5 h-9 font-medium"
                         disabled={actionLoading}
                       >
                         <X className="w-4 h-4" />
-                        رفض
+                        <span>رفض</span>
                       </Button>
                       <Button
                         onClick={() => handleApprove(student.uid)}
                         size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 font-medium"
                         disabled={actionLoading}
                       >
                         <Check className="w-4 h-4" />
-                        قبول الدفع وتفعيل
+                        <span>قبول الدفع وتفعيل</span>
                       </Button>
                     </>
                   )}
@@ -384,11 +396,11 @@ function AdminPaymentsPage() {
                       onClick={() => handleManualActivate(student)}
                       variant="outline"
                       size="sm"
-                      className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                      className="w-full sm:w-auto gap-1.5 border-emerald-500/30 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30 h-9 font-medium"
                       disabled={actionLoading}
                     >
                       <ShieldCheck className="w-4 h-4" />
-                      تفعيل يدوي (دفع نقدي)
+                      <span>تفعيل يدوي (دفع نقدي)</span>
                     </Button>
                   )}
                 </div>
@@ -400,27 +412,30 @@ function AdminPaymentsPage() {
 
       {/* Reject Dialog */}
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>رفض الدفع</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent className="rounded-2xl max-w-[calc(100vw-2rem)] sm:max-w-lg p-5 sm:p-6">
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle className="text-base sm:text-lg">رفض الدفع</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm">
               يرجى توضيح سبب رفض الدفع. سيظهر هذا السبب للطالب ليتمكن من معالجته.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
+          <div className="py-3">
             <Input
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="مثال: صورة الإيصال غير واضحة..."
+              className="text-xs sm:text-sm h-10 rounded-xl"
               autoFocus
             />
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>إلغاء</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={actionLoading} className="w-full sm:w-auto rounded-xl">
+              إلغاء
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRejectSubmit}
               disabled={actionLoading || !rejectionReason.trim()}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl"
             >
               {actionLoading ? "جاري الحفظ..." : "تأكيد الرفض"}
             </AlertDialogAction>
@@ -445,14 +460,18 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 border flex items-center gap-2 ${
+      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 border flex items-center gap-1.5 sm:gap-2 shrink-0 ${
         active
           ? "bg-primary text-primary-foreground border-primary shadow-xs"
           : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
       }`}
     >
       <span>{label}</span>
-      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+      <span
+        className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+          active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+        }`}
+      >
         {count}
       </span>
     </button>
