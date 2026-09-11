@@ -17,7 +17,7 @@ import { useActiveDate } from "@/contexts/ActiveDateContext";
 import { useCourse } from "@/contexts/CourseContext";
 import { getAllStudents } from "@/utils/courseFilter";
 import { getVehicleLabelById } from "@/utils/vehicleLabels";
-import { isStationSelected } from "@/utils/stationResolver";
+import { isStationSelected, buildOperationalStations, type OperationalStation } from "@/utils/stationResolver";
 import { OperationalHeader } from "@/components/admin/OperationalHeader";
 import { OperationalBottomBar } from "@/components/admin/OperationalBottomBar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -85,7 +85,7 @@ function handleTripError(err: unknown, fallbackMessage: string) {
 // ---------------------------------------------------------------------------
 
 function TripsPage() {
-  const { stations, loading: stationsLoading } = useStations();
+  const { stations: currentCourseStations, allCourseStations, loading: stationsLoading } = useStations();
   const {
     status: tripStatus,
     currentStationId,
@@ -104,6 +104,16 @@ function TripsPage() {
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all");
+
+  const stations = useMemo<OperationalStation[]>(() => {
+    return buildOperationalStations({
+      selectedCourseId: courseId,
+      selectedCourseFilter,
+      activeCourses,
+      allCourseStations: allCourseStations || {},
+      primaryStations: currentCourseStations,
+    });
+  }, [courseId, selectedCourseFilter, activeCourses, allCourseStations, currentCourseStations]);
 
   const myVehicles = vehicles.filter((v) => v.assignedCoordinatorId === user?.uid);
   const myVehicle = myVehicles[0];
@@ -364,13 +374,17 @@ function TripsPage() {
   const handleStartDay = async () => {
     if (!dbRefs || !user) return;
     try {
-      await startDay({
-        db: dbRefs.db,
-        activeDateKey,
-        serverTimeOffset,
-        adminUid: user.uid,
-        courseId,
-      });
+      await Promise.all(
+        activeCourses.map((c) =>
+          startDay({
+            db: dbRefs.db,
+            activeDateKey,
+            serverTimeOffset,
+            adminUid: user.uid,
+            courseId: c.id,
+          }),
+        ),
+      );
       toast.success("تم بدء اليوم وتفعيل النظام للطلاب!");
     } catch (e) {
       handleTripError(e, "حدث خطأ أثناء بدء اليوم");
@@ -429,7 +443,11 @@ function TripsPage() {
 
     const isVehicleFull =
       displayedVehicle.status === "full" || Boolean(displayedVehicle.isFull);
-    const currentIndex = stations.findIndex((s) => s.id === displayedVehicle.currentStationId);
+    const currentIndex = stations.findIndex(
+      (s) =>
+        s.id === displayedVehicle.currentStationId ||
+        s.matchedIds?.includes(displayedVehicle.currentStationId!),
+    );
     const isLastPickupStation = isVehicleFull || currentIndex === stations.length - 1;
 
     try {
@@ -478,7 +496,11 @@ function TripsPage() {
     if (!displayedVehicle.nextStationId) return;
 
     try {
-      const nextIndex = stations.findIndex((s) => s.id === displayedVehicle.nextStationId);
+      const nextIndex = stations.findIndex(
+        (s) =>
+          s.id === displayedVehicle.nextStationId ||
+          s.matchedIds?.includes(displayedVehicle.nextStationId!),
+      );
       const isNextStationLastPickup = nextIndex === stations.length - 1;
 
       await arriveAtStation({
@@ -549,17 +571,30 @@ function TripsPage() {
     lastStationId === stations[stations.length - 1]?.id;
 
   // Filter passengers by station for Live Boarding with optional course filter
-  const getStationPassengers = (stationId: string) => {
+  const getStationPassengers = (stationOrId: OperationalStation | string) => {
+    let matchedIds: Set<string>;
+    if (typeof stationOrId === "string") {
+      const foundStation = stations.find(
+        (s) => s.id === stationOrId || s.matchedIds?.includes(stationOrId),
+      );
+      matchedIds = new Set(foundStation?.matchedIds || [stationOrId]);
+    } else {
+      matchedIds = new Set(stationOrId.matchedIds || [stationOrId.id]);
+    }
+
     return passengers
-      .filter((p: any) => {
-        if (p.status !== "riding" || p.station !== stationId) return false;
+      .filter((p: DailyRecord) => {
+        if (p.status !== "riding" || !matchedIds.has(p.station)) return false;
         if (selectedCourseFilter !== "all") {
-          const studentCourse = p.courseId || users.find((u) => u.uid === p.id || u.id === p.id)?.courseId || "default";
+          const studentCourse =
+            p.courseId ||
+            users.find((u) => u.uid === p.id || u.id === p.id)?.courseId ||
+            "default";
           return studentCourse === selectedCourseFilter;
         }
         return true;
       })
-      .map((p: any) => {
+      .map((p: DailyRecord) => {
         const record = recordsByStudent[p.id];
         const isBoarded = record?.status === "boarded";
         const vehicleName = isBoarded && record?.vehicleId
@@ -684,19 +719,31 @@ function TripsPage() {
   );
 
   const currentStation = displayedVehicle?.currentStationId
-    ? stations.find((s) => s.id === displayedVehicle.currentStationId)
+    ? stations.find(
+        (s) =>
+          s.id === displayedVehicle.currentStationId ||
+          s.matchedIds?.includes(displayedVehicle.currentStationId!),
+      )
     : null;
   const currentStationName = currentStation?.name || null;
 
   const nextStation = displayedVehicle?.nextStationId
     ? displayedVehicle.nextStationId === "creativa"
       ? { id: "creativa", name: "كرياتيفا" }
-      : stations.find((s) => s.id === displayedVehicle.nextStationId)
+      : stations.find(
+          (s) =>
+            s.id === displayedVehicle.nextStationId ||
+            s.matchedIds?.includes(displayedVehicle.nextStationId!),
+        )
     : null;
   const nextStationName = nextStation?.name || null;
 
   const currentStationIndex = displayedVehicle?.currentStationId
-    ? stations.findIndex((s) => s.id === displayedVehicle.currentStationId)
+    ? stations.findIndex(
+        (s) =>
+          s.id === displayedVehicle.currentStationId ||
+          s.matchedIds?.includes(displayedVehicle.currentStationId!),
+      )
     : -1;
 
   const isLastStation = Boolean(
@@ -710,7 +757,11 @@ function TripsPage() {
       return { current: currentStationIndex + 1, total: stations.length };
     }
     if (displayedVehicle?.nextStationId) {
-      const nIdx = stations.findIndex((s) => s.id === displayedVehicle.nextStationId);
+      const nIdx = stations.findIndex(
+        (s) =>
+          s.id === displayedVehicle.nextStationId ||
+          s.matchedIds?.includes(displayedVehicle.nextStationId!),
+      );
       if (nIdx >= 0) {
         return { current: nIdx + 1, total: stations.length };
       }
@@ -893,7 +944,7 @@ function TripsPage() {
           className={`lg:col-span-2 space-y-5 ${isOperationalMode ? "block" : (activeTab !== "passengers" ? "hidden lg:block" : "block")}`}
         >
           {!displayedVehicle || showPlanningPanel ? (
-            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} />
+            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} allCourseStations={allCourseStations} />
           ) : displayedVehicle.status === "running" || displayedVehicle.status === "full" ? (
             <motion.div
               className="space-y-5"
@@ -1066,12 +1117,17 @@ function TripsPage() {
               )}
 
               {stations.map((station, idx) => {
-                const sp = getStationPassengers(station.id);
+                const sp = getStationPassengers(station);
+                const isCurrentStation = Boolean(
+                  displayedVehicle.currentStationId &&
+                    (displayedVehicle.currentStationId === station.id ||
+                      station.matchedIds?.includes(displayedVehicle.currentStationId))
+                );
                 // Don't render empty stations unless it's the current active station
-                if (sp.length === 0 && displayedVehicle.currentStationId !== station.id) return null;
+                if (sp.length === 0 && !isCurrentStation) return null;
 
                 const isActiveStation =
-                  displayedVehicle.currentStationId === station.id &&
+                  isCurrentStation &&
                   (displayedVehicle.status === "running" || displayedVehicle.status === "full");
                 return (
                   <motion.div
@@ -1128,7 +1184,7 @@ function TripsPage() {
               </div>
             </div>
           ) : (
-            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} />
+            <TripSummary passengers={passengers} stations={stations} courses={activeCourses} allCourseStations={allCourseStations} />
           )}
         </div>
       </div>

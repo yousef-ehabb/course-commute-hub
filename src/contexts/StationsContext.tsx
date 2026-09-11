@@ -30,6 +30,8 @@ interface StationsContextType {
   error: string | null;
   retry: () => void;
   saveStations: (newStations: Station[]) => Promise<void>;
+  /** Map of all courses' stations keyed by courseId (for cross-course operational boarding) */
+  allCourseStations: Record<string, Station[]>;
 }
 
 export interface StationsProviderProps {
@@ -42,6 +44,7 @@ const StationsContext = createContext<StationsContextType | undefined>(undefined
 
 export function StationsProvider({ children, courseId }: StationsProviderProps) {
   const [stations, setStations] = useState<Station[]>([]);
+  const [allCourseStations, setAllCourseStations] = useState<Record<string, Station[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -58,6 +61,7 @@ export function StationsProvider({ children, courseId }: StationsProviderProps) 
   useEffect(() => {
     let isMounted = true;
     let unsub: (() => void) | undefined;
+    let unsubAll: (() => void) | undefined;
 
     setLoading(true);
     setError(null);
@@ -153,6 +157,28 @@ export function StationsProvider({ children, courseId }: StationsProviderProps) 
             setError(firebaseError.message || "فشل تحميل النقاط");
           },
         );
+        // Listen to all course stations at rakeb/stations for cross-course operational boarding
+        const allStationsRef = ref(db, "rakeb/stations");
+        unsubAll = onValue(
+          allStationsRef,
+          (snap) => {
+            if (!isMounted) return;
+            const val = snap.val();
+            const map: Record<string, Station[]> = {};
+            if (val && typeof val === "object") {
+              for (const [cKey, cVal] of Object.entries(val)) {
+                if (cVal && typeof cVal === "object") {
+                  const parsed: Station[] = Array.isArray(cVal) ? cVal : Object.values(cVal);
+                  map[cKey] = parsed;
+                }
+              }
+            }
+            setAllCourseStations(map);
+          },
+          (allErr) => {
+            console.warn("[StationsContext] All-stations listener error:", allErr);
+          },
+        );
       } catch (err) {
         console.error("Failed to init stations DB:", err);
         if (isMounted) {
@@ -167,6 +193,9 @@ export function StationsProvider({ children, courseId }: StationsProviderProps) 
       if (unsub) {
         console.log("[StationsContext] Stations listener detached");
         unsub();
+      }
+      if (unsubAll) {
+        unsubAll();
       }
     };
   }, [retryKey, user, courseId]);
@@ -195,17 +224,18 @@ export function StationsProvider({ children, courseId }: StationsProviderProps) 
       toast.error("فشل حفظ النقاط");
       throw saveError;
     }
-  }, [user]);
+  }, [user, courseId]);
 
   const value = useMemo<StationsContextType>(
     () => ({
       stations,
+      allCourseStations,
       loading,
       error,
       retry,
       saveStations,
     }),
-    [stations, loading, error, retry, saveStations],
+    [stations, allCourseStations, loading, error, retry, saveStations],
   );
 
   return <StationsContext.Provider value={value}>{children}</StationsContext.Provider>;

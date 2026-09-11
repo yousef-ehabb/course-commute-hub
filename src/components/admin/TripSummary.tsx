@@ -2,16 +2,18 @@ import { Users, MapPin, ChevronDown, ChevronUp, User } from "lucide-react";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DailyRecord } from "@/hooks/useTodayStatus";
-import { isStationSelected } from "@/utils/stationResolver";
+import { isStationSelected, areStationsEquivalent } from "@/utils/stationResolver";
+import type { Station } from "@/contexts/StationsContext";
 import { cn } from "@/lib/utils";
 
 interface TripSummaryProps {
   passengers: DailyRecord[];
-  stations: Array<{ id: string; name: string }>;
+  stations: Array<{ id: string; name: string; matchedIds?: string[]; latitude?: number; longitude?: number }>;
   courses?: Array<{ id: string; name: string }>;
+  allCourseStations?: Record<string, Station[]>;
 }
 
-export function TripSummary({ passengers, stations, courses }: TripSummaryProps) {
+export function TripSummary({ passengers, stations, courses, allCourseStations }: TripSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedStations, setExpandedStations] = useState<Record<string, boolean>>({});
 
@@ -31,22 +33,52 @@ export function TripSummary({ passengers, stations, courses }: TripSummaryProps)
   // Calculate total riding passengers
   const totalPassengers = ridingPassengers.length;
 
-  // Group passengers by station
+  // Group passengers by station (resolving aliased cross-course station IDs)
   const stationPassengers = useMemo(() => {
     const grouped: Record<string, DailyRecord[]> = {};
-    ridingPassengers.forEach((p) => {
-      const sId = p.station;
-      if (!grouped[sId]) {
-        grouped[sId] = [];
+    const idToPrimaryStationId: Record<string, string> = {};
+
+    stations.forEach((s) => {
+      idToPrimaryStationId[s.id] = s.id;
+      if (s.matchedIds) {
+        s.matchedIds.forEach((mId) => {
+          idToPrimaryStationId[mId] = s.id;
+        });
       }
-      grouped[sId].push(p);
+    });
+
+    ridingPassengers.forEach((p) => {
+      let targetStationId =
+        p.station === "custom" ? "custom" : idToPrimaryStationId[p.station];
+
+      // Fallback: resolve student -> student.courseId -> course station -> equivalent operational station
+      if (!targetStationId && p.station !== "custom" && allCourseStations) {
+        const studentCourse = p.courseId || "default";
+        const studentCourseStations = allCourseStations[studentCourse] || [];
+        const studentStationObj = studentCourseStations.find((s) => s.id === p.station);
+        if (studentStationObj) {
+          const matched = stations.find((s) => areStationsEquivalent(s, studentStationObj));
+          if (matched) {
+            targetStationId = matched.id;
+          }
+        }
+      }
+
+      if (!targetStationId) {
+        targetStationId = p.station;
+      }
+
+      if (!grouped[targetStationId]) {
+        grouped[targetStationId] = [];
+      }
+      grouped[targetStationId].push(p);
     });
     // Sort students alphabetically within each station for clean UX
     Object.values(grouped).forEach((list) => {
       list.sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "", "ar"));
     });
     return grouped;
-  }, [ridingPassengers]);
+  }, [ridingPassengers, stations, allCourseStations]);
 
   // Group by course
   const courseCounts = useMemo(() => {
