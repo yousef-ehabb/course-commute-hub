@@ -553,7 +553,7 @@ function RegisterPage() {
     );
   }
 
-  if (accountStatus === "active") {
+  if (accountStatus === "active" && step <= 1) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-8">
         <div className="mb-6 w-full max-w-sm flex justify-center">
