@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Bus, MapPin, Users, Navigation, ChevronDown } from "lucide-react";
+import { Bus, MapPin, Users, Navigation, Lock } from "lucide-react";
 import type { Vehicle } from "@/types";
 import { VEHICLE_DEFAULTS } from "@/types";
 
@@ -32,7 +32,7 @@ export function OperationalHeader({
   isHeadingToCreativa,
   isFull = false,
 }: OperationalHeaderProps) {
-  const defaults = VEHICLE_DEFAULTS[vehicle.type] || { emoji: "🚐", labelAr: "مركبة" };
+  const defaults = VEHICLE_DEFAULTS[vehicle.type] || { labelAr: "مركبة" };
   const isVehicleFull = isFull || vehicle.status === "full" || Boolean(vehicle.isFull);
 
   const vehicleLabel = useMemo(() => {
@@ -42,52 +42,32 @@ export function OperationalHeader({
   }, [vehicles, vehicle.id, defaults.labelAr]);
 
   return (
-    <div className="bg-card/95 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-border shadow-card space-y-2.5">
-      {/* Top Row: Vehicle Info & Switcher + Live Status */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className="bg-card/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3.5 border border-border shadow-card space-y-2 sm:space-y-2.5 transition-all">
+      {/* Top Row: Vehicle Identity, Coordinator & Live Status */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
-            {defaults.emoji}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Bus className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-foreground truncate">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-xs sm:text-sm text-foreground truncate">
                 {vehicleLabel}
               </span>
               {vehicle.licensePlate && (
-                <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50 font-mono">
+                <span className="text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50 font-mono">
                   {vehicle.licensePlate}
                 </span>
               )}
-              {/* Vehicle switcher dropdown if multiple vehicles exist */}
-              {vehicles.length > 1 && onSelectVehicle && (
-                <div className="relative inline-block">
-                  <select
-                    value={vehicle.id}
-                    onChange={(e) => onSelectVehicle(e.target.value)}
-                    className="bg-muted/80 hover:bg-muted border border-border/80 text-foreground text-[11px] font-semibold rounded-lg px-2 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-                    title="تبديل المركبة المعروضة"
-                  >
-                    {vehicles.map((v, i) => {
-                      const vDefs = VEHICLE_DEFAULTS[v.type] || { labelAr: "مركبة" };
-                      return (
-                        <option key={v.id} value={v.id}>
-                          {vDefs.labelAr} {i + 1} {v.licensePlate ? `(${v.licensePlate})` : ""}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+            <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
               {isControlling ? (
                 <span className="text-primary font-semibold flex items-center gap-1">
                   <Navigation className="w-3 h-3" />
                   أنت القائد
                 </span>
               ) : (
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground truncate">
                   متابعة: {vehicle.assignedCoordinatorName || "منسق آخر"}
                 </span>
               )}
@@ -95,34 +75,64 @@ export function OperationalHeader({
           </div>
         </div>
 
-        {/* Status Chip */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Live Status Pill */}
+        <div className="shrink-0">
           {isVehicleFull ? (
-            <span className="bg-destructive/15 text-destructive border border-destructive/30 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse"></span>
-              🔴 ممتلئ فعليًا
+            <span className="bg-destructive/15 text-destructive border border-destructive/30 px-2 sm:px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold flex items-center gap-1.5">
+              <Lock className="w-3 h-3 shrink-0" />
+              ممتلئ فعليًا
             </span>
           ) : isMoving ? (
-            <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-2 sm:px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               {isHeadingToCreativa ? "في الطريق لكرياتيفا" : "في الطريق"}
             </span>
           ) : (
-            <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-              صعود الركاب بالنقطة
+            <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 px-2 sm:px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              صعود الركاب
             </span>
           )}
         </div>
       </div>
 
-      {/* Bottom Row: Current Station & Station Progress + Passenger Count */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-border/40 text-xs">
-        {/* Station Indicator */}
+      {/* Multi-bus Horizontal Selector Pills (Shown only if multiple vehicles exist) */}
+      {vehicles.length > 1 && onSelectVehicle && (
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <span className="text-[10px] text-muted-foreground font-semibold shrink-0">المركبة:</span>
+          {vehicles.map((v, i) => {
+            const vDefs = VEHICLE_DEFAULTS[v.type] || { labelAr: "مركبة" };
+            const isSelected = v.id === vehicle.id;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => onSelectVehicle(v.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/40"
+                    : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50"
+                }`}
+              >
+                <Bus className="w-3 h-3 shrink-0" />
+                <span>{vDefs.labelAr} {i + 1}</span>
+                {v.status === "full" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Station Context Banner */}
+      <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-muted/40 rounded-xl border border-border/50 text-xs">
         <div className="flex items-center gap-1.5 min-w-0">
           <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="text-muted-foreground font-medium shrink-0">الموقع الحالي:</span>
-          <span className="font-bold text-foreground truncate">
+          <span className="text-muted-foreground font-medium shrink-0 text-[11px]">
+            {isMoving ? "المسار:" : "المحطة الحالية:"}
+          </span>
+          <span className="font-bold text-foreground truncate text-xs sm:text-sm">
             {isVehicleFull
               ? isMoving
                 ? "متجه مباشرة إلى Creativa (تم تخطي باقي المحطات)"
@@ -133,30 +143,36 @@ export function OperationalHeader({
                   : `نحو: ${nextStationName || "المحطة التالية"}`
                 : currentStationName || "نقطة التجمع"}
           </span>
-          {stationProgress && !isVehicleFull && (
-            <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-md text-[11px] shrink-0 mr-1">
-              {stationProgress.current} / {stationProgress.total}
-            </span>
-          )}
         </div>
 
-        {/* Boarding Counts & Capacity */}
-        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-          <div className="flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg">
-            <Users className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground font-medium text-[11px]">صعد:</span>
-            <span className="font-bold text-foreground">
-              {boardedCount} / {totalPassengers}
-            </span>
-          </div>
+        {stationProgress && !isVehicleFull && (
+          <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] shrink-0">
+            {stationProgress.current} / {stationProgress.total}
+          </span>
+        )}
+      </div>
 
-          <div className="flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg">
-            <Bus className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground font-medium text-[11px]">الحمولة:</span>
-            <span className="font-bold text-foreground">
-              {vehicle.occupiedSeats} / {vehicle.capacity}
+      {/* Quick Stats: Boarded + Capacity */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center justify-center gap-1.5 bg-muted/60 px-2 sm:px-2.5 py-1.5 rounded-lg border border-border/40">
+          <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="text-muted-foreground font-medium text-[11px]">صعد:</span>
+          <span className="font-bold text-foreground">
+            {boardedCount} / {totalPassengers}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-center gap-1.5 bg-muted/60 px-2 sm:px-2.5 py-1.5 rounded-lg border border-border/40">
+          <Bus className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="text-muted-foreground font-medium text-[11px]">الحمولة:</span>
+          <span className="font-bold text-foreground">
+            {vehicle.occupiedSeats} / {vehicle.capacity}
+          </span>
+          {isVehicleFull && (
+            <span className="text-[10px] text-destructive font-bold mr-0.5">
+              (مكتمل)
             </span>
-          </div>
+          )}
         </div>
       </div>
     </div>

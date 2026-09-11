@@ -79,7 +79,7 @@ export default function AdminStationsMap({
         <Marker key={clm.id} position={[clm.lat, clm.lng]}>
           <Popup className="font-cairo">
             <div className="text-right rtl p-1">
-              <div className="text-[11px] font-bold text-primary mb-1">📍 موقع مخصص لانتظار الطالب</div>
+              <div className="text-[11px] font-bold text-primary mb-1">موقع مخصص لانتظار الطالب</div>
               <div className="font-bold text-base text-gray-900 mb-0.5">{clm.studentName}</div>
               <div className="text-xs font-semibold text-gray-600 mb-2">الموقع: {clm.locationName}</div>
               <a
@@ -88,7 +88,7 @@ export default function AdminStationsMap({
                 rel="noreferrer"
                 className="inline-block text-xs font-bold text-white bg-primary px-3 py-1.5 rounded-lg shadow-sm hover:opacity-90 transition-opacity"
               >
-                🗺️ التوجه إلى الموقع
+                التوجه إلى الموقع
               </a>
             </div>
           </Popup>

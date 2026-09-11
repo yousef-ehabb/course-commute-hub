@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/admin/trips")({
+  validateSearch: (search: Record<string, unknown>): { vehicleId?: string } => ({
+    ...(typeof search.vehicleId === "string" ? { vehicleId: search.vehicleId } : {}),
+  }),
   pendingComponent: () => (
     <div className="space-y-6 pt-4 pb-24">
       <div>

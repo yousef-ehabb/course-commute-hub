@@ -1,5 +1,5 @@
 import { useCourse } from "@/contexts/CourseContext";
-import { Layers, Check, ChevronDown } from "lucide-react";
+import { Layers, Check, ChevronDown, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,7 +79,8 @@ export function CourseSwitcher() {
             to="/admin/settings"
             className="flex items-center justify-center gap-1.5 text-center text-xs font-bold text-primary py-2 rounded-xl hover:bg-primary/10 transition-colors"
           >
-            ⚙️ إدارة وإنشاء الكورسات
+            <Settings className="w-3.5 h-3.5 shrink-0" />
+            <span>إدارة وإنشاء الكورسات</span>
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

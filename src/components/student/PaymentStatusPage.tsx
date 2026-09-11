@@ -71,7 +71,8 @@ export function PaymentStatusPage() {
         status: "submitted",
         paymentMethod: selectedMethod || "unknown",
         submittedAt: now,
-        createdAt: now, // For initial creation, will be preserved by rules if already exists
+        createdAt: now,
+        ...(rejectionReason ? { previousRejectionReason: rejectionReason, resubmittedAt: now } : {}),
       };
       updates[`rakeb/users/${user.uid}/paymentStatus`] = "payment_submitted";
 

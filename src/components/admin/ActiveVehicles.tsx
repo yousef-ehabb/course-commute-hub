@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Vehicle, VEHICLE_DEFAULTS } from "../../types";
 import { Button } from "../ui/button";
-import { Loader2, Navigation, AlertCircle } from "lucide-react";
+import { Loader2, Navigation, AlertCircle, Bus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,7 +103,7 @@ export function ActiveVehicles({
               const isControlledByOther =
                 vehicle.assignedCoordinatorId && !isControlledByMe;
               
-              const defaults = VEHICLE_DEFAULTS[vehicle.type] || { emoji: "🚐", labelAr: "مركبة" };
+              const defaults = VEHICLE_DEFAULTS[vehicle.type] || { labelAr: "مركبة" };
               
               const isLoading =
                 loadingAction === `take-${vehicle.id}` ||
@@ -124,8 +124,8 @@ export function ActiveVehicles({
                   } gap-4`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl">
-                      {defaults.emoji}
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Bus className="w-5 h-5 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground flex items-center gap-2">

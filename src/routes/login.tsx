@@ -164,11 +164,18 @@ function LoginPage() {
               <div className="mt-0.5 h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
                 <Archive className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="space-y-1.5 min-w-0">
+              <div className="space-y-1.5 min-w-0 flex-1">
                 <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">انتهى الكورس السابق</h3>
                 <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
                   أهلاً <strong>{archivedProfile.profile.fullName}</strong>، كورسك السابق انتهى. للاستمرار، سجّل في كورس جديد وبياناتك محفوظة.
                 </p>
+                <div className="pt-2">
+                  <Link to="/register">
+                    <Button size="sm" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold">
+                      التسجيل في كورس جديد ✨
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

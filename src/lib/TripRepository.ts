@@ -473,6 +473,13 @@ export class TripRepository {
   /**
    * Take control of a vehicle for independent GPS tracking.
    * Uses runTransaction to prevent race conditions.
+   *
+   * @param force — When true, bypasses the 60-second stale-heartbeat restriction.
+   *   Used when an authorized admin/coordinator explicitly confirms takeover in the UI.
+   *   Authorization is still enforced server-side by Firebase security rules
+   *   (only admin role can write to vehicles).
+   *   NOTE: When force=true we do NOT set lastHeartbeatAt — that field only updates
+   *   when the new coordinator's device actually sends GPS/heartbeat telemetry.
    */
   static async takeControl(
     db: Database,
@@ -480,6 +487,7 @@ export class TripRepository {
     vehicleId: string,
     adminUid: string,
     adminName?: string,
+    force: boolean = false,
   ): Promise<{ success: boolean; error?: string }> {
     const { ref, runTransaction, get, serverTimestamp } = await import("firebase/database");
     const path = `rakeb/vehicles/${dateKey}/${vehicleId}`;
@@ -502,22 +510,27 @@ export class TripRepository {
 
         if (vehicle.assignedCoordinatorId) {
           if (vehicle.assignedCoordinatorId !== adminUid) {
-            // Already assigned to someone else. Check for staleness.
-            const lastActive = vehicle.lastHeartbeatAt || vehicle.assignedAt || 0;
-            if (estimatedServerTime - lastActive < STALE_TIMEOUT_MS) {
-              return undefined; // Still active, abort
+            if (!force) {
+              // Default behavior: check for staleness before allowing takeover
+              const lastActive = vehicle.lastHeartbeatAt || vehicle.assignedAt || 0;
+              if (estimatedServerTime - lastActive < STALE_TIMEOUT_MS) {
+                return undefined; // Still active, abort
+              }
             }
-            // Stale! We can claim it.
+            // force=true OR stale → allow takeover
           }
-          // Already assigned to us, just refresh
+          // Already assigned to us, just refresh assignedAt
         }
         
+        // Update ONLY ownership metadata — never fake a heartbeat
         vehicle.assignedCoordinatorId = adminUid;
         if (adminName) {
           vehicle.assignedCoordinatorName = adminName;
         }
         vehicle.assignedAt = serverTimestamp();
-        vehicle.lastHeartbeatAt = serverTimestamp();
+        // Intentionally DO NOT touch lastHeartbeatAt or currentLocation.
+        // Those fields are only updated when the coordinator's device
+        // actually sends real GPS telemetry via useAdminLocationTracking.
         return vehicle;
       });
       

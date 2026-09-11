@@ -21,7 +21,7 @@ import { isStationSelected, buildOperationalStations, type OperationalStation } 
 import { OperationalHeader } from "@/components/admin/OperationalHeader";
 import { OperationalBottomBar } from "@/components/admin/OperationalBottomBar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { Flag, CheckCircle2, ChevronDown } from "lucide-react";
+import { Flag, CheckCircle2, ChevronDown, Bus, MapPin, GraduationCap, Navigation, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LongPressButton } from "@/components/ui/LongPressButton";
 import {
@@ -102,8 +102,15 @@ function TripsPage() {
 
   const activeCourses = useMemo(() => courses.filter(c => c.status === "active"), [courses]);
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const { vehicleId: searchVehicleId } = Route.useSearch();
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(searchVehicleId || null);
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (searchVehicleId) {
+      setSelectedVehicleId(searchVehicleId);
+    }
+  }, [searchVehicleId]);
 
   const stations = useMemo<OperationalStation[]>(() => {
     return buildOperationalStations({
@@ -169,7 +176,10 @@ function TripsPage() {
     const activeCourseIds = new Set(activeCourses.map(c => c.id));
     return users.filter(u => {
       const cId = u.courseId || "default";
-      return activeCourseIds.has(cId);
+      if (!activeCourseIds.has(cId)) return false;
+      // Exclude students who are not active in payment (pending, submitted, or rejected)
+      if (u.role === "student" && u.paymentStatus && u.paymentStatus !== "active") return false;
+      return true;
     });
   }, [users, activeCourses]);
 
@@ -332,7 +342,7 @@ function TripsPage() {
         const now = Date.now() + serverTimeOffset;
         if (now > cutoff.getTime()) {
           const proceed = window.confirm(
-            `⚠️ تحذير: موعد غلق التسجيل لرحلة الغد (${cutoffTimeStr}) قد انقضى بالفعل!\nإذا قمت بإنهاء هذه الرحلة الآن، فلن يتمكن الطلاب من التسجيل لرحلة الغد.\n\nهل أنت متأكد من رغبتك في إنهاء الرحلة الآن؟`
+            `تحذير: موعد غلق التسجيل لرحلة الغد (${cutoffTimeStr}) قد انقضى بالفعل!\nإذا قمت بإنهاء هذه الرحلة الآن، فلن يتمكن الطلاب من التسجيل لرحلة الغد.\n\nهل أنت متأكد من رغبتك في إنهاء الرحلة الآن؟`
           );
           if (!proceed) {
             setIsCompleting(false);
@@ -532,6 +542,10 @@ function TripsPage() {
     if (!dbRefs || !displayedVehicle || !isControllingDisplayed) return;
     try {
       const studentUser = users.find((u) => u.uid === userId || u.id === userId);
+      if (studentUser?.role === "student" && studentUser.paymentStatus && studentUser.paymentStatus !== "active") {
+        toast.error("لا يمكن تسجيل ركوب طالب لم يتم تفعيل اشتراكه بعد");
+        return;
+      }
       const studentCourseId = studentUser?.courseId || "default";
 
       if (currentBoardedState) {
@@ -775,8 +789,20 @@ function TripsPage() {
   }, [displayedVehicle?.currentStationId, passengers, selectedCourseFilter, recordsByStudent, coursesMap, getStationPassengers]);
 
   const unboardedAtCurrentStation = useMemo(() => {
-    return activeStationPassengers.filter((p: any) => !p.boarded).length;
+    return activeStationPassengers.filter((p) => !p.boarded).length;
   }, [activeStationPassengers]);
+
+  const otherStationsWithPassengers = useMemo(() => {
+    if (!displayedVehicle?.currentStationId) return [];
+    return stations.filter((s) => {
+      const isCurrent =
+        s.id === displayedVehicle.currentStationId ||
+        s.matchedIds?.includes(displayedVehicle.currentStationId!);
+      if (isCurrent) return false;
+      const sp = getStationPassengers(s);
+      return sp.length > 0;
+    });
+  }, [stations, displayedVehicle?.currentStationId, getStationPassengers]);
 
   if (stationsLoading) {
     return (
@@ -799,8 +825,8 @@ function TripsPage() {
   }
 
   return (
-    <div className={`space-y-4 lg:space-y-5 pt-2 relative ${isOperationalMode ? "pb-36 lg:pb-16" : "pb-20"}`}>
-      <div className="px-1">
+    <div className={`space-y-4 lg:space-y-5 pt-2 relative ${isOperationalMode ? "pb-60 sm:pb-52 lg:pb-20" : "pb-20"}`}>
+      <div className={`px-1 ${isOperationalMode ? "hidden sm:block" : ""}`}>
         <h1 className="text-lg sm:text-xl font-bold text-foreground">إدارة الرحلة والتخطيط</h1>
         <p className="text-[12px] sm:text-[13px] text-muted-foreground mt-0.5">
           التحكم في المركبات ومتابعةالطلاب
@@ -851,9 +877,9 @@ function TripsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
         <div
-          className={`lg:col-span-1 space-y-5 ${isOperationalMode ? "hidden lg:block" : (activeTab !== "trip" ? "hidden lg:block" : "block")}`}
+          className={`lg:col-span-4 space-y-5 ${isOperationalMode ? "hidden lg:block" : (activeTab !== "trip" ? "hidden lg:block" : "block")}`}
         >
           {/* Vehicle Planning Panel — shown before trip starts */}
           {showPlanningPanel && (
@@ -941,13 +967,13 @@ function TripsPage() {
         </div>
 
         <div
-          className={`lg:col-span-2 space-y-5 ${isOperationalMode ? "block" : (activeTab !== "passengers" ? "hidden lg:block" : "block")}`}
+          className={`lg:col-span-8 space-y-5 ${isOperationalMode ? "block" : (activeTab !== "passengers" ? "hidden lg:block" : "block")}`}
         >
           {!displayedVehicle || showPlanningPanel ? (
             <TripSummary passengers={passengers} stations={stations} courses={activeCourses} allCourseStations={allCourseStations} />
           ) : displayedVehicle.status === "running" || displayedVehicle.status === "full" ? (
             <motion.div
-              className="space-y-5"
+              className="space-y-4 sm:space-y-5"
               initial={mounted ? false : "hidden"}
               animate="show"
               variants={{
@@ -958,23 +984,250 @@ function TripsPage() {
                 }
               }}
             >
-              {/* Mobile Context: Collapsible Map & Timeline (Operational Mode only) */}
-              {isOperationalMode && displayedVehicle && (
-                <div className="lg:hidden">
-                  <Collapsible defaultOpen={true} className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between p-3 bg-muted/20 border-b border-border/50">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-2">
-                        <span>🗺️</span> خريطة ومسار الرحلة
-                      </span>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground gap-1">
-                          عرض / إخفاء
-                          <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200" />
-                        </Button>
-                      </CollapsibleTrigger>
+              {/* 1. COURSE FILTER BAR (Directly above boarding list, clean & integrated) */}
+              <motion.div
+                initial={mounted ? false : "hidden"}
+                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                className="bg-card rounded-2xl p-3 sm:p-4 shadow-card border border-border/60 space-y-2.5"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm font-bold text-foreground">ركاب الحافلة</span>
+                    <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                      صعد {courseStats.totalBoarded} من {courseStats.totalRiding}
+                    </span>
+                  </div>
+
+                  {/* Course Filter Dropdown */}
+                  <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
+                    <label htmlFor="course-filter-select" className="text-muted-foreground font-semibold shrink-0">
+                      تصفية الكورس:
+                    </label>
+                    <select
+                      id="course-filter-select"
+                      value={selectedCourseFilter}
+                      onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                      className="bg-muted border border-border/80 text-foreground rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                    >
+                      <option value="all">جميع الكورسات النشطة (افتراضي)</option>
+                      {activeCourses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Course Distribution Pills (Quick Tap) */}
+                {courseStats.byCourse.length > 1 && (
+                  <div className="flex gap-1.5 pt-2 border-t border-border/40 items-center overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCourseFilter("all")}
+                      className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 ${
+                        selectedCourseFilter === "all"
+                          ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                          : "bg-muted/60 hover:bg-muted text-foreground border border-border/40"
+                      }`}
+                    >
+                      <Users className="w-3 h-3 shrink-0" />
+                      <span>الكل</span>
+                    </button>
+                    {courseStats.byCourse.map((c) => (
+                      <button
+                        key={c.courseId}
+                        type="button"
+                        onClick={() =>
+                          setSelectedCourseFilter(
+                            selectedCourseFilter === c.courseId ? "all" : c.courseId,
+                          )
+                        }
+                        className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 ${
+                          selectedCourseFilter === c.courseId
+                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "bg-muted/60 hover:bg-muted text-foreground border border-border/40"
+                        }`}
+                      >
+                        <GraduationCap className="w-3 h-3 shrink-0" />
+                        <span>{c.courseName}:</span>
+                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                          {c.boarded}
+                        </span>
+                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground/80 text-[11px]" : "text-muted-foreground text-[11px]"}>
+                          / {c.total}
+                        </span>
+                      </button>
+                    ))}
+                    {selectedCourseFilter !== "all" && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCourseFilter("all")}
+                        className="text-[11px] text-primary hover:underline font-semibold mr-1 shrink-0"
+                      >
+                        إعادة ضبط (عرض الكل)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+
+              {/* 2. WHEN WAITING AT STATION: HERO BOARDING LIST FOR CURRENT STATION */}
+              {displayedVehicle.currentStationId && currentStation && (
+                <motion.div
+                  key={currentStation.id}
+                  initial={mounted ? false : "hidden"}
+                  variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                  className="ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl bg-card shadow-lg"
+                >
+                  <BoardingList
+                    stationName={currentStation.name}
+                    passengers={activeStationPassengers}
+                    onConfirmBoarding={(id) => {
+                      const p = activeStationPassengers.find((x) => x.id === id);
+                      if (p) return handleToggleBoarding(p.id, p.boarded);
+                    }}
+                    onDepartStation={(isControllingDisplayed && !isOperationalMode) ? handleDepartStation : undefined}
+                    isLastStation={isLastStation}
+                    isFull={isVehicleFull}
+                    isCurrentStation={true}
+                  />
+                </motion.div>
+              )}
+
+              {/* 3. WHEN MOVING: MOVING BANNER + NEXT STATION PASSENGERS PREVIEW */}
+              {!displayedVehicle.currentStationId && (
+                <motion.div
+                  initial={mounted ? false : "hidden"}
+                  variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                  className="space-y-4"
+                >
+                  <div className="bg-card rounded-2xl p-5 sm:p-7 shadow-card flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-2.5">
+                      <Bus className="w-6 h-6 text-primary animate-pulse" />
                     </div>
-                    <CollapsibleContent className="p-3 space-y-3">
-                      <div className="h-[170px] rounded-xl overflow-hidden border border-border/50 relative z-0">
+                    <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">
+                      {isHeadingToCreativa ? "الباص في طريقه إلى كرياتيفا" : "الباص يتحرك الآن"}
+                    </h3>
+                    <p className="text-xs sm:text-[13px] text-muted-foreground mb-4 max-w-sm">
+                      {isHeadingToCreativa
+                        ? "الباص في طريقه إلى الوجهة النهائية (مركز كرياتيفا). عند الوصول، اضغط لإنهاء الرحلة."
+                        : `الباص في طريقه نحو ${nextStationName || "المحطة التالية"}. اضغط لتأكيد التوقف وبدء صعود الركاب.`}
+                    </p>
+
+                    <LongPressButton
+                      size="lg"
+                      onComplete={handleArriveAtStation}
+                      className="w-full sm:w-auto px-6 sm:px-8 gap-2 font-semibold shadow-sm text-xs sm:text-sm h-11 sm:h-12 rounded-xl"
+                    >
+                      {isHeadingToCreativa ? (
+                        <>
+                          <Flag className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
+                          الوصول إلى كرياتيفا وإنهاء الرحلة (اضغط مطولاً)
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                          الوصول إلى {nextStationName || "المحطة التالية"} (اضغط مطولاً)
+                        </>
+                      )}
+                    </LongPressButton>
+                  </div>
+
+                  {/* Next Station Passengers Waiting to Board */}
+                  {nextStation && nextStation.id !== "creativa" && (
+                    <div className="space-y-2 pt-1">
+                      <div className="text-xs font-bold text-muted-foreground px-1 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>الركاب في انتظار الوصول إلى: {nextStation.name}</span>
+                      </div>
+                      <BoardingList
+                        stationName={nextStation.name}
+                        passengers={getStationPassengers(nextStation)}
+                        onConfirmBoarding={(id) => {
+                          const sp = getStationPassengers(nextStation);
+                          const p = sp.find((x) => x.id === id);
+                          if (p) return handleToggleBoarding(p.id, p.boarded);
+                        }}
+                        isLastStation={nextStation.id === stations[stations.length - 1]?.id}
+                        isFull={isVehicleFull}
+                        isCurrentStation={false}
+                      />
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* 4. OTHER STATIONS WITH REGISTERED PASSENGERS */}
+              {displayedVehicle.currentStationId && otherStationsWithPassengers.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="text-xs font-bold text-muted-foreground px-1 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>محطات أخرى في المسار ({otherStationsWithPassengers.length})</span>
+                  </div>
+                  {otherStationsWithPassengers.map((station) => {
+                    const sp = getStationPassengers(station);
+                    return (
+                      <motion.div
+                        key={station.id}
+                        initial={mounted ? false : "hidden"}
+                        variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                        className="opacity-90 hover:opacity-100 transition-opacity"
+                      >
+                        <BoardingList
+                          stationName={station.name}
+                          passengers={sp}
+                          onConfirmBoarding={(id) => {
+                            const p = sp.find((x) => x.id === id);
+                            if (p) return handleToggleBoarding(p.id, p.boarded);
+                          }}
+                          isLastStation={station.id === stations[stations.length - 1]?.id}
+                          isFull={isVehicleFull}
+                          isCurrentStation={false}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 5. CUSTOM LOCATION PASSENGERS */}
+              {customLocationPassengers.length > 0 && (
+                <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="pt-2 opacity-90 hover:opacity-100 transition-opacity">
+                  <BoardingList
+                    stationName="ركاب في مواقع مخصصة"
+                    passengers={customLocationPassengers}
+                    onConfirmBoarding={(id) => {
+                      const p = customLocationPassengers.find((x) => x.id === id);
+                      if (p) return handleToggleBoarding(p.id, p.boarded);
+                    }}
+                    onDepartStation={undefined}
+                    isLastStation={false}
+                    isFull={isVehicleFull}
+                    isCurrentStation={false}
+                  />
+                </motion.div>
+              )}
+
+              {/* 6. MOBILE MAP & TIMELINE COLLAPSIBLE (Placed at bottom, collapsed by default) */}
+              {isOperationalMode && displayedVehicle && (
+                <div className="lg:hidden pt-2">
+                  <Collapsible defaultOpen={false} className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between p-3.5 bg-muted/20 hover:bg-muted/40 transition-colors text-right cursor-pointer"
+                      >
+                        <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                          <Navigation className="w-4 h-4 text-primary shrink-0" />
+                          <span>خريطة ومسار الرحلة (عرض الخريطة والمحطات)</span>
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200" />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="p-3.5 space-y-3 border-t border-border/40">
+                      <div className="h-[200px] rounded-xl overflow-hidden border border-border/50 relative z-0">
                         <AdminStationsMap
                           stations={stations}
                           customLocationMarkers={customStudentMarkers}
@@ -1000,175 +1253,6 @@ function TripsPage() {
                     </CollapsibleContent>
                   </Collapsible>
                 </div>
-              )}
-
-              {/* Course Distribution & Filter Bar */}
-              <motion.div
-                initial={mounted ? false : "hidden"}
-                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-                className="bg-card rounded-2xl p-4 sm:p-5 shadow-card border border-border/60 space-y-3"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-sm font-bold text-foreground">
-                      🚍 ركاب الحافلة المشتركة
-                    </span>
-                    <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                      صعد: {courseStats.totalBoarded} / {courseStats.totalRiding}
-                    </span>
-                  </div>
-
-                  {/* Course Filter Dropdown */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <label htmlFor="course-filter-select" className="text-muted-foreground font-semibold shrink-0">
-                      تصفية العرض:
-                    </label>
-                    <select
-                      id="course-filter-select"
-                      value={selectedCourseFilter}
-                      onChange={(e) => setSelectedCourseFilter(e.target.value)}
-                      className="bg-muted border border-border/80 text-foreground rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                    >
-                      <option value="all">جميع الكورسات النشطة (افتراضي)</option>
-                      {activeCourses.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Course Distribution Pills */}
-                {courseStats.byCourse.length > 0 && (
-                  <div className="flex gap-1.5 pt-2 border-t border-border/40 items-center overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-nowrap sm:flex-wrap">
-                    <span className="text-[11px] font-semibold text-muted-foreground ml-1 shrink-0">
-                      توزيع الصعود:
-                    </span>
-                    {courseStats.byCourse.map((c) => (
-                      <button
-                        key={c.courseId}
-                        type="button"
-                        onClick={() =>
-                          setSelectedCourseFilter(
-                            selectedCourseFilter === c.courseId ? "all" : c.courseId,
-                          )
-                        }
-                        className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 ${
-                          selectedCourseFilter === c.courseId
-                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                            : "bg-muted/60 hover:bg-muted text-foreground border border-border/40"
-                        }`}
-                      >
-                        <span>📚 {c.courseName}:</span>
-                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
-                          {c.boarded}
-                        </span>
-                        <span className={selectedCourseFilter === c.courseId ? "text-primary-foreground/80 text-[11px]" : "text-muted-foreground text-[11px]"}>
-                          / {c.total}
-                        </span>
-                      </button>
-                    ))}
-                    {selectedCourseFilter !== "all" && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCourseFilter("all")}
-                        className="text-[11px] text-primary hover:underline font-semibold mr-1 shrink-0"
-                      >
-                        إعادة ضبط (عرض الكل)
-                      </button>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-
-              {!displayedVehicle.currentStationId && (
-                <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="bg-card rounded-2xl p-8 shadow-card flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 animate-bounce">
-                    <span className="text-3xl">🚌</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground mb-1">
-                    {isHeadingToCreativa ? "الباص في طريقه إلى كرياتيفا" : "الباص يتحرك الآن"}
-                  </h3>
-                  <p className="text-[13px] text-muted-foreground mb-6 max-w-sm">
-                    {isHeadingToCreativa
-                      ? "الباص في طريقه إلى الوجهة النهائية (مركز كرياتيفا). عند الوصول، اضغط لإنهاء الرحلة."
-                      : "الباص في طريقه إلى النقطة التالية. اضغط لتأكيد التوقف وتسجيل صعود الركاب."}
-                  </p>
-
-                  <LongPressButton
-                    size="lg"
-                    onComplete={handleArriveAtStation}
-                    className="w-full sm:w-auto px-8 gap-2 font-semibold shadow-sm"
-                  >
-                    {isHeadingToCreativa ? (
-                      <>
-                        <Flag className="w-5 h-5" strokeWidth={2} />
-                        الوصول إلى كرياتيفا وإنهاء الرحلة (اضغط مطولاً)
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-lg">📍</span>
-                        الوصول للنقطة التالية (اضغط مطولاً)
-                      </>
-                    )}
-                  </LongPressButton>
-                </motion.div>
-              )}
-
-              {stations.map((station, idx) => {
-                const sp = getStationPassengers(station);
-                const isCurrentStation = Boolean(
-                  displayedVehicle.currentStationId &&
-                    (displayedVehicle.currentStationId === station.id ||
-                      station.matchedIds?.includes(displayedVehicle.currentStationId))
-                );
-                // Don't render empty stations unless it's the current active station
-                if (sp.length === 0 && !isCurrentStation) return null;
-
-                const isActiveStation =
-                  isCurrentStation &&
-                  (displayedVehicle.status === "running" || displayedVehicle.status === "full");
-                return (
-                  <motion.div
-                    key={station.id}
-                    initial={mounted ? false : "hidden"}
-                    variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-                    className={
-                      isActiveStation
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl bg-card shadow-lg"
-                        : "opacity-80 hover:opacity-100 transition-opacity"
-                    }
-                  >
-                    <BoardingList
-                      stationName={station.name}
-                      passengers={sp}
-                      onConfirmBoarding={(id) => {
-                        const p = sp.find((x: any) => x.id === id);
-                        if (p) return handleToggleBoarding(p.id, p.boarded);
-                      }}
-                      onDepartStation={(isActiveStation && isControllingDisplayed && !isOperationalMode) ? handleDepartStation : undefined}
-                      isLastStation={station.id === stations[stations.length - 1]?.id}
-                      isFull={isVehicleFull}
-                    />
-                  </motion.div>
-                );
-              })}
-
-              {customLocationPassengers.length > 0 && (
-                <motion.div initial={mounted ? false : "hidden"} variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="pt-2 opacity-80 hover:opacity-100 transition-opacity">
-                  <BoardingList
-                    stationName="ركاب في مواقع مخصصة"
-                    passengers={customLocationPassengers}
-                    onConfirmBoarding={(id) => {
-                      const p = customLocationPassengers.find((x: any) => x.id === id);
-                      if (p) return handleToggleBoarding(p.id, p.boarded);
-                    }}
-                    onDepartStation={undefined}
-                    isLastStation={false}
-                    isFull={isVehicleFull}
-                  />
-                </motion.div>
               )}
             </motion.div>
           ) : displayedVehicle.status === "ended" ? (

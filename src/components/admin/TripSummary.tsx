@@ -1,4 +1,4 @@
-import { Users, MapPin, ChevronDown, ChevronUp, User } from "lucide-react";
+import { Users, MapPin, ChevronDown, ChevronUp, User, GraduationCap } from "lucide-react";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DailyRecord } from "@/hooks/useTodayStatus";
@@ -155,7 +155,8 @@ export function TripSummary({ passengers, stations, courses, allCourseStations }
                     key={cId}
                     className="inline-flex items-center gap-1.5 bg-muted/50 border border-border/60 text-foreground px-2.5 py-1 rounded-lg text-xs font-semibold"
                   >
-                    <span>📚 {getCourseName(cId)}:</span>
+                    <GraduationCap className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{getCourseName(cId)}:</span>
                     <strong className="text-primary">{count}</strong>
                   </span>
                 ))}
@@ -332,8 +333,9 @@ export function TripSummary({ passengers, stations, courses, allCourseStations }
                                     {student.fullName || "طالب بدون اسم"}
                                   </span>
                                   {student.customLocation?.name && (
-                                    <span className="text-[10px] text-muted-foreground truncate">
-                                      📍 {student.customLocation.name}
+                                    <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+                                      <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                                      <span>{student.customLocation.name}</span>
                                     </span>
                                   )}
                                 </div>

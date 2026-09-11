@@ -1,5 +1,20 @@
 import { useState, useMemo } from "react";
-import { CheckCircle2, Circle, Loader2, RotateCcw, Users, Lock } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  RotateCcw,
+  Users,
+  Lock,
+  MapPin,
+  ExternalLink,
+  GraduationCap,
+  Shield,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Check,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -32,6 +47,7 @@ interface BoardingListProps {
   onDepartStation?: () => void;
   isLastStation?: boolean;
   isFull?: boolean;
+  isCurrentStation?: boolean;
 }
 
 export function BoardingList({
@@ -41,11 +57,11 @@ export function BoardingList({
   onDepartStation,
   isLastStation,
   isFull = false,
+  isCurrentStation = true,
 }: BoardingListProps) {
   const [showDepartConfirm, setShowDepartConfirm] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [justBoardedId, setJustBoardedId] = useState<string | null>(null);
-  const [showBoarded, setShowBoarded] = useState(true);
 
   // Split passengers into unboarded and boarded
   const unboardedPassengers = useMemo(
@@ -57,24 +73,26 @@ export function BoardingList({
     [passengers]
   );
 
+  const [showBoarded, setShowBoarded] = useState(unboardedPassengers.length === 0);
+
   const boardedCount = boardedPassengers.length;
   const expectedCount = passengers.length;
   const remainingCount = unboardedPassengers.length;
 
   const handleToggle = async (passenger: Passenger) => {
     if (isFull) return;
-    // Prevent double taps for the same student while processing
+    // Prevent duplicate clicks while processing this specific student
     if (processingIds.has(passenger.id)) return;
 
     setProcessingIds((prev) => new Set(prev).add(passenger.id));
     try {
       await onConfirmBoarding(passenger.id);
       if (!passenger.boarded) {
-        // Just boarded successfully! Show visual feedback
+        // Just boarded successfully - trigger visual highlight
         setJustBoardedId(passenger.id);
         setTimeout(() => {
           setJustBoardedId((curr) => (curr === passenger.id ? null : curr));
-        }, 2500);
+        }, 2200);
       }
     } finally {
       setProcessingIds((prev) => {
@@ -101,42 +119,58 @@ export function BoardingList({
   };
 
   return (
-    <div className="bg-card rounded-2xl p-4 sm:p-5 shadow-card space-y-4 border border-border/50">
-      {/* Header with counts */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-base font-bold text-foreground">الركاب في نقطة التجمع: {stationName}</h3>
-          <p className="text-[12px] text-muted-foreground mt-0.5">تأكيد صعود الركاب للباص</p>
+    <div className="bg-card rounded-2xl p-3 sm:p-5 shadow-card space-y-4 border border-border/60">
+      {/* Station Prominent Operational Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/30 rounded-xl border border-border/40">
+        <div className="space-y-0.5 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs font-semibold">
+            <MapPin className={`w-3.5 h-3.5 shrink-0 ${isCurrentStation ? "text-primary" : "text-muted-foreground"}`} />
+            <span className={isCurrentStation ? "text-primary font-bold" : "text-muted-foreground"}>
+              {isCurrentStation ? "المحطة الحالية" : "نقطة تجمع"}
+            </span>
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-foreground truncate">
+            {stationName}
+          </h3>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="bg-primary/10 text-primary px-3 py-1 rounded-xl text-xs font-bold">
-            صعد: {boardedCount} / المتوقع: {expectedCount}
+
+        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+          <div className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-lg text-xs font-bold">
+            صعد: {boardedCount} / {expectedCount}
           </div>
-          <div className="text-[11px] font-semibold text-muted-foreground">
-            متبقي: {remainingCount}
-          </div>
+          {remainingCount > 0 ? (
+            <div className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 px-2.5 py-1 rounded-lg text-xs font-bold">
+              في الانتظار: {remainingCount}
+            </div>
+          ) : expectedCount > 0 ? (
+            <div className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" />
+              اكتمل الصعود
+            </div>
+          ) : null}
         </div>
       </div>
 
+      {/* Full Bus Warning Banner */}
       {isFull && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold">
           <Lock className="w-4 h-4 shrink-0" />
-          <span>تم تأكيد امتلاء الباص — الصعود مغلق (للمراجعة فقط)</span>
+          <span>تم تأكيد امتلاء الباص — تم إغلاق الصعود ويتم الانتقال مباشرة إلى Creativa</span>
         </div>
       )}
 
-      {/* Internal Independent Scroll Area */}
-      <div className="overflow-y-auto overscroll-contain max-h-[calc(100dvh-20rem)] sm:max-h-[calc(100dvh-18rem)] lg:max-h-[540px] space-y-5 pe-1 [scrollbar-width:thin]">
+      {/* Passenger List Container - Clean touch-friendly scrolling without locking */}
+      <div className="space-y-5">
         {/* =================================================== */}
         {/* SECTION 1: UNBOARDED PASSENGERS (HIGH PRIORITY)     */}
         {/* =================================================== */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1 text-xs font-bold text-foreground">
             <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
               <Users className="w-4 h-4" />
               لم يصعد بعد
             </span>
-            <span className="bg-amber-500/15 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full text-[11px] font-bold">
+            <span className="bg-amber-500/15 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-xs font-bold">
               {unboardedPassengers.length} طلاب
             </span>
           </div>
@@ -146,95 +180,115 @@ export function BoardingList({
             return (
               <div
                 key={passenger.id}
-                className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl border transition-all duration-150 ${
+                className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border gap-3 transition-all duration-150 ${
                   isFull
-                    ? "bg-muted/40 border-border/60 opacity-75 cursor-not-allowed"
+                    ? "bg-muted/30 border-border/50 opacity-70"
                     : isProcessing
-                      ? "bg-muted/80 border-primary/40 pointer-events-none opacity-80"
-                      : "bg-card hover:bg-muted/40 border-border/80 cursor-pointer active:scale-[0.99] shadow-sm"
+                      ? "bg-muted/60 border-primary/40 opacity-80"
+                      : "bg-card hover:bg-muted/30 border-border/80 shadow-sm"
                 }`}
-                onClick={() => !isFull && !isProcessing && handleToggle(passenger)}
               >
-                <div className="min-w-0 flex-1 pl-2">
-                  <div className="text-[14px] font-semibold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="truncate">{passenger.name}</span>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {passenger.courseName && (
-                        <span className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-indigo-500/25">
-                          📚 {passenger.courseName}
-                        </span>
-                      )}
-                      {passenger.isStaff && (
-                        <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/25">
-                          موظف / مدرب
-                        </span>
-                      )}
-                      {passenger.customLocationName && (
-                        <span className="bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-blue-500/20">
-                          📍 موقع مخصص: {passenger.customLocationName}
-                        </span>
-                      )}
-                      {passenger.locationLink && (
-                        <a
-                          href={passenger.locationLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] font-semibold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-primary/20"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          🗺️ فتح الخريطة
-                        </a>
-                      )}
-                    </div>
+                {/* Student Info */}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm sm:text-base font-bold text-foreground leading-tight">
+                      {passenger.name}
+                    </span>
+                    {passenger.isStaff && (
+                      <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10px] sm:text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-500/25">
+                        <Shield className="w-3 h-3" />
+                        موظف / مدرب
+                      </span>
+                    )}
                   </div>
-                  <div
-                    className="text-[12px] text-muted-foreground dir-ltr text-right mt-0.5"
-                    dir="ltr"
-                  >
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    {passenger.courseName && (
+                      <span className="bg-primary/10 text-primary font-bold text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-primary/20">
+                        <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                        <span>{passenger.courseName}</span>
+                      </span>
+                    )}
+
+                    {passenger.customLocationName && (
+                      <span className="bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-blue-500/20">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span>موقع: {passenger.customLocationName}</span>
+                      </span>
+                    )}
+
+                    {passenger.locationLink && (
+                      <a
+                        href={passenger.locationLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-semibold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-md flex items-center gap-1 border border-primary/20"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                        <span>الخريطة</span>
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] sm:text-xs text-muted-foreground font-mono" dir="ltr">
                     {passenger.phone}
                   </div>
                 </div>
 
-                {isFull ? (
-                  <span className="text-[11px] font-bold text-muted-foreground/90 flex items-center gap-1 bg-muted/80 px-2.5 py-1.5 rounded-lg border border-border/60 shrink-0">
-                    <Lock className="w-3.5 h-3.5" />
-                    الصعود غير متاح
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    aria-label={`تأكيد صعود ${passenger.name}`}
-                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors shrink-0 text-muted-foreground/50 hover:text-primary hover:bg-primary/10 bg-muted/40 border border-border active:scale-95"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    ) : (
-                      <Circle className="w-6 h-6" strokeWidth={1.8} />
-                    )}
-                  </button>
-                )}
+                {/* Board Action Button with minimum 44px touch target */}
+                <div className="shrink-0 pt-1 sm:pt-0">
+                  {isFull ? (
+                    <div className="h-11 px-4 rounded-xl bg-muted/80 text-muted-foreground font-semibold text-xs flex items-center justify-center gap-1.5 border border-border/60">
+                      <Lock className="w-3.5 h-3.5" />
+                      الصعود مغلق
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={isProcessing}
+                      onClick={() => handleToggle(passenger)}
+                      className="w-full sm:w-auto h-11 px-5 rounded-xl text-xs sm:text-sm font-bold gap-2 shadow-sm transition-transform active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>جاري التسجيل...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4" />
+                          <span>تسجيل صعود</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
 
-          {/* Empty state when all students have boarded */}
+          {/* Empty state: all students boarded */}
           {unboardedPassengers.length === 0 && boardedPassengers.length > 0 && (
-            <div className="text-center py-5 px-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1">
-              <span className="text-2xl">🎉</span>
-              <p className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                تم تسجيل صعود جميع الركاب في هذه النقطة!
+            <div className="text-center py-6 px-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1.5">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                تم صعود جميع الطلاب في هذه النقطة!
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 صعد {boardedPassengers.length} من أصل {expectedCount} ركاب. الباص جاهز للمغادرة عند الاستعداد.
               </p>
             </div>
           )}
 
-          {/* Empty state when no passengers exist */}
+          {/* Empty state: zero passengers registered for this station */}
           {passengers.length === 0 && (
-            <div className="text-center py-8 text-xs text-muted-foreground bg-muted/30 rounded-xl">
-              لا يوجد ركاب مسجلين في هذه النقطة اليوم
+            <div className="text-center py-8 px-4 text-xs text-muted-foreground bg-muted/30 border border-border/40 rounded-xl space-y-1">
+              <Users className="w-6 h-6 mx-auto text-muted-foreground/60 mb-1" />
+              <p className="font-semibold">لا يوجد طلاب في انتظار الركوب في هذه المحطة اليوم</p>
             </div>
           )}
         </div>
@@ -243,101 +297,122 @@ export function BoardingList({
         {/* SECTION 2: BOARDED PASSENGERS                       */}
         {/* =================================================== */}
         {boardedPassengers.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="space-y-2.5 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between px-1 text-xs font-bold text-foreground">
               <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
                 صعد بالفعل
               </span>
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-xs font-bold">
                   {boardedPassengers.length} ركاب
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowBoarded(!showBoarded)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline font-medium"
+                  className="text-xs text-muted-foreground hover:text-foreground underline font-semibold flex items-center gap-0.5"
                 >
-                  {showBoarded ? "إخفاء القائمة" : "عرض القائمة"}
+                  {showBoarded ? (
+                    <>
+                      <span>إخفاء</span>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      <span>عرض</span>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
-            {showBoarded &&
-              boardedPassengers.map((passenger) => {
-                const isProcessing = processingIds.has(passenger.id);
-                const isJustBoarded = justBoardedId === passenger.id;
-                return (
-                  <div
-                    key={passenger.id}
-                    className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl border transition-all duration-150 ${
-                      isJustBoarded
-                        ? "bg-emerald-500/15 ring-2 ring-emerald-500 border-emerald-500/30"
-                        : "bg-emerald-500/5 border-emerald-500/15"
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 pl-2">
-                      <div className="text-[14px] font-semibold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="truncate">{passenger.name}</span>
-                        <div className="flex flex-wrap items-center gap-1.5">
+            {showBoarded && (
+              <div className="space-y-2">
+                {boardedPassengers.map((passenger) => {
+                  const isProcessing = processingIds.has(passenger.id);
+                  const isJustBoarded = justBoardedId === passenger.id;
+                  return (
+                    <div
+                      key={passenger.id}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border gap-3 transition-all duration-150 ${
+                        isJustBoarded
+                          ? "bg-emerald-500/20 ring-2 ring-emerald-500 border-emerald-500/40"
+                          : "bg-emerald-500/5 border-emerald-500/20"
+                      }`}
+                    >
+                      {/* Passenger Details */}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm sm:text-base font-bold text-foreground leading-tight">
+                            {passenger.name}
+                          </span>
                           {isJustBoarded && (
-                            <span className="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full animate-pulse">
-                              ✓ تم الصعود للتو
-                            </span>
-                          )}
-                          {passenger.courseName && (
-                            <span className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-indigo-500/25">
-                              📚 {passenger.courseName}
+                            <span className="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                              <Sparkles className="w-3 h-3" />
+                              تم الصعود للتو
                             </span>
                           )}
                           {passenger.isStaff && (
-                            <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/25">
+                            <span className="bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[10px] sm:text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-500/25">
+                              <Shield className="w-3 h-3" />
                               موظف / مدرب
                             </span>
                           )}
-                          <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1">
-                            ✓ تم الصعود {passenger.vehicleName ? `• ${passenger.vehicleName}` : ""}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {passenger.courseName && (
+                            <span className="bg-primary/10 text-primary font-bold text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-primary/20">
+                              <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                              <span>{passenger.courseName}</span>
+                            </span>
+                          )}
+
+                          <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-500/25">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>تم الصعود {passenger.vehicleName ? `• ${passenger.vehicleName}` : ""}</span>
                           </span>
                         </div>
+
+                        <div className="text-[11px] sm:text-xs text-muted-foreground font-mono" dir="ltr">
+                          {passenger.phone}
+                        </div>
                       </div>
-                      <div
-                        className="text-[12px] text-muted-foreground dir-ltr text-right mt-0.5"
-                        dir="ltr"
-                      >
-                        {passenger.phone}
+
+                      {/* Undo Action Button */}
+                      <div className="shrink-0 flex items-center justify-end sm:justify-start gap-2 pt-1 sm:pt-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isProcessing || isFull}
+                          onClick={() => handleToggle(passenger)}
+                          className="h-9 px-3 text-xs font-semibold text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 gap-1.5 rounded-xl border-border/70"
+                          title="إلغاء تسجيل الصعود في حال الخطأ"
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                          <span>تراجع</span>
+                        </Button>
+
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Safe Undo button for accidental clicks */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={isProcessing || isFull}
-                        onClick={() => handleToggle(passenger)}
-                        className="h-8 px-2 text-[11px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1 rounded-lg"
-                        title="إلغاء تسجيل الصعود في حال الخطأ"
-                      >
-                        {isProcessing ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        )}
-                        <span>تراجع</span>
-                      </Button>
-
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-6 h-6" strokeWidth={2.2} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
+      {/* Non-operational Depart Button & Confirmation Modal */}
       {onDepartStation && (
         <>
           <Button
@@ -347,9 +422,9 @@ export function BoardingList({
             onClick={handleDepartClick}
           >
             {isFull
-              ? "التحرك مباشرة إلى Creativa 🏁"
+              ? "التحرك مباشرة إلى Creativa"
               : isLastStation
-                ? "مغادرة نحو كرياتيفا (الوجهة النهائية) 🏁"
+                ? "مغادرة نحو كرياتيفا (الوجهة النهائية)"
                 : "مغادرة نقطة التجمع"}
           </Button>
 
@@ -380,4 +455,3 @@ export function BoardingList({
     </div>
   );
 }
-

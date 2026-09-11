@@ -22,7 +22,7 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const { user, profile, signOutUser } = useAuth();
   const currentPath = routerState.location.pathname;
-  
+
   const { isDriving, permissionState, requestPermission } = useAdminLocationTracking();
 
   const navItems = [
@@ -104,7 +104,7 @@ export function AdminLayout() {
 
         {/* Content Area */}
         <main className="flex-1 lg:pl-60 rtl:lg:pl-0 rtl:lg:pr-60 pb-24 lg:pb-6">
-          <div className="container mx-auto p-3 md:p-5 max-w-5xl">
+          <div className="container mx-auto p-2.5 sm:p-4 md:p-5 max-w-6xl">
             <Outlet />
           </div>
         </main>

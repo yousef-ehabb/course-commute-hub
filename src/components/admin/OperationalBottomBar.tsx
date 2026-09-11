@@ -75,10 +75,10 @@ export function OperationalBottomBar({
 
   return (
     <>
-      <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:sticky lg:bottom-4 inset-x-0 lg:inset-auto z-40 bg-card/95 backdrop-blur-xl border-t lg:border border-border/80 p-3 sm:p-4 shadow-elevated lg:rounded-2xl transition-all">
-        <div className="max-w-5xl mx-auto flex flex-col gap-2">
+      <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:sticky lg:bottom-4 inset-x-0 lg:inset-auto z-40 bg-card/95 backdrop-blur-xl border-t lg:border border-border/80 p-2 sm:p-3 shadow-elevated lg:rounded-2xl transition-all">
+        <div className="max-w-6xl mx-auto flex flex-col gap-1.5 sm:gap-2">
           {!isControlling ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/60 border border-border/60 text-xs">
+            <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/60 border border-border/60 text-xs">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>
@@ -96,23 +96,51 @@ export function OperationalBottomBar({
               {!isFull && unboardedCountAtCurrentStation > 0 && (
                 <div className="flex items-center justify-between px-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
                   <span className="flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    متبقي {unboardedCountAtCurrentStation} ركاب في هذه النقطة لم يصعدوا
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>متبقي {unboardedCountAtCurrentStation} طلاب لم يصعدوا</span>
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    سيتم طلب التأكيد عند التحرك
+                    تأكيد إجباري عند التحرك
                   </span>
                 </div>
               )}
 
               {isFull && (
-                <div className="flex items-center gap-1.5 px-1 text-[11px] text-destructive font-bold">
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                  <span>الباص ممتلئ فعليًا — الخطوة التالية هي التوجه مباشرة إلى Creativa</span>
+                <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+                  <span>الباص ممتلئ فعليًا — التوجه مباشرة إلى Creativa (تم تخطي باقي المحطات)</span>
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row items-stretch gap-2">
+              <div className="flex items-stretch gap-2">
+                {/* Primary Depart Action (Dominant) */}
+                <LongPressButton
+                  size="lg"
+                  className={`flex-1 min-w-0 h-11 sm:h-12 rounded-xl text-xs sm:text-base font-bold shadow-md gap-1.5 sm:gap-2 active:scale-[0.99] transition-transform ${
+                    isFull
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : ""
+                  }`}
+                  onComplete={handleDepartTrigger}
+                >
+                  {isFull ? (
+                    <>
+                      <Flag className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      <span className="truncate">التحرك مباشرة إلى Creativa (اضغط مطولاً)</span>
+                    </>
+                  ) : isLastStation ? (
+                    <>
+                      <Flag className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      <span className="truncate">مغادرة نحو كرياتيفا (اضغط مطولاً)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current shrink-0" />
+                      <span className="truncate">مغادرة {currentStationName || "نقطة التجمع"} (اضغط مطولاً)</span>
+                    </>
+                  )}
+                </LongPressButton>
+
                 {/* Secondary "Bus Full" action button - only visible if bus is NOT full yet */}
                 {!isFull && onMarkFull && (
                   <Button
@@ -120,34 +148,16 @@ export function OperationalBottomBar({
                     variant="outline"
                     onClick={() => setShowFullConfirm(true)}
                     disabled={isMarkingFull}
-                    className="h-12 sm:h-13 rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive gap-2 font-bold shrink-0 text-xs sm:text-sm px-4 order-2 sm:order-1 transition-colors"
+                    className="h-11 sm:h-12 rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive gap-1 sm:gap-1.5 font-bold shrink-0 text-xs sm:text-sm px-2.5 sm:px-4 transition-colors"
                   >
                     {isMarkingFull ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                     ) : (
-                      <Bus className="w-4 h-4" />
+                      <Bus className="w-4 h-4 shrink-0" />
                     )}
-                    <span>الباص ممتلئ</span>
+                    <span className="shrink-0">الباص ممتلئ</span>
                   </Button>
                 )}
-
-                {/* Primary Depart Action */}
-                <LongPressButton
-                  size="lg"
-                  className={`flex-1 h-12 sm:h-13 rounded-xl text-sm sm:text-base font-bold shadow-md gap-2 active:scale-[0.99] transition-transform order-1 sm:order-2 ${
-                    isFull
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : ""
-                  }`}
-                  onComplete={handleDepartTrigger}
-                >
-                  <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                  {isFull
-                    ? "التحرك مباشرة إلى Creativa 🏁 (اضغط مطولاً)"
-                    : isLastStation
-                      ? "مغادرة نحو كرياتيفا (الوجهة النهائية) 🏁 (اضغط مطولاً)"
-                      : `مغادرة ${currentStationName || "نقطة التجمع"} ➡️ (اضغط مطولاً)`}
-                </LongPressButton>
               </div>
             </div>
           ) : (
@@ -155,7 +165,7 @@ export function OperationalBottomBar({
             <div>
               <LongPressButton
                 size="lg"
-                className={`w-full h-12 sm:h-13 rounded-xl text-sm sm:text-base font-bold shadow-md gap-2 active:scale-[0.99] transition-transform ${
+                className={`w-full h-11 sm:h-12 rounded-xl text-xs sm:text-base font-bold shadow-md gap-2 active:scale-[0.99] transition-transform ${
                   isHeadingToCreativa || isFull
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
                     : ""
@@ -166,14 +176,16 @@ export function OperationalBottomBar({
                 {isHeadingToCreativa || isFull ? (
                   <>
                     <Flag className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
-                    {isCompleting
-                      ? "جاري إنهاء الرحلة..."
-                      : "الوصول إلى كرياتيفا وإنهاء الرحلة (اضغط مطولاً)"}
+                    <span>
+                      {isCompleting
+                        ? "جاري إنهاء الرحلة..."
+                        : "الوصول إلى كرياتيفا وإنهاء الرحلة (اضغط مطولاً)"}
+                    </span>
                   </>
                 ) : (
                   <>
                     <MapPin className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
-                    الوصول إلى {nextStationName || "النقطة التالية"} (اضغط مطولاً)
+                    <span>الوصول إلى {nextStationName || "النقطة التالية"} (اضغط مطولاً)</span>
                   </>
                 )}
               </LongPressButton>
@@ -219,14 +231,15 @@ export function OperationalBottomBar({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-right text-destructive flex items-center gap-2">
               <Bus className="w-5 h-5" />
-              هل الباص ممتلئ فعليًا؟
+              <span>هل الباص ممتلئ فعليًا؟</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-right text-sm sm:text-base text-foreground mt-2 space-y-2">
               <span>
                 سيتم اعتبار الباص ممتلئًا، ولن يتوقف في أي من المحطات المتبقية، وسيتجه مباشرة إلى Creativa.
               </span>
-              <span className="block text-destructive font-semibold text-xs sm:text-sm bg-destructive/10 p-2.5 rounded-xl border border-destructive/20 mt-2">
-                ⚠️ سيظهر للطلاب أن هذا الباص ممتلئ ولن يتوقف في المحطات القادمة.
+              <span className="flex items-center gap-2 text-destructive font-semibold text-xs sm:text-sm bg-destructive/10 p-2.5 rounded-xl border border-destructive/20 mt-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>سيظهر للطلاب أن هذا الباص ممتلئ ولن يتوقف في المحطات القادمة.</span>
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -120,9 +120,28 @@ function RegisterPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      const { getFirebaseAuth } = await import("@/lib/firebase");
+      const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, get } = await import("firebase/database");
       const currentUser = getFirebaseAuth().currentUser;
       if (currentUser) {
+        // Check if user already has an active profile in rakeb/users
+        const userSnap = await get(ref(getFirebaseDb(), `rakeb/users/${currentUser.uid}`));
+        if (userSnap.exists()) {
+          const uProfile = userSnap.val();
+          if (uProfile.role === "admin") {
+            toast.info("تم تسجيل الدخول كمسؤول.");
+            navigate({ to: "/admin/dashboard", replace: true });
+            return;
+          }
+          const cId = uProfile.courseId || "default";
+          const cSnap = await get(ref(getFirebaseDb(), `rakeb/courses/${cId}`));
+          if (cSnap.exists() && cSnap.val().status === "active") {
+            toast.error(`أنت مسجل بالفعل في كورس نشط (${cSnap.val().name}). لا يمكنك التسجيل في كورس جديد حتى انتهاء الكورس الحالي.`);
+            navigate({ to: "/student/home", replace: true });
+            return;
+          }
+        }
+
         setIsGoogleUser(true);
         setGoogleUid(currentUser.uid);
         if (currentUser.displayName) setFullName(currentUser.displayName);
@@ -145,30 +164,55 @@ function RegisterPage() {
       const { ref, get } = await import("firebase/database");
       const db = getFirebaseDb();
       const normalizedPhone = ph.replace(/\D/g, "");
+      const currentUid = user?.uid || googleUid;
 
       const nidSnap = await get(ref(db, `rakeb/usersByNationalId/${nid}`));
-      if (nidSnap.exists() && nidSnap.val().uid !== user?.uid && nidSnap.val().uid !== googleUid) {
+      if (nidSnap.exists()) {
+        const existingUid = nidSnap.val().uid;
         const cid = nidSnap.val().courseId;
         const cSnap = await get(ref(db, `rakeb/courses/${cid}`));
-        if (cSnap.exists() && cSnap.val().status === "active") {
-          toast.error(`الرقم القومي مسجل مسبقاً في كورس نشط (${cSnap.val().name}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+        const isCourseActive = cSnap.exists() && cSnap.val().status === "active";
+        const courseName = cSnap.exists() ? cSnap.val().name : cid;
+
+        if (existingUid !== currentUid) {
+          if (isCourseActive) {
+            toast.error(`الرقم القومي مسجل مسبقاً في كورس نشط (${courseName}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+            return false;
+          } else {
+            toast.error("الرقم القومي مسجل بحساب سابق. يرجى تسجيل الدخول بحسابك القديم للتسجيل في الكورس الجديد.");
+            return false;
+          }
+        } else if (isCourseActive) {
+          toast.error(`أنت مسجل بالفعل في كورس نشط (${courseName}). لا يمكنك التسجيل في كورس آخر حتى انتهاء الكورس الحالي.`);
           return false;
         }
       }
 
       const phoneSnap = await get(ref(db, `rakeb/usersByPhone/${normalizedPhone}`));
-      if (phoneSnap.exists() && phoneSnap.val().uid !== user?.uid && phoneSnap.val().uid !== googleUid) {
+      if (phoneSnap.exists()) {
+        const existingUid = phoneSnap.val().uid;
         const cid = phoneSnap.val().courseId;
         const cSnap = await get(ref(db, `rakeb/courses/${cid}`));
-        if (cSnap.exists() && cSnap.val().status === "active") {
-          toast.error(`رقم الموبايل مسجل مسبقاً في كورس نشط (${cSnap.val().name}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+        const isCourseActive = cSnap.exists() && cSnap.val().status === "active";
+        const courseName = cSnap.exists() ? cSnap.val().name : cid;
+
+        if (existingUid !== currentUid) {
+          if (isCourseActive) {
+            toast.error(`رقم الموبايل مسجل مسبقاً في كورس نشط (${courseName}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+            return false;
+          } else {
+            toast.error("رقم الموبايل مسجل بحساب سابق. يرجى تسجيل الدخول بحسابك القديم للتسجيل في الكورس الجديد.");
+            return false;
+          }
+        } else if (isCourseActive) {
+          toast.error(`أنت مسجل بالفعل في كورس نشط (${courseName}). لا يمكنك التسجيل في كورس آخر حتى انتهاء الكورس الحالي.`);
           return false;
         }
       }
       return true;
     } catch (err) {
       console.error(err);
-      return true; // fail open or closed? let's fail open to not block legitimate users if rules reject read, but rules should allow it or we bypass
+      return true;
     }
   }
 
@@ -211,12 +255,6 @@ function RegisterPage() {
         [`rakeb/usersByNationalId/${nationalId.trim()}`]: { uid: googleUid, courseId: targetCourseId },
         [`rakeb/usersByPhone/${normalizedPhone}`]: { uid: googleUid, courseId: targetCourseId }
       };
-
-      // Clean up archived data and index if re-enrolling
-      if (isReEnrolling && archivedProfile) {
-        updates[`rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`] = null;
-        updates[`rakeb/archivedUsersIndex/${googleUid}`] = null;
-      }
 
       await update(ref(getFirebaseDb()), updates);
 
@@ -270,8 +308,6 @@ function RegisterPage() {
         [`rakeb/users/${user.uid}`]: newProfile,
         [`rakeb/usersByNationalId/${nationalId.trim()}`]: { uid: user.uid, courseId: courseIdFromUrl },
         [`rakeb/usersByPhone/${normalizedPhone}`]: { uid: user.uid, courseId: courseIdFromUrl },
-        [`rakeb/archivedUsers/${archivedProfile.courseId}/${user.uid}`]: null,
-        [`rakeb/archivedUsersIndex/${user.uid}`]: null,
       };
 
       await update(ref(getFirebaseDb()), updates);
@@ -300,6 +336,13 @@ function RegisterPage() {
             if (currentUser.displayName) setFullName(currentUser.displayName);
             if (currentUser.email) setEmail(currentUser.email);
             setStep(2);
+          } else {
+            const uProfile = snap.val();
+            const cId = uProfile.courseId || "default";
+            const cSnap = await get(ref(getFirebaseDb(), `rakeb/courses/${cId}`));
+            if (cSnap.exists() && cSnap.val().status === "active") {
+              navigate({ to: "/student/home", replace: true });
+            }
           }
         }
       } catch (e) {
@@ -510,6 +553,35 @@ function RegisterPage() {
     );
   }
 
+  if (accountStatus === "active") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-8">
+        <div className="mb-6 w-full max-w-sm flex justify-center">
+          <Link to="/">
+            <RakebLogo size="lg" />
+          </Link>
+        </div>
+        <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-elevated text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-2">
+            <AlertCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">أنت مسجل بالفعل</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            أنت مسجل بالفعل في كورس نشط حالياً. لا يمكن التسجيل في أكثر من كورس في نفس الوقت وفقاً لسياسة المنصة.
+          </p>
+          <div className="pt-4 flex flex-col gap-2">
+            <Button onClick={() => navigate({ to: "/student/home" })} className="w-full">
+              الذهاب إلى صفحتي الرئيسية
+            </Button>
+            <Button variant="outline" onClick={() => navigate({ to: "/" })} className="w-full">
+              العودة للرئيسية
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isRegistrationClosed = courseData?.registrationDeadline && Date.now() > courseData.registrationDeadline;
 
   return (
@@ -523,14 +595,26 @@ function RegisterPage() {
         </div>
       )}
 
-      {isRegistrationClosed && !isReEnrolling ? (
+      {isRegistrationClosed ? (
         <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-elevated text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-2">
             <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
           <h2 className="text-xl font-bold text-foreground">التسجيل مغلق</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            عذراً، انتهى موعد التسجيل في هذا الكورس. يرجى التواصل مع الإدارة إذا كنت تعتقد أن هذا خطأ.
+            عذراً، انتهى موعد التسجيل في هذا الكورس
+            {courseData?.registrationDeadline && (
+              <>
+                {" "}بتاريخ{" "}
+                <strong className="text-foreground" dir="ltr">
+                  {new Date(courseData.registrationDeadline).toLocaleString("ar-EG", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </strong>
+              </>
+            )}
+            . يرجى التواصل مع الإدارة إذا كنت تعتقد أن هذا خطأ.
           </p>
           <div className="pt-4">
             <Button variant="outline" onClick={() => navigate({ to: "/" })} className="w-full">

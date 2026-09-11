@@ -1,4 +1,4 @@
-import { Check, Clock, MapPin, Flag, Loader2, FastForward } from "lucide-react";
+import { Check, Clock, MapPin, Flag, Loader2, FastForward, Bus } from "lucide-react";
 import { useStations } from "@/contexts/StationsContext";
 
 interface StationTimelineProps {
@@ -200,8 +200,8 @@ export function StationTimeline({
 
                   {isMovingTowardsThis && (
                     <div className="absolute -top-5 right-5 translate-x-1/2 flex items-center z-20">
-                      <div className="bg-card rounded-full p-1 ring-2 ring-primary shadow-elevated animate-bounce">
-                        <span className="text-base leading-none block">🚌</span>
+                      <div className="bg-card rounded-full p-1.5 ring-2 ring-primary shadow-elevated animate-bounce flex items-center justify-center">
+                        <Bus className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div className="mr-2 bg-primary text-white text-[11px] px-2 py-1 rounded-lg font-semibold shadow-sm relative">
                         {isFinalDestination ? "في الطريق إلى كرياتيفا" : "في الطريق"}
