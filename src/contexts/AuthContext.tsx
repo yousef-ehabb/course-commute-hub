@@ -275,9 +275,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       handleCodeInApp: true,
     };
 
-    // Automatically send verification email upon successful registration
-    await sendEmailVerification(cred.user, actionCodeSettings);
-
     const newProfile: UserProfile = {
       uid: cred.user.uid,
       ...data,
@@ -285,6 +282,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: Date.now(),
     };
     await set(ref(getFirebaseDb(), `rakeb/users/${cred.user.uid}`), newProfile);
+
+    // Automatically send verification email upon successful registration
+    try {
+      await sendEmailVerification(cred.user, actionCodeSettings);
+    } catch (emailErr) {
+      console.warn("[AuthContext] Initial verification email warning:", emailErr);
+    }
   }, []);
 
   const sendVerificationEmail = useCallback(async () => {

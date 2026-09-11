@@ -5,9 +5,9 @@
         ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
         "$uid": {
           ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
-          ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student' && ((!root.child('rakeb/courses/' + newData.child('courseId').val()).exists() && newData.child('courseId').val() === 'default') || root.child('rakeb/courses/' + newData.child('courseId').val() + '/status').val() === 'active') && (!root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').exists() || now <= root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').val())) || (data.exists() && data.child('role').val() === newData.child('role').val() && data.child('courseId').val() === newData.child('courseId').val()))))",
+          ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student' && (newData.child('courseId').val() === 'default' || root.child('rakeb/courses/' + newData.child('courseId').val() + '/status').val() === 'active') && (!root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').exists() || now <= root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').val())) || (data.exists() && data.child('role').val() === newData.child('role').val() && data.child('courseId').val() === newData.child('courseId').val()))))",
           "paymentStatus": {
-            ".validate": "root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (!data.exists() && (newData.val() === 'pending_payment' || (newData.val() === 'active' && root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment/isFree').val() === true))) || (newData.val() === 'payment_submitted' && (data.val() === 'pending_payment' || data.val() === 'payment_rejected'))"
+            ".validate": "root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (!data.exists() && (newData.val() === 'pending_payment' || (newData.val() === 'active' && (root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment/isFree').val() === true || !root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment').exists() || newData.parent().child('courseId').val() === 'default')))) || (newData.val() === 'payment_submitted' && (data.val() === 'pending_payment' || data.val() === 'payment_rejected'))"
           }
         }
       },
@@ -38,7 +38,7 @@
         ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
       },
       "courses": {
-        ".read": "auth != null",
+        ".read": true,
         ".write": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
       },
       "archivedUsers": {

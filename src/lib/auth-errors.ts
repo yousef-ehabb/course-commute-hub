@@ -29,6 +29,14 @@ export function getAuthErrorMessage(err: unknown): string {
     return "تم حظر الحساب مؤقتًا بسبب محاولات كثيرة خاطئة. يرجى المحاولة مرة أخرى لاحقًا.";
   }
   
+  if (message.includes("PERMISSION_DENIED") || message.includes("Permission denied")) {
+    return "تعذر إتمام التسجيل بسبب قيود التسجيل أو انتهاء موعد التسجيل للكورس.";
+  }
+
+  if (message.includes("auth/unauthorized-continue-uri") || message.includes("auth/invalid-continue-uri")) {
+    return "حدث خطأ في رابط تأكيد البريد الإلكتروني. يرجى التواصل مع الإدارة.";
+  }
+
   // Default fallback if we can't map the error
   console.error("Unmapped auth error:", message);
   return "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
