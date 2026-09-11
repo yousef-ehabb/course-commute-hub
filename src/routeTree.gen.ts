@@ -17,6 +17,7 @@ import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authentic
 import { Route as AuthenticatedStudentRouteRouteImport } from './routes/_authenticated/student/route'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 import { Route as AuthenticatedAdminHistoryRouteImport } from './routes/_authenticated/admin/history'
+import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin/payments'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
 import { Route as AuthenticatedAdminStationsRouteImport } from './routes/_authenticated/admin/stations'
 import { Route as AuthenticatedAdminStatsRouteImport } from './routes/_authenticated/admin/stats'
@@ -72,6 +73,12 @@ const AuthenticatedAdminHistoryRoute =
   } as any).lazy(() =>
     import('./routes/_authenticated/admin/history.lazy').then((d) => d.Route),
   )
+const AuthenticatedAdminPaymentsRoute =
+  AuthenticatedAdminPaymentsRouteImport.update({
+    id: '/payments',
+    path: '/payments',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminSettingsRoute =
   AuthenticatedAdminSettingsRouteImport.update({
     id: '/settings',
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/student': typeof AuthenticatedStudentRouteRouteWithChildren
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/history': typeof AuthenticatedAdminHistoryRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/stations': typeof AuthenticatedAdminStationsRoute
   '/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -152,6 +160,7 @@ export interface FileRoutesByTo {
   '/student': typeof AuthenticatedStudentRouteRouteWithChildren
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/history': typeof AuthenticatedAdminHistoryRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/stations': typeof AuthenticatedAdminStationsRoute
   '/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -171,6 +180,7 @@ export interface FileRoutesById {
   '/_authenticated/student': typeof AuthenticatedStudentRouteRouteWithChildren
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/history': typeof AuthenticatedAdminHistoryRoute
+  '/_authenticated/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/stations': typeof AuthenticatedAdminStationsRoute
   '/_authenticated/admin/stats': typeof AuthenticatedAdminStatsRoute
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/admin/dashboard'
     | '/admin/history'
+    | '/admin/payments'
     | '/admin/settings'
     | '/admin/stations'
     | '/admin/stats'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/admin/dashboard'
     | '/admin/history'
+    | '/admin/payments'
     | '/admin/settings'
     | '/admin/stations'
     | '/admin/stats'
@@ -225,6 +237,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/history'
+    | '/_authenticated/admin/payments'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/stations'
     | '/_authenticated/admin/stats'
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminHistoryRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/payments': {
+      id: '/_authenticated/admin/payments'
+      path: '/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/settings': {
       id: '/_authenticated/admin/settings'
       path: '/settings'
@@ -362,6 +382,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminHistoryRoute: typeof AuthenticatedAdminHistoryRoute
+  AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminStationsRoute: typeof AuthenticatedAdminStationsRoute
   AuthenticatedAdminStatsRoute: typeof AuthenticatedAdminStatsRoute
@@ -373,6 +394,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
   {
     AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
     AuthenticatedAdminHistoryRoute: AuthenticatedAdminHistoryRoute,
+    AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
     AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
     AuthenticatedAdminStationsRoute: AuthenticatedAdminStationsRoute,
     AuthenticatedAdminStatsRoute: AuthenticatedAdminStatsRoute,

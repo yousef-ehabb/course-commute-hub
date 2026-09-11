@@ -8,6 +8,7 @@ import {
   MapPin,
   History,
   LogOut,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RakebLogo } from "@/components/ui/RakebLogo";
@@ -29,6 +30,7 @@ export function AdminLayout() {
     { name: "الطلاب", icon: Users, path: "/admin/students" },
     { name: "نقاط التجمع", icon: MapPin, path: "/admin/stations" },
     { name: "الرحلات", icon: Map, path: "/admin/trips" },
+    { name: "الدفع", icon: CreditCard, path: "/admin/payments" },
     { name: "السجل", icon: History, path: "/admin/history" },
     { name: "إحصائيات", icon: BarChart3, path: "/admin/stats" },
     { name: "إعدادات", icon: Settings, path: "/admin/settings" },

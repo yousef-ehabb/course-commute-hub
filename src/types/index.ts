@@ -10,7 +10,18 @@ export interface CourseInfo {
   startDate: number;
   endDate?: number;
   createdAt: number;
+  transportation?: {
+    payment: {
+      isFree: boolean;
+      fee?: number; // legacy — kept for backward compat
+      days?: number;
+      dailyFee?: number;
+    };
+  };
+  registrationDeadline?: number;
 }
+
+export type PaymentStatus = "active" | "pending_payment" | "payment_submitted" | "payment_rejected";
 
 export interface UserProfile {
   uid: string;
@@ -21,6 +32,24 @@ export interface UserProfile {
   customLocation?: { lat: number; lng: number; name?: string };
   role: UserRole;
   courseId?: string;
+  createdAt: number;
+  paymentStatus?: PaymentStatus;
+  paymentAmount?: number;
+}
+
+export interface PaymentRecord {
+  id: string;
+  userId: string;
+  courseId: string;
+  amount: number;
+  status: "submitted" | "verified" | "approved" | "approved_cash" | "rejected";
+  submittedAt?: number;
+  verifiedAt?: number;
+  verifiedBy?: string;
+  rejectedAt?: number;
+  rejectedBy?: string;
+  rejectionReason?: string;
+  paymentMethod?: string;
   createdAt: number;
 }
 

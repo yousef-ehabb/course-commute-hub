@@ -57,6 +57,12 @@ function SettingsPage() {
   const [forceLock, setForceLock] = useState(false);
   const [vehicleLimits, setVehicleLimits] = useState({ micro: 14, bus: 50 });
   const [activeDateKey, setActiveDateKey] = useState<string>("");
+  const [paymentMethods, setPaymentMethods] = useState<{
+    instaPay?: string;
+    vodafoneCash?: string;
+    instructions?: string;
+    whatsappNumber?: string;
+  }>({});
 
   const [dbRef, setDbRef] = useState<any>(null);
 
@@ -64,6 +70,10 @@ function SettingsPage() {
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [newCourseId, setNewCourseId] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
+  const [isFree, setIsFree] = useState(true);
+  const [transportDays, setTransportDays] = useState(5);
+  const [dailyFee, setDailyFee] = useState(25);
+  const [registrationDeadlineInput, setRegistrationDeadlineInput] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Course Action Dialogs State
@@ -97,6 +107,7 @@ function SettingsPage() {
 
   useEffect(() => {
     let unsubSettings: (() => void) | undefined;
+    let unsubMethods: (() => void) | undefined;
 
     (async () => {
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -123,12 +134,22 @@ function SettingsPage() {
           console.error("[Settings] Failed to load settings:", error);
         }
       );
+
+      const methodsPath = `rakeb/settings/${courseId}/paymentMethods`;
+      unsubMethods = onValue(
+        ref(db, methodsPath),
+        (snap) => {
+          if (snap.exists()) setPaymentMethods(snap.val());
+          else setPaymentMethods({});
+        }
+      );
     })().catch((err) => {
       console.error("[Settings] Initialization failed:", err);
     });
 
     return () => {
       unsubSettings?.();
+      unsubMethods?.();
     };
   }, [courseId]);
 
@@ -155,6 +176,7 @@ function SettingsPage() {
         vehicleLimits,
         updatedAt: Date.now(),
         updatedBy: user?.uid || "unknown",
+        paymentMethods,
       });
       toast.success("تم حفظ الإعدادات بنجاح");
     } catch (e) {
@@ -167,7 +189,11 @@ function SettingsPage() {
     if (!newCourseId.trim() || !newCourseName.trim()) return;
     setIsCreatingCourse(true);
     try {
-      await createCourse(newCourseId, newCourseName);
+      let deadlineTimestamp: number | undefined;
+      if (registrationDeadlineInput) {
+        deadlineTimestamp = new Date(registrationDeadlineInput).getTime();
+      }
+      await createCourse(newCourseId, newCourseName, isFree, transportDays, dailyFee, deadlineTimestamp);
       toast.success(`تم إنشاء الكورس "${newCourseName.trim()}" بنجاح!`, {
         action: {
           label: "نسخ رابط التسجيل",
@@ -176,6 +202,10 @@ function SettingsPage() {
       });
       setNewCourseId("");
       setNewCourseName("");
+      setIsFree(true);
+      setTransportDays(5);
+      setDailyFee(25);
+      setRegistrationDeadlineInput("");
       setCreateDialogOpen(false);
     } catch (e: any) {
       console.error("[Settings] Create course failed:", e);
@@ -345,6 +375,55 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Payment Methods */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-primary font-bold">💳</span> طرق الدفع
+            </CardTitle>
+            <CardDescription>إعداد طرق الدفع المتاحة لطلاب الكورس ({courseId})</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">حساب إنستاباي (InstaPay)</label>
+              <Input
+                value={paymentMethods.instaPay || ""}
+                onChange={(e) => setPaymentMethods({ ...paymentMethods, instaPay: e.target.value })}
+                placeholder="example@instapay"
+                dir="ltr"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">رقم فودافون كاش</label>
+              <Input
+                value={paymentMethods.vodafoneCash || ""}
+                onChange={(e) => setPaymentMethods({ ...paymentMethods, vodafoneCash: e.target.value })}
+                placeholder="010XXXXXXXX"
+                dir="ltr"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">رقم واتساب لاستقبال الإيصالات</label>
+              <Input
+                value={paymentMethods.whatsappNumber || ""}
+                onChange={(e) => setPaymentMethods({ ...paymentMethods, whatsappNumber: e.target.value })}
+                placeholder="2010XXXXXXXXX"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">أدخل الرقم بكود الدولة بدون علامة + (مثال: 2010...)</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">تعليمات الدفع</label>
+              <textarea
+                value={paymentMethods.instructions || ""}
+                onChange={(e) => setPaymentMethods({ ...paymentMethods, instructions: e.target.value })}
+                placeholder="برجاء تحويل المبلغ وإرسال الإيصال..."
+                className="w-full p-2 border border-border rounded-lg bg-card text-foreground min-h-[80px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Course Management */}
         <Card className="md:col-span-2 border-primary/20">
           <CardHeader>
@@ -391,6 +470,61 @@ function SettingsPage() {
                         onChange={(e) => setNewCourseId(e.target.value)}
                         dir="ltr"
                       />
+                    </div>
+                    
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <label className="text-sm font-medium">اشتراك الباص</label>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" checked={isFree} onChange={() => setIsFree(true)} />
+                          <span className="text-sm">مجاني (بدون اشتراك)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" checked={!isFree} onChange={() => setIsFree(false)} />
+                          <span className="text-sm">مدفوع</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">عدد أيام الباص</label>
+                      <Input
+                        type="number"
+                        placeholder="مثال: 5"
+                        value={transportDays}
+                        onChange={(e) => setTransportDays(Math.max(1, parseInt(e.target.value) || 1))}
+                        min={1}
+                      />
+                    </div>
+
+                    {!isFree && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">تكلفة اليوم الواحد (ج.م)</label>
+                        <Input
+                          type="number"
+                          placeholder="25"
+                          value={dailyFee}
+                          onChange={(e) => setDailyFee(Math.max(0, Number(e.target.value)))}
+                          min={0}
+                        />
+                      </div>
+                    )}
+
+                    <div className="bg-muted/50 rounded-xl p-3 flex justify-between items-center">
+                      <span className="text-sm font-medium text-muted-foreground">الإجمالي المحسوب</span>
+                      <span className="text-lg font-bold text-primary">
+                        {isFree ? "0" : (transportDays * dailyFee)} ج.م
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <label className="text-sm font-medium">تاريخ انتهاء التسجيل (اختياري)</label>
+                      <Input
+                        type="datetime-local"
+                        value={registrationDeadlineInput}
+                        onChange={(e) => setRegistrationDeadlineInput(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">لن يتمكن الطلاب الجدد من التسجيل بعد هذا الوقت</p>
                     </div>
                   </div>
                   <AlertDialogFooter>

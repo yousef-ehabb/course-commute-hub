@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw, KeyRound } from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw, KeyRound, AlertCircle } from "lucide-react";
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import { StationPicker } from "@/components/student/StationPicker";
@@ -76,6 +76,29 @@ function RegisterPage() {
   const [isReEnrolling, setIsReEnrolling] = useState(false);
   const [courseCode, setCourseCode] = useState("");
   const [courseValidating, setCourseValidating] = useState(false);
+  const [courseData, setCourseData] = useState<any>(null);
+  const [courseLoading, setCourseLoading] = useState(false);
+
+  useEffect(() => {
+    if (!courseIdFromUrl) return;
+    let isMounted = true;
+    (async () => {
+      setCourseLoading(true);
+      try {
+        const { getFirebaseDb } = await import("@/lib/firebase");
+        const { ref, get } = await import("firebase/database");
+        const snap = await get(ref(getFirebaseDb(), `rakeb/courses/${courseIdFromUrl}`));
+        if (isMounted && snap.exists()) {
+          setCourseData(snap.val());
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setCourseLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [courseIdFromUrl]);
 
   // Pre-fill form fields from archived profile when re-enrolling
   useEffect(() => {
@@ -116,12 +139,59 @@ function RegisterPage() {
     }
   }
 
+  async function checkDuplicates(nid: string, ph: string): Promise<boolean> {
+    try {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, get } = await import("firebase/database");
+      const db = getFirebaseDb();
+      const normalizedPhone = ph.replace(/\D/g, "");
+
+      const nidSnap = await get(ref(db, `rakeb/usersByNationalId/${nid}`));
+      if (nidSnap.exists() && nidSnap.val().uid !== user?.uid && nidSnap.val().uid !== googleUid) {
+        const cid = nidSnap.val().courseId;
+        const cSnap = await get(ref(db, `rakeb/courses/${cid}`));
+        if (cSnap.exists() && cSnap.val().status === "active") {
+          toast.error(`الرقم القومي مسجل مسبقاً في كورس نشط (${cSnap.val().name}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+          return false;
+        }
+      }
+
+      const phoneSnap = await get(ref(db, `rakeb/usersByPhone/${normalizedPhone}`));
+      if (phoneSnap.exists() && phoneSnap.val().uid !== user?.uid && phoneSnap.val().uid !== googleUid) {
+        const cid = phoneSnap.val().courseId;
+        const cSnap = await get(ref(db, `rakeb/courses/${cid}`));
+        if (cSnap.exists() && cSnap.val().status === "active") {
+          toast.error(`رقم الموبايل مسجل مسبقاً في كورس نشط (${cSnap.val().name}). لا يمكن التسجيل في أكثر من كورس في نفس الوقت.`);
+          return false;
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      return true; // fail open or closed? let's fail open to not block legitimate users if rules reject read, but rules should allow it or we bypass
+    }
+  }
+
   async function handleCompleteGoogleRegistration() {
     if (!validateStep2() || !validateStep3()) return;
     setLoading(true);
+    const noDups = await checkDuplicates(nationalId.trim(), phone);
+    if (!noDups) {
+      setLoading(false);
+      return;
+    }
+    
     try {
+      const isFree = courseData?.transportation?.payment?.isFree ?? true;
+      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const newPaymentStatus = isFree ? "active" : "pending_payment";
+
       const { getFirebaseDb } = await import("@/lib/firebase");
-      const { ref, set, remove } = await import("firebase/database");
+      const { ref, update } = await import("firebase/database");
+      
+      const normalizedPhone = phone.replace(/\D/g, "");
+      const targetCourseId = courseIdFromUrl || "default";
+      
       const userProfile = {
         uid: googleUid,
         fullName: fullName.trim(),
@@ -131,18 +201,24 @@ function RegisterPage() {
         role: "student",
         createdAt: Date.now(),
         ...(station === "custom" && customLocation ? { customLocation } : {}),
-        courseId: courseIdFromUrl || "default",
+        courseId: targetCourseId,
+        paymentStatus: newPaymentStatus,
+        paymentAmount,
       };
-      await set(ref(getFirebaseDb(), `rakeb/users/${googleUid}`), userProfile);
+      
+      const updates: Record<string, any> = {
+        [`rakeb/users/${googleUid}`]: userProfile,
+        [`rakeb/usersByNationalId/${nationalId.trim()}`]: { uid: googleUid, courseId: targetCourseId },
+        [`rakeb/usersByPhone/${normalizedPhone}`]: { uid: googleUid, courseId: targetCourseId }
+      };
 
       // Clean up archived data and index if re-enrolling
       if (isReEnrolling && archivedProfile) {
-        const { update } = await import("firebase/database");
-        await update(ref(getFirebaseDb()), {
-          [`rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`]: null,
-          [`rakeb/archivedUsersIndex/${googleUid}`]: null,
-        });
+        updates[`rakeb/archivedUsers/${archivedProfile.courseId}/${googleUid}`] = null;
+        updates[`rakeb/archivedUsersIndex/${googleUid}`] = null;
       }
+
+      await update(ref(getFirebaseDb()), updates);
 
       toast.success("تم إكمال حسابك بنجاح! أهلاً بك في راكب 🎉");
       navigate({ to: "/student/home", replace: true });
@@ -158,9 +234,22 @@ function RegisterPage() {
     if (!validateStep2() || !validateStep3()) return;
     if (!user || !archivedProfile || !courseIdFromUrl) return;
     setLoading(true);
+    
+    const noDups = await checkDuplicates(nationalId.trim(), phone);
+    if (!noDups) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { getFirebaseDb } = await import("@/lib/firebase");
-      const { ref, set, remove } = await import("firebase/database");
+      const { ref, update } = await import("firebase/database");
+      
+      const isFree = courseData?.transportation?.payment?.isFree ?? true;
+      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const newPaymentStatus = isFree ? "active" : "pending_payment";
+      
+      const normalizedPhone = phone.replace(/\D/g, "");
 
       // Create new active profile for the new course
       const newProfile = {
@@ -172,16 +261,20 @@ function RegisterPage() {
         ...(station === "custom" && customLocation ? { customLocation } : {}),
         role: "student",
         courseId: courseIdFromUrl,
+        paymentStatus: newPaymentStatus,
+        paymentAmount,
         createdAt: Date.now(),
       };
-      await set(ref(getFirebaseDb(), `rakeb/users/${user.uid}`), newProfile);
-
-      // Clean up archived data and index
-      const { update } = await import("firebase/database");
-      await update(ref(getFirebaseDb()), {
+      
+      const updates: Record<string, any> = {
+        [`rakeb/users/${user.uid}`]: newProfile,
+        [`rakeb/usersByNationalId/${nationalId.trim()}`]: { uid: user.uid, courseId: courseIdFromUrl },
+        [`rakeb/usersByPhone/${normalizedPhone}`]: { uid: user.uid, courseId: courseIdFromUrl },
         [`rakeb/archivedUsers/${archivedProfile.courseId}/${user.uid}`]: null,
         [`rakeb/archivedUsersIndex/${user.uid}`]: null,
-      });
+      };
+
+      await update(ref(getFirebaseDb()), updates);
 
       toast.success("تم تسجيلك في الكورس الجديد بنجاح! أهلاً بك مجدداً 🎉");
       navigate({ to: "/student/home", replace: true });
@@ -260,15 +353,40 @@ function RegisterPage() {
     }
 
     setLoading(true);
+    const noDups = await checkDuplicates(nationalId.trim(), phone);
+    if (!noDups) {
+      setLoading(false);
+      return;
+    }
+
     try {
+      const isFree = courseData?.transportation?.payment?.isFree ?? true;
+      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const newPaymentStatus = isFree ? "active" : "pending_payment";
+      const normalizedPhone = phone.replace(/\D/g, "");
+      const targetCourseId = courseIdFromUrl || "default";
+
       await signUp(email.trim(), password, {
         fullName: fullName.trim(),
         phone: phone.trim(),
         nationalId: nationalId.trim(),
         defaultStation: station,
         ...(station === "custom" && customLocation ? { customLocation } : {}),
-        courseId: courseIdFromUrl || "default",
+        courseId: targetCourseId,
+        paymentStatus: newPaymentStatus,
+        paymentAmount,
       });
+      
+      // Need to write the indexes, but signUp writes the user node, so we need to do this after
+      const { getFirebaseAuth, getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, update } = await import("firebase/database");
+      const currentUser = getFirebaseAuth().currentUser;
+      if (currentUser) {
+         await update(ref(getFirebaseDb()), {
+           [`rakeb/usersByNationalId/${nationalId.trim()}`]: { uid: currentUser.uid, courseId: targetCourseId },
+           [`rakeb/usersByPhone/${normalizedPhone}`]: { uid: currentUser.uid, courseId: targetCourseId }
+         });
+      }
       // Registration successful! Move to success step
       setStep(5);
     } catch (err) {
@@ -392,6 +510,8 @@ function RegisterPage() {
     );
   }
 
+  const isRegistrationClosed = courseData?.registrationDeadline && Date.now() > courseData.registrationDeadline;
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-8">
       {/* Header outside the animated box to stay static */}
@@ -403,8 +523,25 @@ function RegisterPage() {
         </div>
       )}
 
-      {/* Re-enrollment banner for archived students */}
-      {isReEnrolling && archivedProfile && (
+      {isRegistrationClosed && !isReEnrolling ? (
+        <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-elevated text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-2">
+            <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">التسجيل مغلق</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            عذراً، انتهى موعد التسجيل في هذا الكورس. يرجى التواصل مع الإدارة إذا كنت تعتقد أن هذا خطأ.
+          </p>
+          <div className="pt-4">
+            <Button variant="outline" onClick={() => navigate({ to: "/" })} className="w-full">
+              العودة للرئيسية
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Re-enrollment banner for archived students */}
+          {isReEnrolling && archivedProfile && (
         <div className="w-full max-w-sm mb-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="text-lg">👋</span>
@@ -762,6 +899,8 @@ function RegisterPage() {
           )}
         </AnimatePresence>
       </div>
+        </>
+      )}
     </div>
   );
 }

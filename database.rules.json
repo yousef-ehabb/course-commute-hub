@@ -5,7 +5,32 @@
         ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
         "$uid": {
           ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
-          ".write": "auth != null && ((auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student') || (data.exists() && data.child('role').val() === newData.child('role').val()))) || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')"
+          ".write": "auth != null && ((auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student') || (data.exists() && data.child('role').val() === newData.child('role').val()))) || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
+          "paymentStatus": {
+            ".validate": "root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (!data.exists() && (newData.val() === 'pending_payment' || (newData.val() === 'active' && root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment/isFree').val() === true))) || (newData.val() === 'payment_submitted' && (data.val() === 'pending_payment' || data.val() === 'payment_rejected'))"
+          }
+        }
+      },
+      "usersByNationalId": {
+        ".read": "auth != null",
+        "$nid": {
+          ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (newData.child('uid').val() === auth.uid && (!data.exists() || data.child('uid').val() === auth.uid)))"
+        }
+      },
+      "usersByPhone": {
+        ".read": "auth != null",
+        "$phone": {
+          ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (newData.child('uid').val() === auth.uid && (!data.exists() || data.child('uid').val() === auth.uid)))"
+        }
+      },
+      "payments": {
+        ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+        "$courseId": {
+          ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
+            ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && newData.child('status').val() === 'submitted' && !newData.child('verifiedBy').exists() && !newData.child('verifiedAt').exists()))"
+          }
         }
       },
       "stations": {

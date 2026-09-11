@@ -2,6 +2,7 @@ import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { PaymentStatusPage } from "../student/PaymentStatusPage";
 
 /**
  * Route guard that only allows authenticated students.
@@ -11,7 +12,7 @@ import type { ReactNode } from "react";
  * - Student → render children
  */
 export function StudentGuard({ children }: { children: ReactNode }) {
-  const { isStudent, isAuthenticated, loading, error, retryAuth } = useAuth();
+  const { isStudent, isAuthenticated, loading, error, retryAuth, paymentStatus } = useAuth();
 
   if (loading) {
     return (
@@ -41,6 +42,14 @@ export function StudentGuard({ children }: { children: ReactNode }) {
 
   if (!isStudent) {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (
+    paymentStatus === "pending_payment" ||
+    paymentStatus === "payment_submitted" ||
+    paymentStatus === "payment_rejected"
+  ) {
+    return <PaymentStatusPage />;
   }
 
   return <>{children}</>;

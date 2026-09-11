@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "firebase/auth";
-import type { UserProfile, UserRole } from "@/types";
+import type { UserProfile, UserRole, PaymentStatus } from "@/types";
 
 export type AccountStatus = "active" | "archived" | "deleted" | null;
 
@@ -29,6 +29,7 @@ interface AuthContextValue {
   error: string | null;
   isEmailVerified: boolean;
   accountStatus: AccountStatus;
+  paymentStatus: PaymentStatus;
   archivedProfile: ArchivedProfile | null;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [configured, setConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountStatus, setAccountStatus] = useState<AccountStatus>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("active");
   const [archivedProfile, setArchivedProfile] = useState<ArchivedProfile | null>(null);
 
   // Incrementing retryKey forces the effect to re-run
@@ -126,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Normal active user
                     setProfile({ ...val, uid: u.uid });
                     setAccountStatus("active");
+                    setPaymentStatus(val.paymentStatus || "active");
                     setArchivedProfile(null);
                     resolved = true;
                     setLoading(false);
@@ -142,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         console.warn("[AuthContext] User was permanently deleted:", u.uid);
                         setProfile(null);
                         setAccountStatus("deleted");
+                        setPaymentStatus("active");
                         setArchivedProfile(null);
                         resolved = true;
                         setLoading(false);
@@ -166,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                           console.log("[AuthContext] Found archived user in course:", archivedCourseId);
                           setProfile(null);
                           setAccountStatus("archived");
+                          setPaymentStatus("active");
                           setArchivedProfile({ profile: { ...archivedData, uid: u.uid }, courseId: archivedCourseId });
                           resolved = true;
                           setLoading(false);
@@ -180,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Not found anywhere — truly new or incomplete profile
                     setProfile(null);
                     setAccountStatus(null);
+                    setPaymentStatus("active");
                     setArchivedProfile(null);
                     resolved = true;
                     setLoading(false);
@@ -188,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     console.error("[AuthContext] Error checking archived/deleted status:", checkErr);
                     setProfile(null);
                     setAccountStatus(null);
+                    setPaymentStatus("active");
                     setArchivedProfile(null);
                     resolved = true;
                     setLoading(false);
@@ -214,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             setProfile(null);
             setAccountStatus(null);
+            setPaymentStatus("active");
             setArchivedProfile(null);
             resolved = true;
             setLoading(false);
@@ -313,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       isEmailVerified,
       accountStatus,
+      paymentStatus,
       archivedProfile,
       signIn,
       signInWithGoogle,
@@ -333,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       isEmailVerified,
       accountStatus,
+      paymentStatus,
       archivedProfile,
       signIn,
       signInWithGoogle,
