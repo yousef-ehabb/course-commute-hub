@@ -18,6 +18,11 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Play,
+  Square,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { DEFAULT_CUTOFF_TIME } from "@/lib/constants";
 import { toast } from "sonner";
@@ -50,6 +55,7 @@ function SettingsPage() {
     createCourse,
     archiveCourse,
     deleteCourse,
+    updateCourseRegistrationDeadline,
   } = useCourse();
 
   const [cutoffTime, setCutoffTime] = useState(DEFAULT_CUTOFF_TIME);
@@ -63,6 +69,16 @@ function SettingsPage() {
     instructions?: string;
     whatsappNumber?: string;
   }>({});
+
+  const currentCourseInfo = coursesList.find((c) => c.id === courseId);
+  const [registrationDeadline, setRegistrationDeadline] = useState<number | null | undefined>(undefined);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentCourseInfo) {
+      setRegistrationDeadline(currentCourseInfo.registrationDeadline ?? null);
+    }
+  }, [currentCourseInfo?.id, currentCourseInfo?.registrationDeadline]);
 
   const [dbRef, setDbRef] = useState<any>(null);
 
@@ -153,35 +169,92 @@ function SettingsPage() {
     };
   }, [courseId]);
 
+  // Compute the cutoff timestamp given the active date and cutoff time
+  const computeCutoffTs = (dateKey: string, timeStr: string): number | null => {
+    if (!dateKey || !timeStr) return null;
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const [h, m] = timeStr.split(":").map(Number);
+    const cutoff = new Date(year, month - 1, day);
+    cutoff.setDate(cutoff.getDate() - 1);
+    cutoff.setHours(h, m, 0, 0);
+    return cutoff.getTime();
+  };
+
   const handleSave = async () => {
     if (!dbRef) return;
     try {
       const { ref, update } = await import("firebase/database");
 
-      let cutoffTimestamp = null;
-      if (activeDateKey && cutoffTime) {
-        const [year, month, day] = activeDateKey.split("-").map(Number);
-        const [cutoffHours, cutoffMinutes] = cutoffTime.split(":").map(Number);
-        const cutoff = new Date(year, month - 1, day);
-        cutoff.setDate(cutoff.getDate() - 1);
-        cutoff.setHours(cutoffHours, cutoffMinutes, 0, 0);
-        cutoffTimestamp = cutoff.getTime();
-      }
+      const cutoffTimestamp = computeCutoffTs(activeDateKey, cutoffTime);
 
-      await update(ref(dbRef, `rakeb/settings/${courseId}`), {
-        cutoffTime,
-        cutoffEnabled,
-        forceLock,
-        ...(cutoffTimestamp ? { cutoffTimestamp } : {}),
-        vehicleLimits,
-        updatedAt: Date.now(),
-        updatedBy: user?.uid || "unknown",
-        paymentMethods,
-      });
+      // Sync registrationDeadline: if cutoffEnabled and not forceLock, set it to
+      // the cutoff timestamp; if auto-close disabled, set to null (open).
+      const newDeadline = cutoffEnabled && !forceLock && cutoffTimestamp ? cutoffTimestamp : null;
+
+      await Promise.all([
+        update(ref(dbRef, `rakeb/settings/${courseId}`), {
+          cutoffTime,
+          cutoffEnabled,
+          forceLock,
+          ...(cutoffTimestamp ? { cutoffTimestamp } : {}),
+          vehicleLimits,
+          updatedAt: Date.now(),
+          updatedBy: user?.uid || "unknown",
+          paymentMethods,
+        }),
+        updateCourseRegistrationDeadline(courseId, newDeadline),
+      ]);
+      setRegistrationDeadline(newDeadline);
       toast.success("تم حفظ الإعدادات بنجاح");
     } catch (e) {
       console.error("[Settings] Save failed:", e);
       toast.error("حدث خطأ أثناء الحفظ");
+    }
+  };
+
+  // Immediately stop registration (set deadline to past)
+  const handleStopRegistration = async () => {
+    if (!dbRef) return;
+    setIsActionLoading(true);
+    try {
+      const { ref, update } = await import("firebase/database");
+      const pastTs = Date.now() - 1000;
+      await Promise.all([
+        update(ref(dbRef, `rakeb/settings/${courseId}`), { forceLock: true, updatedAt: Date.now() }),
+        updateCourseRegistrationDeadline(courseId, pastTs),
+      ]);
+      setForceLock(true);
+      setRegistrationDeadline(pastTs);
+      toast.success("تم إيقاف التسجيل للطلاب الجدد فوراً");
+    } catch (e) {
+      toast.error("فشل إيقاف التسجيل");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Resume registration: open it again
+  const handleResumeRegistration = async () => {
+    if (!dbRef) return;
+    setIsActionLoading(true);
+    try {
+      const { ref, update } = await import("firebase/database");
+
+      // If cutoffEnabled, set deadline to future cutoff time; otherwise remove it
+      const cutoffTimestamp = computeCutoffTs(activeDateKey, cutoffTime);
+      const newDeadline = cutoffEnabled && cutoffTimestamp && cutoffTimestamp > Date.now() ? cutoffTimestamp : null;
+
+      await Promise.all([
+        update(ref(dbRef, `rakeb/settings/${courseId}`), { forceLock: false, updatedAt: Date.now() }),
+        updateCourseRegistrationDeadline(courseId, newDeadline),
+      ]);
+      setForceLock(false);
+      setRegistrationDeadline(newDeadline);
+      toast.success("تم استئناف التسجيل للطلاب الجدد");
+    } catch (e) {
+      toast.error("فشل استئناف التسجيل");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -277,42 +350,124 @@ function SettingsPage() {
             <CardDescription>تحكم في أوقات غلق التسجيل للطلاب</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-border/50">
-              <div>
-                <label className="text-sm font-medium text-foreground">إغلاق التسجيل يدوياً</label>
-                <p className="text-xs text-muted-foreground">منع الطلاب من تغيير حالتهم فوراً وبشكل دائم</p>
-              </div>
-              <Switch
-                checked={forceLock}
-                onCheckedChange={setForceLock}
-                className={forceLock ? "bg-red-500" : ""}
-              />
-            </div>
+            {/* ── Registration Status Badge + Stop/Resume Button ── */}
+            {(() => {
+              const now = Date.now();
+              const isClosed = forceLock || (registrationDeadline != null && now > registrationDeadline);
+              return (
+                <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                  isClosed
+                    ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+                    : "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {isClosed ? (
+                      <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    )}
+                    <div>
+                      <p className={`text-sm font-semibold ${
+                        isClosed ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"
+                      }`}>
+                        {isClosed ? "التسجيل مغلق حالياً" : "التسجيل مفتوح حالياً"}
+                      </p>
+                      {!isClosed && registrationDeadline && registrationDeadline > now && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                          يغلق تلقائياً: {new Date(registrationDeadline).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}
+                        </p>
+                      )}
+                      {!isClosed && !registrationDeadline && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400">مفتوح بدون موعد انتهاء</p>
+                      )}
+                    </div>
+                  </div>
+                  {isClosed ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      onClick={handleResumeRegistration}
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                      استئناف التسجيل
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs border-red-400 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      onClick={handleStopRegistration}
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Square className="w-3 h-3 fill-current" />}
+                      إيقاف التسجيل
+                    </Button>
+                  )}
+                </div>
+              );
+            })()}
 
+            {/* ── Auto-close Toggle ── */}
             <div
               className={`flex items-center justify-between pb-4 border-b border-border/50 ${
                 forceLock ? "opacity-50 pointer-events-none" : ""
               }`}
             >
               <div>
-                <label className="text-sm font-medium text-foreground">تفعيل غلق التسجيل التلقائي</label>
-                <p className="text-xs text-muted-foreground">منع الطلاب من تغيير حالتهم بعد وقت محدد</p>
+                <label className="text-sm font-medium text-foreground">الغلق التلقائي للتسجيل</label>
+                <p className="text-xs text-muted-foreground">إغلاق تسجيل الطلاب تلقائياً عند الوقت المحدد</p>
               </div>
-              <Switch checked={cutoffEnabled} onCheckedChange={setCutoffEnabled} />
+              <Switch
+                checked={cutoffEnabled}
+                onCheckedChange={(v) => {
+                  setCutoffEnabled(v);
+                  // If disabling, clear local deadline preview
+                  if (!v) setRegistrationDeadline(null);
+                  else {
+                    const ts = computeCutoffTs(activeDateKey, cutoffTime);
+                    setRegistrationDeadline(ts);
+                  }
+                }}
+              />
             </div>
 
+            {/* ── Cutoff Time (synced with registrationDeadline) ── */}
             <div className={`space-y-2 ${!cutoffEnabled || forceLock ? "opacity-50 pointer-events-none" : ""}`}>
-              <label className="text-sm font-medium text-foreground">وقت غلق التسجيل يومياً</label>
+              <label className="text-sm font-medium text-foreground">وقت إغلاق التسجيل يومياً</label>
               <input
                 type="time"
                 value={cutoffTime}
-                onChange={(e) => setCutoffTime(e.target.value)}
+                onChange={(e) => {
+                  const newTime = e.target.value;
+                  setCutoffTime(newTime);
+                  // Update preview of registrationDeadline
+                  if (cutoffEnabled && activeDateKey) {
+                    const ts = computeCutoffTs(activeDateKey, newTime);
+                    setRegistrationDeadline(ts);
+                  }
+                }}
                 className="w-full p-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <p className="text-xs text-muted-foreground">الوقت بصيغة 24 ساعة (مثال: 22:00 = 10 مساءً)</p>
+              <p className="text-xs text-muted-foreground">
+                الوقت بصيغة 24 ساعة (مثال: 22:00 = 10 مساءً) — يؤثر أيضاً على موعد انتهاء تسجيل الطلاب الجدد
+              </p>
+              {cutoffEnabled && activeDateKey && cutoffTime && registrationDeadline && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    سيُغلق التسجيل في:{" "}
+                    <strong dir="ltr">
+                      {new Date(registrationDeadline).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}
+                    </strong>
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="pt-4 border-t border-border/50">
+            {/* ── Active Trip Date ── */}
+            <div className={`pt-4 border-t border-border/50 ${forceLock ? "opacity-50 pointer-events-none" : ""}`}>
               <label className="text-sm font-medium text-foreground">تاريخ الرحلة القادمة (اليوم الفعال)</label>
               <div className="flex items-center gap-3 mt-2">
                 <input
@@ -325,6 +480,11 @@ function SettingsPage() {
                       const { ref, update } = await import("firebase/database");
                       await update(ref(dbRef, `rakeb/settings/${courseId}`), { activeDateKey: newDate });
                       setActiveDateKey(newDate);
+                      // Recalculate preview
+                      if (cutoffEnabled) {
+                        const ts = computeCutoffTs(newDate, cutoffTime);
+                        setRegistrationDeadline(ts);
+                      }
                       toast.success("تم تحديث تاريخ الرحلة القادمة بنجاح");
                     } catch (err) {
                       toast.error("فشل في تحديث تاريخ الرحلة");

@@ -31,6 +31,8 @@ interface CourseContextValue {
   deleteCourse: (id: string) => Promise<void>;
   /** Create a new course */
   createCourse: (id: string, name: string, isFree: boolean, days: number, dailyFee: number, registrationDeadline?: number) => Promise<void>;
+  /** Update registration deadline for a course (or set null to remove) */
+  updateCourseRegistrationDeadline: (id: string, deadline: number | null) => Promise<void>;
 }
 
 const CourseContext = createContext<CourseContextValue | null>(null);
@@ -255,6 +257,19 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     [effectiveCourseId, handleSetCourseId]
   );
 
+  // Update registration deadline helper
+  const updateCourseRegistrationDeadline = useCallback(
+    async (targetCourseId: string, deadline: number | null) => {
+      const { getFirebaseDb } = await import("@/lib/firebase");
+      const { ref, update } = await import("firebase/database");
+      const db = getFirebaseDb();
+      await update(ref(db, `rakeb/courses/${targetCourseId}`), {
+        registrationDeadline: deadline,
+      });
+    },
+    []
+  );
+
   const value = useMemo<CourseContextValue>(
     () => ({
       courseId: effectiveCourseId,
@@ -266,6 +281,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
       archiveCourse,
       deleteCourse,
       createCourse,
+      updateCourseRegistrationDeadline,
     }),
     [
       effectiveCourseId,
@@ -277,6 +293,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
       archiveCourse,
       deleteCourse,
       createCourse,
+      updateCourseRegistrationDeadline,
     ]
   );
 
