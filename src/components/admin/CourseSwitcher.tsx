@@ -23,16 +23,16 @@ export function CourseSwitcher() {
     startDate: 0,
   };
 
-  const allCourses = [
-    defaultCourse,
-    ...courses.filter((c) => c.id !== "default"),
-  ];
+  const allCourses = [defaultCourse, ...courses.filter((c) => c.id !== "default")];
 
-  // Exclude archived courses from the switcher dropdown
-  const activeCourses = allCourses.filter((c) => c.status !== "archived");
+  // Exclude archived/ended courses from the switcher dropdown
+  const activeCourses = allCourses.filter((c) => c.status === "active");
 
   // If there are no custom courses created yet, show default indicator
-  const activeCourseName = course?.name || (courseId === "default" ? "الكورس الأساسي" : courseId);
+  const activeCourseName =
+    courseId === "all"
+      ? "جميع الكورسات النشطة"
+      : course?.name || (courseId === "default" ? "الكورس الأساسي" : courseId);
 
   return (
     <DropdownMenu>
@@ -53,24 +53,42 @@ export function CourseSwitcher() {
             لا توجد كورسات نشطة حالياً
           </div>
         ) : (
-          activeCourses.map((c) => {
-            const isSelected = c.id === courseId;
-            return (
-              <DropdownMenuItem
-                key={c.id}
-                onClick={() => setCourseId(c.id)}
-                className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
-                  isSelected ? "bg-primary/10 text-primary font-bold" : ""
-                }`}
-              >
-                <div className="flex flex-col min-w-0 pr-1">
-                  <span className="truncate">{c.name}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono truncate">{c.id}</span>
-                </div>
-                {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
-              </DropdownMenuItem>
-            );
-          })
+          <>
+            <DropdownMenuItem
+              key="all"
+              onClick={() => setCourseId("all")}
+              className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
+                courseId === "all" ? "bg-primary/10 text-primary font-bold" : ""
+              }`}
+            >
+              <div className="flex flex-col min-w-0 pr-1">
+                <span className="truncate">جميع الكورسات النشطة</span>
+                <span className="text-[10px] text-muted-foreground font-mono truncate">all</span>
+              </div>
+              {courseId === "all" && <Check className="w-4 h-4 text-primary shrink-0" />}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1" />
+            {activeCourses.map((c) => {
+              const isSelected = c.id === courseId;
+              return (
+                <DropdownMenuItem
+                  key={c.id}
+                  onClick={() => setCourseId(c.id)}
+                  className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
+                    isSelected ? "bg-primary/10 text-primary font-bold" : ""
+                  }`}
+                >
+                  <div className="flex flex-col min-w-0 pr-1">
+                    <span className="truncate">{c.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono truncate">
+                      {c.id}
+                    </span>
+                  </div>
+                  {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </>
         )}
 
         <DropdownMenuSeparator className="my-1" />

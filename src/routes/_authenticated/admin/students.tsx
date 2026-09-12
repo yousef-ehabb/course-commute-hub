@@ -1,15 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useStations } from "@/contexts/StationsContext";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useBoardingRecords } from "@/hooks/useBoardingRecords";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useCourse } from "@/contexts/CourseContext";
-import { filterStudentsByCourse } from "@/utils/courseFilter";
+import { filterStudentsByCourse, isStudentPaymentActive } from "@/utils/courseFilter";
 import { getStationName } from "@/utils/stationResolver";
 import { getVehicleLabelById } from "@/utils/vehicleLabels";
-import { Download, Search, SearchX, MapPin, Phone, CreditCard, Trash2, Archive, AlertTriangle, Loader2 } from "lucide-react";
+import type { UserProfile } from "@/types";
+import {
+  Download,
+  Search,
+  SearchX,
+  MapPin,
+  Phone,
+  CreditCard,
+  Trash2,
+  Archive,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import {
@@ -28,12 +40,7 @@ export const Route = createFileRoute("/_authenticated/admin/students")({
 
 function WhatsAppIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.03-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z" />
     </svg>
   );
@@ -59,6 +66,8 @@ interface StudentRecord {
   isBoarded?: boolean;
   vehicleName?: string;
   customLocation?: { lat: number; lng: number; name?: string };
+  courseId: string;
+  courseName: string;
 }
 
 type FilterType = "all" | "riding" | "not_riding";
@@ -68,11 +77,30 @@ function StudentsPage() {
   const { getAllStudentsStatus } = useTodayStatus();
   const { recordsByStudent } = useBoardingRecords();
   const { vehicles } = useVehicles();
-  const { courseId } = useCourse();
+  const { courseId, courses } = useCourse();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [mounted, setMounted] = useState(false);
+
+  // Active courses set to avoid matching ended/archived courses
+  const activeCourseIds = useMemo(() => {
+    const ids = new Set<string>(["default"]);
+    courses.forEach((c) => {
+      if (c.status === "active") {
+        ids.add(c.id);
+      }
+    });
+    return ids;
+  }, [courses]);
+
+  const coursesMap = useMemo(() => {
+    const map: Record<string, string> = { default: "الكورس الأساسي" };
+    courses.forEach((c) => {
+      map[c.id] = c.name;
+    });
+    return map;
+  }, [courses]);
 
   // Delete/Archive dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,30 +116,42 @@ function StudentsPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
-          setUsers(filterStudentsByCourse(allUsers, courseId));
+          const allUsers = Object.entries(val).map(([uid, u]) => ({
+            ...(u as Record<string, unknown>),
+            uid,
+          })) as UserProfile[];
+          // Filter by course and ensure ONLY payment-active students are included
+          const activeStudents = filterStudentsByCourse(allUsers, courseId, activeCourseIds).filter(
+            isStudentPaymentActive,
+          );
+          setUsers(activeStudents);
         } else {
           setUsers([]);
         }
       });
     })();
     return () => unsub?.();
-  }, [courseId]);
+  }, [courseId, activeCourseIds]);
 
   const students = useMemo<StudentRecord[]>(() => {
-    const allStatus = getAllStudentsStatus(users);
+    // Defensively ensure only payment-active students are processed
+    const activeUsers = users.filter(isStudentPaymentActive);
+    const allStatus = getAllStudentsStatus(activeUsers);
     return allStatus
       .filter((u) => !u.isStaff)
       .map((u) => {
         const stationName = getStationName(u.station, stations, u.customLocation?.name);
         const record = recordsByStudent[u.id];
         const isBoarded = record?.status === "boarded";
-        const vehicleName = isBoarded && record?.vehicleId
-          ? getVehicleLabelById(record.vehicleId, vehicles)
-          : undefined;
+        const vehicleName =
+          isBoarded && record?.vehicleId
+            ? getVehicleLabelById(record.vehicleId, vehicles)
+            : undefined;
 
-        const originalUser = users.find((usr) => (usr.uid || usr.id) === u.id);
+        const originalUser = activeUsers.find((usr) => usr.uid === u.id);
         const nationalId = u.nationalId || originalUser?.nationalId || "---";
+        const studentCourse = originalUser?.courseId || u.courseId || "default";
+        const courseName = coursesMap[studentCourse] || studentCourse;
 
         return {
           id: u.id,
@@ -123,9 +163,11 @@ function StudentsPage() {
           isBoarded,
           vehicleName,
           customLocation: u.customLocation,
+          courseId: studentCourse,
+          courseName,
         };
       });
-  }, [getAllStudentsStatus, users, stations, recordsByStudent, vehicles]);
+  }, [getAllStudentsStatus, users, stations, recordsByStudent, vehicles, coursesMap]);
 
   const filteredStudents = students.filter((s) => {
     const q = searchTerm.trim().toLowerCase();
@@ -146,7 +188,8 @@ function StudentsPage() {
   const handleExport = () => {
     const exportData = filteredStudents.map((student) => ({
       الاسم: student.name,
-      "الرقم القومي": student.nationalId && student.nationalId !== "---" ? String(student.nationalId) : "---",
+      "الرقم القومي":
+        student.nationalId && student.nationalId !== "---" ? String(student.nationalId) : "---",
       "رقم الهاتف": student.phone,
       "نقطة التجمع": student.station,
       "تأكيد الحضور": student.isRidingToday ? "نعم" : "لا",
@@ -194,17 +237,20 @@ function StudentsPage() {
         return;
       }
 
-      const userData = userSnap.val();
-      const updates: Record<string, any> = {};
+      const userData = userSnap.val() as UserProfile;
+      const updates: Record<string, unknown> = {};
 
-      // Move to archivedUsers under the current course
-      updates[`rakeb/archivedUsers/${courseId}/${selectedStudent.id}`] = {
+      // Student's actual courseId must be used, NEVER courseId === "all"
+      const targetCourseId = selectedStudent.courseId || userData.courseId || "default";
+
+      // Move to archivedUsers under the student's actual course
+      updates[`rakeb/archivedUsers/${targetCourseId}/${selectedStudent.id}`] = {
         ...userData,
         archivedAt: Date.now(),
-        archivedFromCourse: courseId,
+        archivedFromCourse: targetCourseId,
       };
       // Write reverse-lookup index for efficient archived-user checks
-      updates[`rakeb/archivedUsersIndex/${selectedStudent.id}`] = { courseId };
+      updates[`rakeb/archivedUsersIndex/${selectedStudent.id}`] = { courseId: targetCourseId };
       // Remove from active users
       updates[`rakeb/users/${selectedStudent.id}`] = null;
 
@@ -217,7 +263,7 @@ function StudentsPage() {
     } finally {
       setActionLoading(null);
     }
-  }, [selectedStudent, courseId]);
+  }, [selectedStudent]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedStudent) return;
@@ -227,13 +273,15 @@ function StudentsPage() {
       const { ref, update } = await import("firebase/database");
       const db = getFirebaseDb();
 
-      const updates: Record<string, any> = {};
+      // Student's actual courseId must be used, NEVER courseId === "all"
+      const targetCourseId = selectedStudent.courseId || "default";
+      const updates: Record<string, unknown> = {};
       // Remove from active users
       updates[`rakeb/users/${selectedStudent.id}`] = null;
       // Flag as permanently deleted
       updates[`rakeb/deletedUsers/${selectedStudent.id}`] = {
         deletedAt: Date.now(),
-        deletedFromCourse: courseId,
+        deletedFromCourse: targetCourseId,
         studentName: selectedStudent.name,
       };
 
@@ -246,7 +294,7 @@ function StudentsPage() {
     } finally {
       setActionLoading(null);
     }
-  }, [selectedStudent, courseId]);
+  }, [selectedStudent]);
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-4 pb-24">
@@ -259,9 +307,12 @@ function StudentsPage() {
           <Download className="w-4 h-4" />
           <span>تصدير إلى Excel</span>
         </button>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">
-          الطلاب
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">الطلاب</h1>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+            {filteredStudents.length}
+          </span>
+        </div>
         {/* Invisible spacer to perfectly center the title against the button */}
         <div className="w-32 opacity-0 pointer-events-none hidden sm:block"></div>
       </header>
@@ -300,7 +351,7 @@ function StudentsPage() {
       </div>
 
       {/* Student List */}
-      <motion.div 
+      <motion.div
         className="flex flex-col gap-3"
         initial={mounted ? false : "hidden"}
         animate="show"
@@ -308,8 +359,8 @@ function StudentsPage() {
           hidden: { opacity: 0 },
           show: {
             opacity: 1,
-            transition: { staggerChildren: 0.05 }
-          }
+            transition: { staggerChildren: 0.05 },
+          },
         }}
       >
         {filteredStudents.length === 0 && (
@@ -328,7 +379,7 @@ function StudentsPage() {
               initial={mounted ? false : "hidden"}
               variants={{
                 hidden: { opacity: 0, y: 10 },
-                show: { opacity: 1, y: 0 }
+                show: { opacity: 1, y: 0 },
               }}
               className="bg-card p-4 sm:p-5 rounded-2xl shadow-xs border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
             >
@@ -340,6 +391,11 @@ function StudentsPage() {
                   <div className="flex items-center gap-1.5 text-muted-foreground flex-wrap">
                     <MapPin className="w-4 h-4 shrink-0 text-muted-foreground" />
                     <p className="text-xs font-medium">{student.station}</p>
+                    {courseId === "all" && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        {student.courseName}
+                      </span>
+                    )}
                     {student.customLocation?.lat && student.customLocation?.lng && (
                       <a
                         href={`https://maps.google.com/?q=${student.customLocation.lat},${student.customLocation.lng}`}
@@ -347,7 +403,7 @@ function StudentsPage() {
                         rel="noreferrer"
                         className="text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-primary/20"
                       >
-                        🗺️ فتح الخريطة
+                        فتح الخريطة
                       </a>
                     )}
                   </div>
@@ -363,7 +419,7 @@ function StudentsPage() {
                   </button>
                   {student.isBoarded && (
                     <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
-                      ✓ تم الصعود {student.vehicleName ? `• ${student.vehicleName}` : ""}
+                      تم الصعود {student.vehicleName ? `• ${student.vehicleName}` : ""}
                     </div>
                   )}
                   <div
@@ -392,7 +448,9 @@ function StudentsPage() {
                   {student.nationalId && student.nationalId !== "---" && (
                     <div className="flex items-center gap-1.5" dir="ltr" title="الرقم القومي">
                       <CreditCard className="w-4 h-4 text-muted-foreground/70" />
-                      <span className="text-xs font-medium tracking-wider font-mono">{student.nationalId}</span>
+                      <span className="text-xs font-medium tracking-wider font-mono">
+                        {student.nationalId}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -419,11 +477,10 @@ function StudentsPage() {
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent className="max-w-[340px] rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-base">
-              إدارة حساب الطالب
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-base">إدارة حساب الطالب</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-sm leading-relaxed">
-              ماذا تريد أن تفعل بحساب <strong className="text-foreground">{selectedStudent?.name}</strong>؟
+              ماذا تريد أن تفعل بحساب{" "}
+              <strong className="text-foreground">{selectedStudent?.name}</strong>؟
             </AlertDialogDescription>
           </AlertDialogHeader>
 

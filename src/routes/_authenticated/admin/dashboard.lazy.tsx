@@ -9,7 +9,7 @@ import { getStationName, isStationSelected } from "@/utils/stationResolver";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
 import { useTripStatus } from "@/hooks/useTripStatus";
 import { useCourse } from "@/contexts/CourseContext";
-import { filterStudentsByCourse } from "@/utils/courseFilter";
+import { filterStudentsByCourse, isStudentPaymentActive } from "@/utils/courseFilter";
 import { Car, Bus, MapPin, Navigation } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,19 @@ function DashboardPage() {
   const { stations } = useStations();
   const { getAllStudentsStatus } = useTodayStatus();
   const { status: tripStatus } = useTripStatus();
-  const { courseId } = useCourse();
+  const { courseId, courses } = useCourse();
   const [users, setUsers] = useState<UserProfile[]>([]);
+
+  // Active courses set to avoid matching ended/archived courses
+  const activeCourseIds = useMemo(() => {
+    const ids = new Set<string>(["default"]);
+    courses.forEach((c) => {
+      if (c.status === "active") {
+        ids.add(c.id);
+      }
+    });
+    return ids;
+  }, [courses]);
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -38,59 +49,66 @@ function DashboardPage() {
       unsub = onValue(ref(getFirebaseDb(), "rakeb/users"), (snap) => {
         const val = snap.val();
         if (val) {
-          const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
-          setUsers(filterStudentsByCourse(allUsers, courseId));
+          const allUsers = Object.entries(val).map(([uid, u]) => ({
+            ...(u as Record<string, unknown>),
+            uid,
+          })) as UserProfile[];
+          const activeUsers = filterStudentsByCourse(allUsers, courseId, activeCourseIds).filter(
+            isStudentPaymentActive,
+          );
+          setUsers(activeUsers);
         } else {
           setUsers([]);
         }
       });
     })();
     return () => unsub?.();
-  }, [courseId]);
+  }, [courseId, activeCourseIds]);
 
-  const { totalRiders, totalStudents, totalStaff, totalCancelled, totalBoarded, stationCounts } = useMemo(() => {
-    let riders = 0;
-    let students = 0;
-    let staff = 0;
-    let cancelled = 0;
-    let boarded = 0;
-    const counts: Record<string, number> = {};
-    stations.forEach((s) => (counts[s.name] = 0));
+  const { totalRiders, totalStudents, totalStaff, totalCancelled, totalBoarded, stationCounts } =
+    useMemo(() => {
+      let riders = 0;
+      let students = 0;
+      let staff = 0;
+      let cancelled = 0;
+      let boarded = 0;
+      const counts: Record<string, number> = {};
+      stations.forEach((s) => (counts[s.name] = 0));
 
-    const allStatus = getAllStudentsStatus(users);
+      const allStatus = getAllStudentsStatus(users);
 
-    allStatus.forEach((user) => {
-      const hasSelectedStation = isStationSelected(user.station);
+      allStatus.forEach((user) => {
+        const hasSelectedStation = isStationSelected(user.station);
 
-      if (user.status === "riding" && hasSelectedStation) {
-        riders++;
-        if (user.isStaff) {
-          staff++;
-        } else {
-          students++;
+        if (user.status === "riding" && hasSelectedStation) {
+          riders++;
+          if (user.isStaff) {
+            staff++;
+          } else {
+            students++;
+          }
+          const stName = getStationName(user.station, stations);
+          counts[stName] = (counts[stName] || 0) + 1;
+          if (user.boarded) {
+            boarded++;
+          }
+        } else if (user.status === "cancelled" && hasSelectedStation) {
+          cancelled++;
         }
-        const stName = getStationName(user.station, stations);
-        counts[stName] = (counts[stName] || 0) + 1;
-        if (user.boarded) {
-          boarded++;
-        }
-      } else if (user.status === "cancelled" && hasSelectedStation) {
-        cancelled++;
-      }
-    });
+      });
 
-    return {
-      totalRiders: riders,
-      totalStudents: students,
-      totalStaff: staff,
-      totalCancelled: cancelled,
-      totalBoarded: boarded,
-      stationCounts: Object.entries(counts).map(([name, count]) => ({
-        name,
-        count,
-      })),
-    };
-  }, [getAllStudentsStatus, users, stations]);
+      return {
+        totalRiders: riders,
+        totalStudents: students,
+        totalStaff: staff,
+        totalCancelled: cancelled,
+        totalBoarded: boarded,
+        stationCounts: Object.entries(counts).map(([name, count]) => ({
+          name,
+          count,
+        })),
+      };
+    }, [getAllStudentsStatus, users, stations]);
 
   const getVehicleSuggestion = (count: number) => {
     if (count <= 14)
@@ -239,4 +257,3 @@ function DashboardPage() {
     </div>
   );
 }
-

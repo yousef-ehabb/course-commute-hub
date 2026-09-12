@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/contexts/CourseContext";
 import { filterStudentsByCourse } from "@/utils/courseFilter";
+import type { UserProfile } from "@/types";
 import { Check, X, Search, CreditCard, Clock, ShieldCheck, Banknote, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,16 +31,36 @@ type PaymentRecord = {
   rejectionReason?: string;
   verifiedAt?: number;
   paymentMethod?: string;
+  createdAt?: number;
 };
 
 function AdminPaymentsPage() {
   const { user } = useAuth();
-  const { courseId } = useCourse();
-  const [users, setUsers] = useState<any[]>([]);
+  const { courseId, courses } = useCourse();
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Record<string, PaymentRecord>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "submitted" | "pending" | "rejected">("all");
   const [loading, setLoading] = useState(true);
+
+  // Active courses set to avoid matching ended/archived courses
+  const activeCourseIds = useMemo(() => {
+    const ids = new Set<string>(["default"]);
+    courses.forEach((c) => {
+      if (c.status === "active") {
+        ids.add(c.id);
+      }
+    });
+    return ids;
+  }, [courses]);
+
+  const coursesMap = useMemo(() => {
+    const map: Record<string, string> = { default: "الكورس الأساسي" };
+    courses.forEach((c) => {
+      map[c.id] = c.name;
+    });
+    return map;
+  }, [courses]);
 
   // Rejection Dialog State
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -62,23 +83,53 @@ function AdminPaymentsPage() {
           if (!isMounted) return;
           const val = snap.val();
           if (val) {
-            const allUsers = Object.entries(val).map(([uid, u]: [string, any]) => ({ uid, ...u }));
-            setUsers(filterStudentsByCourse(allUsers, courseId));
+            const allUsers = Object.entries(val).map(([uid, u]) => ({
+              ...(u as Record<string, unknown>),
+              uid,
+            })) as UserProfile[];
+            setUsers(filterStudentsByCourse(allUsers, courseId, activeCourseIds));
           } else {
             setUsers([]);
           }
           setLoading(false);
         });
 
-        unsubPayments = onValue(ref(db, `rakeb/payments/${courseId}`), (snap) => {
-          if (!isMounted) return;
-          const val = snap.val();
-          if (val) {
-            setPayments(val);
-          } else {
-            setPayments({});
-          }
-        });
+        if (courseId === "all") {
+          // Listen to all payments and aggregate across active courses
+          unsubPayments = onValue(ref(db, "rakeb/payments"), (snap) => {
+            if (!isMounted) return;
+            const val = snap.val();
+            if (val) {
+              const aggregated: Record<string, PaymentRecord> = {};
+              for (const [cId, coursePayments] of Object.entries(val)) {
+                if (
+                  activeCourseIds.has(cId) &&
+                  coursePayments &&
+                  typeof coursePayments === "object"
+                ) {
+                  for (const [uid, pRec] of Object.entries(
+                    coursePayments as Record<string, unknown>,
+                  )) {
+                    aggregated[uid] = pRec as PaymentRecord;
+                  }
+                }
+              }
+              setPayments(aggregated);
+            } else {
+              setPayments({});
+            }
+          });
+        } else {
+          unsubPayments = onValue(ref(db, `rakeb/payments/${courseId}`), (snap) => {
+            if (!isMounted) return;
+            const val = snap.val();
+            if (val) {
+              setPayments(val);
+            } else {
+              setPayments({});
+            }
+          });
+        }
       } catch (e) {
         console.error("Failed to load users or payments", e);
         if (isMounted) setLoading(false);
@@ -90,7 +141,7 @@ function AdminPaymentsPage() {
       unsubUsers?.();
       unsubPayments?.();
     };
-  }, [courseId]);
+  }, [courseId, activeCourseIds]);
 
   const studentsWithPayments = useMemo(() => {
     return users
@@ -136,11 +187,15 @@ function AdminPaymentsPage() {
       const { ref, update } = await import("firebase/database");
       const db = getFirebaseDb();
 
-      const updates: Record<string, any> = {};
+      // Find student to get their actual courseId
+      const student = studentsWithPayments.find((s) => s.uid === userId);
+      const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
+
+      const updates: Record<string, unknown> = {};
       updates[`rakeb/users/${userId}/paymentStatus`] = "active";
-      updates[`rakeb/payments/${courseId}/${userId}/status`] = "verified";
-      updates[`rakeb/payments/${courseId}/${userId}/verifiedAt`] = Date.now();
-      updates[`rakeb/payments/${courseId}/${userId}/verifiedBy`] = user?.uid || "unknown";
+      updates[`rakeb/payments/${studentCourseId}/${userId}/status`] = "verified";
+      updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedAt`] = Date.now();
+      updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedBy`] = user?.uid || "unknown";
 
       await update(ref(db), updates);
       toast.success("تم قبول الدفع وتفعيل حساب الطالب بنجاح");
@@ -152,19 +207,20 @@ function AdminPaymentsPage() {
     }
   };
 
-  const handleManualActivate = async (student: any) => {
+  const handleManualActivate = async (student: UserProfile & { paymentRecord?: PaymentRecord }) => {
     setActionLoading(true);
     try {
       const { getFirebaseDb } = await import("@/lib/firebase");
       const { ref, update } = await import("firebase/database");
       const db = getFirebaseDb();
 
+      const studentCourseId = student.courseId || (courseId !== "all" ? courseId : "default");
       const now = Date.now();
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
       updates[`rakeb/users/${student.uid}/paymentStatus`] = "active";
-      updates[`rakeb/payments/${courseId}/${student.uid}`] = {
+      updates[`rakeb/payments/${studentCourseId}/${student.uid}`] = {
         userId: student.uid,
-        courseId,
+        courseId: studentCourseId,
         amount: student.paymentAmount || 0,
         status: "verified",
         paymentMethod: "cash",
@@ -191,12 +247,17 @@ function AdminPaymentsPage() {
       const { ref, update } = await import("firebase/database");
       const db = getFirebaseDb();
 
-      const updates: Record<string, any> = {};
+      const student = studentsWithPayments.find((s) => s.uid === rejectUserId);
+      const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
+
+      const updates: Record<string, unknown> = {};
       updates[`rakeb/users/${rejectUserId}/paymentStatus`] = "payment_rejected";
-      updates[`rakeb/payments/${courseId}/${rejectUserId}/status`] = "rejected";
-      updates[`rakeb/payments/${courseId}/${rejectUserId}/rejectionReason`] = rejectionReason;
-      updates[`rakeb/payments/${courseId}/${rejectUserId}/rejectedAt`] = Date.now();
-      updates[`rakeb/payments/${courseId}/${rejectUserId}/rejectedBy`] = user?.uid || "unknown";
+      updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/status`] = "rejected";
+      updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/rejectionReason`] =
+        rejectionReason;
+      updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/rejectedAt`] = Date.now();
+      updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/rejectedBy`] =
+        user?.uid || "unknown";
 
       await update(ref(db), updates);
       toast.success("تم رفض الدفع وتسجيل السبب");
@@ -268,7 +329,9 @@ function AdminPaymentsPage() {
             label="بانتظار المراجعة"
             active={filterType === "submitted"}
             onClick={() => setFilterType("submitted")}
-            count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_submitted").length}
+            count={
+              studentsWithPayments.filter((s) => s.paymentStatus === "payment_submitted").length
+            }
           />
           <FilterChip
             label="لم يتم الدفع"
@@ -280,7 +343,9 @@ function AdminPaymentsPage() {
             label="مرفوض"
             active={filterType === "rejected"}
             onClick={() => setFilterType("rejected")}
-            count={studentsWithPayments.filter((s) => s.paymentStatus === "payment_rejected").length}
+            count={
+              studentsWithPayments.filter((s) => s.paymentStatus === "payment_rejected").length
+            }
           />
         </div>
       </div>
@@ -328,6 +393,13 @@ function AdminPaymentsPage() {
                     {isRejected && (
                       <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
                         مرفوض
+                      </span>
+                    )}
+                    {courseId === "all" && (
+                      <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                        {coursesMap[student.courseId || "default"] ||
+                          student.courseId ||
+                          "الكورس الأساسي"}
                       </span>
                     )}
                   </div>
@@ -469,7 +541,9 @@ function FilterChip({
       <span>{label}</span>
       <span
         className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-          active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+          active
+            ? "bg-primary-foreground/20 text-primary-foreground"
+            : "bg-muted text-muted-foreground"
         }`}
       >
         {count}
