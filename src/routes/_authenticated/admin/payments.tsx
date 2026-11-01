@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/contexts/CourseContext";
 import { filterStudentsByCourse } from "@/utils/courseFilter";
 import type { UserProfile } from "@/types";
-import { Check, X, Search, CreditCard, Clock, ShieldCheck, Banknote, Phone } from "lucide-react";
+import { Check, X, Search, CreditCard, Clock, ShieldCheck, Banknote, Phone, Download } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -289,17 +290,193 @@ function AdminPaymentsPage() {
     });
   };
 
+  // All students (including active) with payment data — used only for export
+  const allStudentsForExport = useMemo(() => {
+    return users
+      .filter((u) => u.role !== "admin")
+      .map((u) => {
+        const paymentRecord = payments[u.uid];
+        return {
+          ...u,
+          paymentAmount: u.paymentAmount || paymentRecord?.amount || 0,
+          paymentRecord,
+        };
+      })
+      .sort((a, b) => {
+        // Group by status: active first, then submitted, pending, rejected
+        const statusOrder: Record<string, number> = {
+          active: 0,
+          payment_submitted: 1,
+          pending_payment: 2,
+          payment_rejected: 3,
+        };
+        const aOrder = statusOrder[a.paymentStatus || "pending_payment"] ?? 4;
+        const bOrder = statusOrder[b.paymentStatus || "pending_payment"] ?? 4;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return (a.fullName || "").localeCompare(b.fullName || "", "ar");
+      });
+  }, [users, payments]);
+
+  const getPaymentStatusLabel = (status?: string, isFree?: boolean): string => {
+    if (isFree) return "🆓 مجاني";
+    switch (status) {
+      case "active":
+        return "✅ تم الدفع والتفعيل";
+      case "payment_submitted":
+        return "⏳ بانتظار المراجعة";
+      case "pending_payment":
+        return "❌ لم يتم الدفع";
+      case "payment_rejected":
+        return "🚫 مرفوض";
+      default:
+        return "❌ لم يتم الدفع";
+    }
+  };
+
+  const getPaymentMethodLabel = (method?: string): string => {
+    if (!method) return "---";
+    switch (method.toLowerCase()) {
+      case "instapay":
+        return "InstaPay";
+      case "vodafone_cash":
+      case "vodafonecash":
+        return "Vodafone Cash";
+      case "cash":
+        return "نقدي";
+      default:
+        return method;
+    }
+  };
+
+  const handlePaymentsExport = () => {
+    if (allStudentsForExport.length === 0) {
+      toast.info("لا يوجد طلاب للتصدير");
+      return;
+    }
+
+    // Determine if the current course is free
+    const currentCourse = courses.find((c) => c.id === courseId);
+    const isCourseFree = currentCourse?.transportation?.payment?.isFree ?? false;
+    const isAllCourses = courseId === "all";
+
+    const exportData = allStudentsForExport.map((student) => {
+      const studentCourse = courses.find((c) => c.id === (student.courseId || "default"));
+      const isStudentCourseFree = studentCourse?.transportation?.payment?.isFree ?? isCourseFree;
+
+      const row: Record<string, string | number> = {
+        الاسم: student.fullName || "غير معروف",
+        "الرقم القومي":
+          student.nationalId && student.nationalId !== "---"
+            ? String(student.nationalId)
+            : "---",
+        "رقم الهاتف": student.phone || "---",
+      };
+
+      if (isAllCourses) {
+        row["الكورس"] =
+          coursesMap[student.courseId || "default"] || student.courseId || "الكورس الأساسي";
+      }
+
+      row["المبلغ المطلوب (ج.م)"] = isStudentCourseFree ? 0 : student.paymentAmount;
+      row["حالة الدفع"] = getPaymentStatusLabel(student.paymentStatus, isStudentCourseFree);
+      row["طريقة الدفع"] = getPaymentMethodLabel(student.paymentRecord?.paymentMethod);
+      row["تاريخ تقديم الدفع"] = formatDate(student.paymentRecord?.submittedAt);
+      row["تاريخ التحقق"] = formatDate(student.paymentRecord?.verifiedAt);
+      row["سبب الرفض"] = student.paymentRecord?.rejectionReason || "";
+
+      return row;
+    });
+
+    // Calculate summary totals
+    const totalExpected = allStudentsForExport.reduce((sum, s) => {
+      const sc = courses.find((c) => c.id === (s.courseId || "default"));
+      const isFree = sc?.transportation?.payment?.isFree ?? isCourseFree;
+      return sum + (isFree ? 0 : s.paymentAmount);
+    }, 0);
+
+    const totalCollected = allStudentsForExport
+      .filter((s) => s.paymentStatus === "active")
+      .reduce((sum, s) => {
+        const sc = courses.find((c) => c.id === (s.courseId || "default"));
+        const isFree = sc?.transportation?.payment?.isFree ?? isCourseFree;
+        return sum + (isFree ? 0 : s.paymentAmount);
+      }, 0);
+
+    const totalPending = totalExpected - totalCollected;
+
+    // Add summary row
+    const summaryRow: Record<string, string | number> = {
+      الاسم: "── الإجمالي ──",
+      "الرقم القومي": "",
+      "رقم الهاتف": "",
+    };
+    if (isAllCourses) {
+      summaryRow["الكورس"] = "";
+    }
+    summaryRow["المبلغ المطلوب (ج.م)"] = totalExpected;
+    summaryRow["حالة الدفع"] = `المحصّل: ${totalCollected} ج.م | المتبقي: ${totalPending} ج.م`;
+    summaryRow["طريقة الدفع"] = "";
+    summaryRow["تاريخ تقديم الدفع"] = "";
+    summaryRow["تاريخ التحقق"] = "";
+    summaryRow["سبب الرفض"] = "";
+    exportData.push(summaryRow);
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const timeStr = now.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+
+    const courseName = isAllCourses
+      ? "جميع الكورسات النشطة"
+      : currentCourse?.name || courseId;
+
+    const metadata = [
+      ["تقرير المدفوعات — Financial Report"],
+      [`الكورس: ${courseName}`],
+      [`تاريخ التصدير: ${dateStr} — الوقت: ${timeStr}`],
+      [`إجمالي الطلاب: ${allStudentsForExport.length} | المحصّل: ${totalCollected} ج.م | المتبقي: ${totalPending} ج.م`],
+      [], // Empty line before table
+    ];
+
+    const fileLabel = isAllCourses ? "all" : courseId;
+    exportToExcel(
+      exportData,
+      `Payment_Report_${fileLabel}_${now.toISOString().split("T")[0]}`,
+      metadata,
+    );
+    toast.success("تم تصدير تقرير المدفوعات بنجاح");
+  };
+
   return (
     <div className="space-y-5 pt-2 pb-12 w-full max-w-full min-w-0">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-          <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
-          <span>مراجعة المدفوعات</span>
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({courseId})
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+            <span>مراجعة المدفوعات</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({courseId})
+          </p>
+        </div>
+        <Button
+          onClick={handlePaymentsExport}
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-xs font-semibold shrink-0 self-start sm:self-auto"
+          disabled={loading}
+        >
+          <Download className="w-4 h-4" />
+          <span>تصدير تقرير المدفوعات</span>
+        </Button>
       </div>
 
       {/* Search Bar Section */}
