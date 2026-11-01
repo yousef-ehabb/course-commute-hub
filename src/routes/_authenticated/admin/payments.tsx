@@ -124,7 +124,8 @@ function AdminPaymentsPage() {
                   (u as Record<string, unknown>)?.archivedFromCourse ||
                   courseId,
               })) as UserProfile[];
-              setArchivedUsers(filterStudentsByCourse(allArchived, courseId, activeCourseIds));
+              // No need for filterStudentsByCourse — we already fetched from the exact course path
+              setArchivedUsers(allArchived.filter((u) => u.role !== "admin"));
             } else {
               setArchivedUsers([]);
             }
@@ -221,6 +222,23 @@ function AdminPaymentsPage() {
     });
   }, [studentsWithPayments, searchTerm, filterType]);
 
+  /** Check if a student record came from the archived users collection */
+  const isStudentArchived = (student: Record<string, unknown> | null | undefined, studentCourseId: string): boolean => {
+    if (!student) return false;
+    return Boolean(
+      student.archivedAt ||
+      student.archivedFromCourse ||
+      courses.find((c) => c.id === studentCourseId)?.status === "archived"
+    );
+  };
+
+  /** Returns the correct Firebase path prefix for a student's paymentStatus field */
+  const getUserPaymentStatusPath = (uid: string, studentCourseId: string, archived: boolean): string => {
+    return archived
+      ? `rakeb/archivedUsers/${studentCourseId}/${uid}/paymentStatus`
+      : `rakeb/users/${uid}/paymentStatus`;
+  };
+
   const handleApprove = async (userId: string) => {
     setActionLoading(true);
     try {
@@ -231,18 +249,10 @@ function AdminPaymentsPage() {
       // Find student to get their actual courseId
       const student = studentsWithPayments.find((s) => s.uid === userId);
       const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
-      const isArchived = Boolean(
-        (student as Record<string, unknown>)?.archivedAt ||
-        (student as Record<string, unknown>)?.archivedFromCourse ||
-        courses.find((c) => c.id === studentCourseId)?.status === "archived"
-      );
+      const archived = isStudentArchived(student as Record<string, unknown>, studentCourseId);
 
       const updates: Record<string, unknown> = {};
-      if (isArchived) {
-        updates[`rakeb/archivedUsers/${studentCourseId}/${userId}/paymentStatus`] = "active";
-      } else {
-        updates[`rakeb/users/${userId}/paymentStatus`] = "active";
-      }
+      updates[getUserPaymentStatusPath(userId, studentCourseId, archived)] = "active";
       updates[`rakeb/payments/${studentCourseId}/${userId}/status`] = "verified";
       updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedAt`] = Date.now();
       updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedBy`] = user?.uid || "unknown";
@@ -265,18 +275,10 @@ function AdminPaymentsPage() {
       const db = getFirebaseDb();
 
       const studentCourseId = student.courseId || (courseId !== "all" ? courseId : "default");
-      const isArchived = Boolean(
-        (student as Record<string, unknown>)?.archivedAt ||
-        (student as Record<string, unknown>)?.archivedFromCourse ||
-        courses.find((c) => c.id === studentCourseId)?.status === "archived"
-      );
+      const archived = isStudentArchived(student as Record<string, unknown>, studentCourseId);
       const now = Date.now();
       const updates: Record<string, unknown> = {};
-      if (isArchived) {
-        updates[`rakeb/archivedUsers/${studentCourseId}/${student.uid}/paymentStatus`] = "active";
-      } else {
-        updates[`rakeb/users/${student.uid}/paymentStatus`] = "active";
-      }
+      updates[getUserPaymentStatusPath(student.uid, studentCourseId, archived)] = "active";
       updates[`rakeb/payments/${studentCourseId}/${student.uid}`] = {
         userId: student.uid,
         courseId: studentCourseId,
@@ -308,18 +310,10 @@ function AdminPaymentsPage() {
 
       const student = studentsWithPayments.find((s) => s.uid === rejectUserId);
       const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
-      const isArchived = Boolean(
-        (student as Record<string, unknown>)?.archivedAt ||
-        (student as Record<string, unknown>)?.archivedFromCourse ||
-        courses.find((c) => c.id === studentCourseId)?.status === "archived"
-      );
+      const archived = isStudentArchived(student as Record<string, unknown>, studentCourseId);
 
       const updates: Record<string, unknown> = {};
-      if (isArchived) {
-        updates[`rakeb/archivedUsers/${studentCourseId}/${rejectUserId}/paymentStatus`] = "payment_rejected";
-      } else {
-        updates[`rakeb/users/${rejectUserId}/paymentStatus`] = "payment_rejected";
-      }
+      updates[getUserPaymentStatusPath(rejectUserId, studentCourseId, archived)] = "payment_rejected";
       updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/status`] = "rejected";
       updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/rejectionReason`] =
         rejectionReason;
