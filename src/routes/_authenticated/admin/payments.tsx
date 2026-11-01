@@ -38,11 +38,24 @@ type PaymentRecord = {
 function AdminPaymentsPage() {
   const { user } = useAuth();
   const { courseId, courses } = useCourse();
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [activeUsers, setActiveUsers] = useState<UserProfile[]>([]);
+  const [archivedUsers, setArchivedUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Record<string, PaymentRecord>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "submitted" | "pending" | "rejected">("all");
   const [loading, setLoading] = useState(true);
+
+  // Combine active users with archived users (for past courses or archived students)
+  const users = useMemo<UserProfile[]>(() => {
+    const map = new Map<string, UserProfile>();
+    archivedUsers.forEach((u) => {
+      if (u.uid) map.set(u.uid, u);
+    });
+    activeUsers.forEach((u) => {
+      if (u.uid) map.set(u.uid, u);
+    });
+    return Array.from(map.values());
+  }, [activeUsers, archivedUsers]);
 
   // Active courses set to avoid matching ended/archived courses
   const activeCourseIds = useMemo(() => {
@@ -71,6 +84,7 @@ function AdminPaymentsPage() {
 
   useEffect(() => {
     let unsubUsers: (() => void) | undefined;
+    let unsubArchivedUsers: (() => void) | undefined;
     let unsubPayments: (() => void) | undefined;
     let isMounted = true;
 
@@ -80,6 +94,7 @@ function AdminPaymentsPage() {
         const { ref, onValue } = await import("firebase/database");
         const db = getFirebaseDb();
 
+        // 1. Listen to active users
         unsubUsers = onValue(ref(db, "rakeb/users"), (snap) => {
           if (!isMounted) return;
           const val = snap.val();
@@ -88,13 +103,37 @@ function AdminPaymentsPage() {
               ...(u as Record<string, unknown>),
               uid,
             })) as UserProfile[];
-            setUsers(filterStudentsByCourse(allUsers, courseId, activeCourseIds));
+            setActiveUsers(filterStudentsByCourse(allUsers, courseId, activeCourseIds));
           } else {
-            setUsers([]);
+            setActiveUsers([]);
           }
           setLoading(false);
         });
 
+        // 2. If viewing a specific course, also listen to archived users for that course
+        if (courseId !== "all") {
+          unsubArchivedUsers = onValue(ref(db, `rakeb/archivedUsers/${courseId}`), (snap) => {
+            if (!isMounted) return;
+            const val = snap.val();
+            if (val) {
+              const allArchived = Object.entries(val).map(([uid, u]) => ({
+                ...(u as Record<string, unknown>),
+                uid,
+                courseId:
+                  (u as Record<string, unknown>)?.courseId ||
+                  (u as Record<string, unknown>)?.archivedFromCourse ||
+                  courseId,
+              })) as UserProfile[];
+              setArchivedUsers(filterStudentsByCourse(allArchived, courseId, activeCourseIds));
+            } else {
+              setArchivedUsers([]);
+            }
+          });
+        } else {
+          setArchivedUsers([]);
+        }
+
+        // 3. Listen to payments
         if (courseId === "all") {
           // Listen to all payments and aggregate across active courses
           unsubPayments = onValue(ref(db, "rakeb/payments"), (snap) => {
@@ -140,6 +179,7 @@ function AdminPaymentsPage() {
     return () => {
       isMounted = false;
       unsubUsers?.();
+      unsubArchivedUsers?.();
       unsubPayments?.();
     };
   }, [courseId, activeCourseIds]);
@@ -191,9 +231,18 @@ function AdminPaymentsPage() {
       // Find student to get their actual courseId
       const student = studentsWithPayments.find((s) => s.uid === userId);
       const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
+      const isArchived = Boolean(
+        (student as Record<string, unknown>)?.archivedAt ||
+        (student as Record<string, unknown>)?.archivedFromCourse ||
+        courses.find((c) => c.id === studentCourseId)?.status === "archived"
+      );
 
       const updates: Record<string, unknown> = {};
-      updates[`rakeb/users/${userId}/paymentStatus`] = "active";
+      if (isArchived) {
+        updates[`rakeb/archivedUsers/${studentCourseId}/${userId}/paymentStatus`] = "active";
+      } else {
+        updates[`rakeb/users/${userId}/paymentStatus`] = "active";
+      }
       updates[`rakeb/payments/${studentCourseId}/${userId}/status`] = "verified";
       updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedAt`] = Date.now();
       updates[`rakeb/payments/${studentCourseId}/${userId}/verifiedBy`] = user?.uid || "unknown";
@@ -216,9 +265,18 @@ function AdminPaymentsPage() {
       const db = getFirebaseDb();
 
       const studentCourseId = student.courseId || (courseId !== "all" ? courseId : "default");
+      const isArchived = Boolean(
+        (student as Record<string, unknown>)?.archivedAt ||
+        (student as Record<string, unknown>)?.archivedFromCourse ||
+        courses.find((c) => c.id === studentCourseId)?.status === "archived"
+      );
       const now = Date.now();
       const updates: Record<string, unknown> = {};
-      updates[`rakeb/users/${student.uid}/paymentStatus`] = "active";
+      if (isArchived) {
+        updates[`rakeb/archivedUsers/${studentCourseId}/${student.uid}/paymentStatus`] = "active";
+      } else {
+        updates[`rakeb/users/${student.uid}/paymentStatus`] = "active";
+      }
       updates[`rakeb/payments/${studentCourseId}/${student.uid}`] = {
         userId: student.uid,
         courseId: studentCourseId,
@@ -250,9 +308,18 @@ function AdminPaymentsPage() {
 
       const student = studentsWithPayments.find((s) => s.uid === rejectUserId);
       const studentCourseId = student?.courseId || (courseId !== "all" ? courseId : "default");
+      const isArchived = Boolean(
+        (student as Record<string, unknown>)?.archivedAt ||
+        (student as Record<string, unknown>)?.archivedFromCourse ||
+        courses.find((c) => c.id === studentCourseId)?.status === "archived"
+      );
 
       const updates: Record<string, unknown> = {};
-      updates[`rakeb/users/${rejectUserId}/paymentStatus`] = "payment_rejected";
+      if (isArchived) {
+        updates[`rakeb/archivedUsers/${studentCourseId}/${rejectUserId}/paymentStatus`] = "payment_rejected";
+      } else {
+        updates[`rakeb/users/${rejectUserId}/paymentStatus`] = "payment_rejected";
+      }
       updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/status`] = "rejected";
       updates[`rakeb/payments/${studentCourseId}/${rejectUserId}/rejectionReason`] =
         rejectionReason;
@@ -356,6 +423,7 @@ function AdminPaymentsPage() {
 
     // Determine if the current course is free
     const currentCourse = courses.find((c) => c.id === courseId);
+    const isCourseArchived = currentCourse?.status === "archived";
     const isCourseFree = currentCourse?.transportation?.payment?.isFree ?? false;
     const isAllCourses = courseId === "all";
 
@@ -435,7 +503,7 @@ function AdminPaymentsPage() {
 
     const courseName = isAllCourses
       ? "جميع الكورسات النشطة"
-      : currentCourse?.name || courseId;
+      : `${currentCourse?.name || courseId}${isCourseArchived ? " (مؤرشف)" : ""}`;
 
     const metadata = [
       ["تقرير المدفوعات — Financial Report"],
@@ -454,6 +522,8 @@ function AdminPaymentsPage() {
     toast.success("تم تصدير تقرير المدفوعات بنجاح");
   };
 
+  const isCurrentCourseArchived = courses.find((c) => c.id === courseId)?.status === "archived";
+
   return (
     <div className="space-y-5 pt-2 pb-12 w-full max-w-full min-w-0">
       {/* Header */}
@@ -463,9 +533,16 @@ function AdminPaymentsPage() {
             <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
             <span>مراجعة المدفوعات</span>
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({courseId})
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              مراجعة وتفعيل الحسابات للطلاب المتقدمين في كورس ({coursesMap[courseId] || courseId})
+            </p>
+            {isCurrentCourseArchived && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                كورس مؤرشف
+              </span>
+            )}
+          </div>
         </div>
         <Button
           onClick={handlePaymentsExport}
