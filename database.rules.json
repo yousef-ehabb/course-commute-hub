@@ -8,6 +8,9 @@
           ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && ((!data.exists() && newData.child('role').val() === 'student' && (newData.child('courseId').val() === 'default' || root.child('rakeb/courses/' + newData.child('courseId').val() + '/status').val() === 'active') && (!root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').exists() || now <= root.child('rakeb/courses/' + newData.child('courseId').val() + '/registrationDeadline').val())) || (data.exists() && data.child('role').val() === newData.child('role').val() && data.child('courseId').val() === newData.child('courseId').val()))))",
           "paymentStatus": {
             ".validate": "root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (!data.exists() && (newData.val() === 'pending_payment' || (newData.val() === 'active' && (root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment/isFree').val() === true || !root.child('rakeb/courses/' + newData.parent().child('courseId').val() + '/transportation/payment').exists() || newData.parent().child('courseId').val() === 'default')))) || (newData.val() === 'payment_submitted' && (data.val() === 'pending_payment' || data.val() === 'payment_rejected'))"
+          },
+          "transportationType": {
+            ".validate": "root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (!data.exists() && (newData.val() === 'roundTrip' || newData.val() === 'returnOnly')) || (data.exists() && (!newData.exists() || newData.val() === data.val()))"
           }
         }
       },
@@ -29,7 +32,10 @@
           ".read": "auth != null && root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'",
           "$uid": {
             ".read": "auth != null && (auth.uid === $uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin')",
-            ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && newData.child('status').val() === 'submitted' && !newData.child('verifiedBy').exists() && !newData.child('verifiedAt').exists()))"
+            ".write": "auth != null && (root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin' || (auth.uid === $uid && newData.child('status').val() === 'submitted' && !newData.child('verifiedBy').exists() && !newData.child('verifiedAt').exists()))",
+            "transportationType": {
+              ".validate": "!newData.exists() || newData.val() === 'roundTrip' || newData.val() === 'returnOnly'"
+            }
           }
         }
       },
@@ -104,7 +110,7 @@
               ".validate": "!data.parent().exists() || data.parent().child('status').val() === 'planned' || newData.val() === data.val()"
             },
             "currentLocation": {
-              ".validate": "newData.parent().child('assignedCoordinatorId').val() === auth.uid"
+              ".validate": "newData.parent().child('assignedCoordinatorId').val() === auth.uid || root.child('rakeb/users/' + auth.uid + '/role').val() === 'admin'"
             },
             "occupiedSeats": {
               ".validate": "newData.val() <= newData.parent().child('capacity').val() && newData.val() >= 0"

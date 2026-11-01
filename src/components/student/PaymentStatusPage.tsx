@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Clock, AlertCircle, Copy, MessageCircle } from "lucide-react";
 import { RakebLogo } from "@/components/ui/RakebLogo";
+import type { TransportationType } from "@/types";
+import {
+  calculateTransportationFee,
+  getDailyFeeForType,
+  getTransportationTypeLabel,
+} from "@/utils/pricing";
 
 interface PaymentMethods {
   instaPay?: string;
@@ -61,13 +67,17 @@ export function PaymentStatusPage() {
       const db = getFirebaseDb();
 
       const now = Date.now();
-      const amount = profile.paymentAmount || (course?.transportation?.payment?.days || 0) * (course?.transportation?.payment?.dailyFee || 0);
+      const transportType: TransportationType =
+        profile.transportationType === "returnOnly" ? "returnOnly" : "roundTrip";
+      const calculatedFee = calculateTransportationFee(course?.transportation?.payment, transportType);
+      const amount = typeof profile.paymentAmount === "number" ? profile.paymentAmount : calculatedFee;
 
       const updates: Record<string, any> = {};
       updates[`rakeb/payments/${courseId}/${user.uid}`] = {
         userId: user.uid,
         courseId,
         amount,
+        transportationType: transportType,
         status: "submitted",
         paymentMethod: selectedMethod || "unknown",
         submittedAt: now,
@@ -88,11 +98,13 @@ export function PaymentStatusPage() {
         }
 
         const methodAr = selectedMethod === "instaPay" ? "إنستاباي (InstaPay)" : selectedMethod === "vodafoneCash" ? "فودافون كاش" : "غير محدد";
+        const transportTypeLabel = getTransportationTypeLabel(transportType);
         const message = `السلام عليكم،
 تم تحويل مبلغ الاشتراك.
 الاسم: ${profile.fullName}
 الرقم القومي: ${profile.nationalId}
 الكورس: ${course?.name || courseId}
+نوع المواصلات: ${transportTypeLabel}
 المبلغ: ${amount} ج.م
 طريقة الدفع: ${methodAr}
 مرفق صورة إيصال التحويل.`;
@@ -124,10 +136,13 @@ export function PaymentStatusPage() {
     );
   }
 
-  const days = course?.transportation?.payment?.days || 0;
-  const dailyFee = course?.transportation?.payment?.dailyFee || 0;
-  const calculatedFee = days * dailyFee;
-  const totalAmount = profile?.paymentAmount || calculatedFee;
+  const paymentConfig = course?.transportation?.payment;
+  const days = paymentConfig?.days || 0;
+  const transportType: TransportationType =
+    profile?.transportationType === "returnOnly" ? "returnOnly" : "roundTrip";
+  const applicableDailyFee = getDailyFeeForType(paymentConfig, transportType);
+  const calculatedFee = calculateTransportationFee(paymentConfig, transportType);
+  const totalAmount = typeof profile?.paymentAmount === "number" ? profile.paymentAmount : calculatedFee;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
@@ -186,13 +201,19 @@ export function PaymentStatusPage() {
             </div>
 
             <div className="bg-muted/50 rounded-xl p-4 flex flex-col gap-2">
-              {!profile?.paymentAmount && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">التفاصيل</span>
-                  <span className="font-semibold text-foreground">{days} أيام × {dailyFee} ج.م</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">نوع المواصلات</span>
+                <span className="font-semibold text-foreground">
+                  {getTransportationTypeLabel(transportType)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">التفاصيل</span>
+                <span className="font-semibold text-foreground">
+                  {days} أيام × {applicableDailyFee} ج.م
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-border/50 pt-2">
                 <span className="font-semibold text-foreground">المبلغ المطلوب</span>
                 <span className="text-xl font-bold text-primary">{totalAmount} ج.م</span>
               </div>

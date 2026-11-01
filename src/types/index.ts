@@ -2,6 +2,16 @@ export type UserRole = "student" | "admin";
 
 export type CourseStatus = "active" | "archived";
 
+export type TransportationType = "roundTrip" | "returnOnly";
+
+export interface CoursePaymentConfig {
+  isFree: boolean;
+  fee?: number; // legacy — kept for backward compat
+  days?: number;
+  dailyFee?: number;
+  returnOnlyDailyFee?: number;
+}
+
 export interface CourseInfo {
   id: string;
   name: string;
@@ -11,12 +21,7 @@ export interface CourseInfo {
   endDate?: number;
   createdAt: number;
   transportation?: {
-    payment: {
-      isFree: boolean;
-      fee?: number; // legacy — kept for backward compat
-      days?: number;
-      dailyFee?: number;
-    };
+    payment: CoursePaymentConfig;
   };
   registrationDeadline?: number;
 }
@@ -35,6 +40,7 @@ export interface UserProfile {
   createdAt: number;
   paymentStatus?: PaymentStatus;
   paymentAmount?: number;
+  transportationType?: TransportationType;
 }
 
 export interface PaymentRecord {
@@ -50,6 +56,7 @@ export interface PaymentRecord {
   rejectedBy?: string;
   rejectionReason?: string;
   paymentMethod?: string;
+  transportationType?: TransportationType;
   createdAt: number;
 }
 

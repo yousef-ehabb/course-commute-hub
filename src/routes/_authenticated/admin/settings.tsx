@@ -89,6 +89,7 @@ function SettingsPage() {
   const [isFree, setIsFree] = useState(true);
   const [transportDays, setTransportDays] = useState(5);
   const [dailyFee, setDailyFee] = useState(25);
+  const [returnOnlyDailyFee, setReturnOnlyDailyFee] = useState(15);
   const [registrationDeadlineInput, setRegistrationDeadlineInput] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -266,7 +267,15 @@ function SettingsPage() {
       if (registrationDeadlineInput) {
         deadlineTimestamp = new Date(registrationDeadlineInput).getTime();
       }
-      await createCourse(newCourseId, newCourseName, isFree, transportDays, dailyFee, deadlineTimestamp);
+      await createCourse(
+        newCourseId,
+        newCourseName,
+        isFree,
+        transportDays,
+        dailyFee,
+        deadlineTimestamp,
+        returnOnlyDailyFee
+      );
       toast.success(`تم إنشاء الكورس "${newCourseName.trim()}" بنجاح!`, {
         action: {
           label: "نسخ رابط التسجيل",
@@ -278,6 +287,7 @@ function SettingsPage() {
       setIsFree(true);
       setTransportDays(5);
       setDailyFee(25);
+      setReturnOnlyDailyFee(15);
       setRegistrationDeadlineInput("");
       setCreateDialogOpen(false);
     } catch (e: any) {
@@ -658,23 +668,50 @@ function SettingsPage() {
                     </div>
 
                     {!isFree && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">تكلفة اليوم الواحد (ج.م)</label>
-                        <Input
-                          type="number"
-                          placeholder="25"
-                          value={dailyFee}
-                          onChange={(e) => setDailyFee(Math.max(0, Number(e.target.value)))}
-                          min={0}
-                        />
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">سعر اليوم — ذهاب وعودة (ج.م)</label>
+                          <Input
+                            type="number"
+                            placeholder="25"
+                            value={dailyFee}
+                            onChange={(e) => setDailyFee(Math.max(0, Number(e.target.value)))}
+                            min={0}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">سعر اليوم — عودة فقط (ج.م)</label>
+                          <Input
+                            type="number"
+                            placeholder="15"
+                            value={returnOnlyDailyFee}
+                            onChange={(e) => setReturnOnlyDailyFee(Math.max(0, Number(e.target.value)))}
+                            min={0}
+                          />
+                        </div>
                       </div>
                     )}
 
-                    <div className="bg-muted/50 rounded-xl p-3 flex justify-between items-center">
-                      <span className="text-sm font-medium text-muted-foreground">الإجمالي المحسوب</span>
-                      <span className="text-lg font-bold text-primary">
-                        {isFree ? "0" : (transportDays * dailyFee)} ج.م
-                      </span>
+                    <div className="bg-muted/50 rounded-xl p-3 flex flex-col gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">الإجمالي المحسوب حسب نوع المواصلات:</span>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">
+                          ذهاب وعودة {isFree ? "" : `(${transportDays} أيام × ${dailyFee} ج.م)`}:
+                        </span>
+                        <span className="font-bold text-primary">
+                          {isFree ? "0" : transportDays * dailyFee} ج.م
+                        </span>
+                      </div>
+                      {!isFree && (
+                        <div className="flex justify-between items-center text-sm border-t border-border/50 pt-1.5">
+                          <span className="text-muted-foreground">
+                            عودة فقط ({transportDays} أيام × {returnOnlyDailyFee} ج.م):
+                          </span>
+                          <span className="font-bold text-primary">
+                            {transportDays * returnOnlyDailyFee} ج.م
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-border">
@@ -766,6 +803,22 @@ function SettingsPage() {
                           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono dir-ltr">
                             <span>/register?course={c.id}</span>
                           </div>
+
+                          {c.transportation?.payment && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap pt-0.5">
+                              {c.transportation.payment.isFree ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">مجاني (بدون اشتراك)</span>
+                              ) : (
+                                <>
+                                  <span>{c.transportation.payment.days || 0} أيام</span>
+                                  <span>•</span>
+                                  <span>ذهاب وعودة: {c.transportation.payment.dailyFee || 0} ج.م/يوم</span>
+                                  <span>•</span>
+                                  <span>عودة فقط: {c.transportation.payment.returnOnlyDailyFee ?? c.transportation.payment.dailyFee ?? 0} ج.م/يوم</span>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Course Action Buttons */}
@@ -888,6 +941,22 @@ function SettingsPage() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono dir-ltr">
                               <span>/register?course={c.id}</span>
                             </div>
+
+                            {c.transportation?.payment && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap pt-0.5">
+                                {c.transportation.payment.isFree ? (
+                                  <span className="font-medium">مجاني (بدون اشتراك)</span>
+                                ) : (
+                                  <>
+                                    <span>{c.transportation.payment.days || 0} أيام</span>
+                                    <span>•</span>
+                                    <span>ذهاب وعودة: {c.transportation.payment.dailyFee || 0} ج.م/يوم</span>
+                                    <span>•</span>
+                                    <span>عودة فقط: {c.transportation.payment.returnOnlyDailyFee ?? c.transportation.payment.dailyFee ?? 0} ج.م/يوم</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Action Buttons */}

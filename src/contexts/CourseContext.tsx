@@ -30,7 +30,15 @@ interface CourseContextValue {
   /** Delete a course and all its related nodes permanently */
   deleteCourse: (id: string) => Promise<void>;
   /** Create a new course */
-  createCourse: (id: string, name: string, isFree: boolean, days: number, dailyFee: number, registrationDeadline?: number) => Promise<void>;
+  createCourse: (
+    id: string,
+    name: string,
+    isFree: boolean,
+    days: number,
+    dailyFee: number,
+    registrationDeadline?: number,
+    returnOnlyDailyFee?: number
+  ) => Promise<void>;
   /** Update registration deadline for a course (or set null to remove) */
   updateCourseRegistrationDeadline: (id: string, deadline: number | null) => Promise<void>;
 }
@@ -146,7 +154,15 @@ export function CourseProvider({ children }: { children: ReactNode }) {
 
   // Create course helper
   const createCourse = useCallback(
-    async (id: string, name: string, isFree: boolean, days: number, dailyFee: number, registrationDeadline?: number) => {
+    async (
+      id: string,
+      name: string,
+      isFree: boolean,
+      days: number,
+      dailyFee: number,
+      registrationDeadline?: number,
+      returnOnlyDailyFee?: number
+    ) => {
       const normalizedId = id.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
       if (!normalizedId || !name.trim()) {
         throw new Error("يرجى إدخال اسم ومعرف صالح للكورس");
@@ -173,6 +189,7 @@ export function CourseProvider({ children }: { children: ReactNode }) {
             isFree,
             days: isFree ? days : days,
             dailyFee: isFree ? 0 : dailyFee,
+            returnOnlyDailyFee: isFree ? 0 : (returnOnlyDailyFee ?? dailyFee),
           }
         },
         ...(registrationDeadline ? { registrationDeadline } : {}),

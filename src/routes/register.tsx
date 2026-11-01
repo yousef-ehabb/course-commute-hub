@@ -19,6 +19,8 @@ import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Mail, RefreshCw, KeyR
 import { RakebLogo } from "@/components/ui/RakebLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import { StationPicker } from "@/components/student/StationPicker";
+import type { TransportationType } from "@/types";
+import { calculateTransportationFee, getDailyFeeForType } from "@/utils/pricing";
 
 export const Route = createFileRoute("/register")({
   ssr: false,
@@ -68,6 +70,7 @@ function RegisterPage() {
   const [nationalId, setNationalId] = useState("");
   const [station, setStation] = useState<string>("");
   const [customLocation, setCustomLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [transportationType, setTransportationType] = useState<TransportationType>("roundTrip");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -227,7 +230,8 @@ function RegisterPage() {
     
     try {
       const isFree = courseData?.transportation?.payment?.isFree ?? true;
-      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const paymentConfig = courseData?.transportation?.payment;
+      const paymentAmount = isFree ? 0 : calculateTransportationFee(paymentConfig, transportationType);
       const newPaymentStatus = isFree ? "active" : "pending_payment";
 
       const { getFirebaseDb } = await import("@/lib/firebase");
@@ -248,6 +252,7 @@ function RegisterPage() {
         courseId: targetCourseId,
         paymentStatus: newPaymentStatus,
         paymentAmount,
+        transportationType,
       };
       
       const updates: Record<string, any> = {
@@ -284,7 +289,8 @@ function RegisterPage() {
       const { ref, update } = await import("firebase/database");
       
       const isFree = courseData?.transportation?.payment?.isFree ?? true;
-      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const paymentConfig = courseData?.transportation?.payment;
+      const paymentAmount = isFree ? 0 : calculateTransportationFee(paymentConfig, transportationType);
       const newPaymentStatus = isFree ? "active" : "pending_payment";
       
       const normalizedPhone = phone.replace(/\D/g, "");
@@ -301,6 +307,7 @@ function RegisterPage() {
         courseId: courseIdFromUrl,
         paymentStatus: newPaymentStatus,
         paymentAmount,
+        transportationType,
         createdAt: Date.now(),
       };
       
@@ -379,6 +386,10 @@ function RegisterPage() {
       toast.error("يرجى اختيار نقطة التجمع");
       return false;
     }
+    if (!transportationType || (transportationType !== "roundTrip" && transportationType !== "returnOnly")) {
+      toast.error("يرجى تحديد نوع المواصلات (ذهاب وعودة أو عودة فقط)");
+      return false;
+    }
     return true;
   };
 
@@ -404,7 +415,8 @@ function RegisterPage() {
 
     try {
       const isFree = courseData?.transportation?.payment?.isFree ?? true;
-      const paymentAmount = isFree ? 0 : ((courseData?.transportation?.payment?.days || 0) * (courseData?.transportation?.payment?.dailyFee || 0));
+      const paymentConfig = courseData?.transportation?.payment;
+      const paymentAmount = isFree ? 0 : calculateTransportationFee(paymentConfig, transportationType);
       const newPaymentStatus = isFree ? "active" : "pending_payment";
       const normalizedPhone = phone.replace(/\D/g, "");
       const targetCourseId = courseIdFromUrl || "default";
@@ -418,6 +430,7 @@ function RegisterPage() {
         courseId: targetCourseId,
         paymentStatus: newPaymentStatus,
         paymentAmount,
+        transportationType,
       });
       
       // Need to write the indexes, but signUp writes the user node, so we need to do this after
@@ -781,7 +794,7 @@ function RegisterPage() {
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold">نقطة التجمع</h2>
+                  <h2 className="text-lg font-bold">نقطة التجمع والمواصلات</h2>
                   <span className="text-[13px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
                     {isReEnrolling ? "2 من 2" : isGoogleUser ? "2 من 2" : "2 من 3"}
                   </span>
@@ -821,6 +834,93 @@ function RegisterPage() {
                   تقدر تغيرها بعدين لو احتجت من إعدادات حسابك.
                 </p>
               </div>
+
+              {/* Transportation Type Selection */}
+              {(() => {
+                const paymentConfig = courseData?.transportation?.payment;
+                const isFreeCourse = paymentConfig?.isFree ?? true;
+                const roundTripDailyFee = getDailyFeeForType(paymentConfig, "roundTrip");
+                const returnOnlyDailyFee = getDailyFeeForType(paymentConfig, "returnOnly");
+                const totalRoundTrip = calculateTransportationFee(paymentConfig, "roundTrip");
+                const totalReturnOnly = calculateTransportationFee(paymentConfig, "returnOnly");
+
+                return (
+                  <div className="space-y-3 pt-3 border-t border-border">
+                    <div className="space-y-1">
+                      <Label className="text-[14px] font-semibold text-foreground">
+                        هتحتاج المواصلات إزاي؟
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        اختر نوع الاشتراك المناسب لك
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {/* ذهاب وعودة */}
+                      <button
+                        type="button"
+                        onClick={() => setTransportationType("roundTrip")}
+                        className={`p-3.5 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                          transportationType === "roundTrip"
+                            ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                            : "border-border bg-card hover:bg-muted/40 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-foreground">ذهاب وعودة</span>
+                          <div
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                              transportationType === "roundTrip"
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/40"
+                            }`}
+                          >
+                            {transportationType === "roundTrip" && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {isFreeCourse
+                            ? "مجاناً"
+                            : `ذهاب وعودة — ${roundTripDailyFee} جنيه يوميًا — الإجمالي ${totalRoundTrip} جنيه`}
+                        </p>
+                      </button>
+
+                      {/* عودة فقط */}
+                      <button
+                        type="button"
+                        onClick={() => setTransportationType("returnOnly")}
+                        className={`p-3.5 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                          transportationType === "returnOnly"
+                            ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                            : "border-border bg-card hover:bg-muted/40 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-foreground">عودة فقط</span>
+                          <div
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                              transportationType === "returnOnly"
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/40"
+                            }`}
+                          >
+                            {transportationType === "returnOnly" && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {isFreeCourse
+                            ? "مجاناً"
+                            : `عودة فقط — ${returnOnlyDailyFee} جنيه يوميًا — الإجمالي ${totalReturnOnly} جنيه`}
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={prevStep} className="w-12 p-0 shrink-0" disabled={loading}>

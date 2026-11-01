@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/contexts/CourseContext";
 import { filterStudentsByCourse } from "@/utils/courseFilter";
-import type { UserProfile } from "@/types";
+import type { UserProfile, TransportationType } from "@/types";
 import { Check, X, Search, CreditCard, Clock, ShieldCheck, Banknote, Phone, Download } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
+import { getDailyFeeForType, getTransportationTypeLabel } from "@/utils/pricing";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: AdminPaymentsPage,
@@ -32,6 +33,7 @@ type PaymentRecord = {
   rejectionReason?: string;
   verifiedAt?: number;
   paymentMethod?: string;
+  transportationType?: TransportationType;
   createdAt?: number;
 };
 
@@ -190,8 +192,11 @@ function AdminPaymentsPage() {
       .filter((u) => u.paymentStatus && u.paymentStatus !== "active")
       .map((u) => {
         const paymentRecord = payments[u.uid];
+        const transportationType: TransportationType =
+          u.transportationType || paymentRecord?.transportationType || "roundTrip";
         return {
           ...u,
+          transportationType,
           paymentAmount: u.paymentAmount || paymentRecord?.amount || 0,
           paymentRecord,
         };
@@ -275,14 +280,16 @@ function AdminPaymentsPage() {
       const db = getFirebaseDb();
 
       const studentCourseId = student.courseId || (courseId !== "all" ? courseId : "default");
-      const archived = isStudentArchived(student as Record<string, unknown>, studentCourseId);
+      const archived = isStudentArchived(student as unknown as Record<string, unknown>, studentCourseId);
       const now = Date.now();
+      const transportType = student.transportationType || "roundTrip";
       const updates: Record<string, unknown> = {};
       updates[getUserPaymentStatusPath(student.uid, studentCourseId, archived)] = "active";
       updates[`rakeb/payments/${studentCourseId}/${student.uid}`] = {
         userId: student.uid,
         courseId: studentCourseId,
         amount: student.paymentAmount || 0,
+        transportationType: transportType,
         status: "verified",
         paymentMethod: "cash",
         verifiedAt: now,
@@ -357,8 +364,11 @@ function AdminPaymentsPage() {
       .filter((u) => u.role !== "admin")
       .map((u) => {
         const paymentRecord = payments[u.uid];
+        const transportationType: TransportationType =
+          u.transportationType || paymentRecord?.transportationType || "roundTrip";
         return {
           ...u,
+          transportationType,
           paymentAmount: u.paymentAmount || paymentRecord?.amount || 0,
           paymentRecord,
         };
@@ -424,6 +434,9 @@ function AdminPaymentsPage() {
     const exportData = allStudentsForExport.map((student) => {
       const studentCourse = courses.find((c) => c.id === (student.courseId || "default"));
       const isStudentCourseFree = studentCourse?.transportation?.payment?.isFree ?? isCourseFree;
+      const dailyRate = isStudentCourseFree
+        ? 0
+        : getDailyFeeForType(studentCourse?.transportation?.payment, student.transportationType);
 
       const row: Record<string, string | number> = {
         الاسم: student.fullName || "غير معروف",
@@ -439,6 +452,8 @@ function AdminPaymentsPage() {
           coursesMap[student.courseId || "default"] || student.courseId || "الكورس الأساسي";
       }
 
+      row["نوع المواصلات"] = getTransportationTypeLabel(student.transportationType);
+      row["سعر اليوم (ج.م)"] = dailyRate;
       row["المبلغ المطلوب (ج.م)"] = isStudentCourseFree ? 0 : student.paymentAmount;
       row["حالة الدفع"] = getPaymentStatusLabel(student.paymentStatus, isStudentCourseFree);
       row["طريقة الدفع"] = getPaymentMethodLabel(student.paymentRecord?.paymentMethod);
@@ -475,6 +490,8 @@ function AdminPaymentsPage() {
     if (isAllCourses) {
       summaryRow["الكورس"] = "";
     }
+    summaryRow["نوع المواصلات"] = "";
+    summaryRow["سعر اليوم (ج.م)"] = "";
     summaryRow["المبلغ المطلوب (ج.م)"] = totalExpected;
     summaryRow["حالة الدفع"] = `المحصّل: ${totalCollected} ج.م | المتبقي: ${totalPending} ج.م`;
     summaryRow["طريقة الدفع"] = "";
@@ -643,6 +660,9 @@ function AdminPaymentsPage() {
                         مرفوض
                       </span>
                     )}
+                    <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 shrink-0">
+                      {getTransportationTypeLabel(student.transportationType)}
+                    </span>
                     {courseId === "all" && (
                       <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary border border-primary/20 shrink-0">
                         {coursesMap[student.courseId || "default"] ||
