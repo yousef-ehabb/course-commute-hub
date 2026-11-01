@@ -26,7 +26,7 @@ if (!API_KEY || !DATABASE_URL) {
   process.exit(1);
 }
 
-// ── Existing admins: update display name ──────────────────────────
+// ── Active admin team ─────────────────────────────────────────────
 const EXISTING_ADMINS = [
   {
     email: "admin@rakeb.com",
@@ -35,59 +35,73 @@ const EXISTING_ADMINS = [
   },
   {
     email: "admin1@rakeb.com",
-    password: "Password123!",
-    displayName: "رحمة عمرو",
+    password: "Sh101admin",
+    displayName: "شيماء نشأت",
   },
   {
     email: "admin2@rakeb.com",
-    password: "Password123!",
-    displayName: "لؤي عاشور",
+    password: "No102admin",
+    displayName: "نورهان أشرف",
   },
   {
     email: "admin3@rakeb.com",
-    password: "Password123!",
-    displayName: "فاطمة ياسين",
+    password: "Ag103admin",
+    displayName: "أجيا رومانى",
   },
-];
-
-// ── New admins: create account + set display name + DB profile ────
-const NEW_ADMINS = [
   {
     email: "admin4@rakeb.com",
-    password: "Password123!",
-    displayName: "محمد فهمي",
+    password: "Mo104admin",
+    displayName: "محمد عبدالرحمن",
   },
   {
     email: "admin5@rakeb.com",
-    password: "Password123!",
-    displayName: "رضوي منتصر",
+    password: "Mo105admin",
+    displayName: "محمد خالد",
   },
   {
     email: "admin6@rakeb.com",
-    password: "Password123!",
-    displayName: "يسرى عمرو",
+    password: "Ha106admin",
+    displayName: "حلا عماد",
   },
   {
     email: "admin7@rakeb.com",
-    password: "Password123!",
-    displayName: "أروى ابوالسعود",
+    password: "Al107admin",
+    displayName: "الزهراء محمد",
   },
   {
     email: "admin8@rakeb.com",
-    password: "Password123!",
-    displayName: "زياد ممدوح",
+    password: "Yo108admin",
+    displayName: "يسرا بهاء",
   },
   {
     email: "admin9@rakeb.com",
-    password: "Password123!",
-    displayName: "منة وليد",
+    password: "Ra109admin",
+    displayName: "رحيق سيد",
   },
   {
     email: "admin10@rakeb.com",
+    password: "Ya110admin",
+    displayName: "ياسمين أحمد",
+  },
+  {
+    email: "admin11@rakeb.com",
     password: "Password123!",
-    displayName: "ايتن احمد",
+    displayName: "مكاريوس منير",
+  },
+  {
+    email: "admin12@rakeb.com",
+    password: "Pe111admin",
+    displayName: "بيتر ميلاد",
+  },
+  {
+    email: "admin13@rakeb.com",
+    password: "Na112admin",
+    displayName: "ندي عبدالهادي",
   },
 ];
+
+// ── New admins (empty now, all provisioned) ───────────────────────
+const NEW_ADMINS = [];
 
 // Sign in and get idToken + uid
 async function signIn(email, password) {
